@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import shopData from "@/components/Shop/shopData";
+import path from "path";
 
 type AssistantRequest = {
   query: string;
@@ -32,7 +33,7 @@ type QueryNormalizationResult = {
 };
 
 const GEMINI_MODEL = "gemini-2.0-flash";
-const OPENROUTER_MODEL = "openai/gpt-4o-mini";
+const FREEFLOW_MODEL = process.env.ASSISTANT_FREEFLOW_MODEL?.trim() || "openrouter/auto";
 const CACHE_TTL_MS = 1000 * 60 * 5;
 
 type CacheEntry = {
@@ -82,6 +83,14 @@ function configuredGeminiFallbackModels() {
     .split(",")
     .map((m) => m.trim())
     .filter((m) => m.length > 0 && m !== GEMINI_MODEL);
+}
+
+function configuredFreeflowFallbackModels() {
+  const fromEnv = process.env.ASSISTANT_FREEFLOW_FALLBACK_MODELS ?? "";
+  return fromEnv
+    .split(",")
+    .map((m) => m.trim())
+    .filter((m) => m.length > 0 && m !== FREEFLOW_MODEL);
 }
 
 function sleep(ms: number) {
@@ -171,12 +180,58 @@ function buildCatalog(mode: "detail" | "jomla") {
   return shopData.map((p) => ({
     id: p.id,
     title: p.title,
+    description: p.description ?? "",
     category: p.category,
     price: mode === "detail" ? p.detailPrice : p.jomlaPrice,
     detailPrice: p.detailPrice,
     jomlaPrice: p.jomlaPrice,
     image: p.imgs?.previews?.[0] ?? p.imgs?.thumbnails?.[0] ?? "",
+    images: Array.from(new Set([...(p.imgs?.previews ?? []), ...(p.imgs?.thumbnails ?? [])])).slice(0, 3),
+    visualHints: extractVisualHintsForProduct(p),
   }));
+}
+
+const GENERIC_IMAGE_TOKENS = new Set([
+  "image",
+  "images",
+  "product",
+  "hero",
+  "sm",
+  "bg",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+]);
+
+function extractImageNameTokens(imagePath: string) {
+  const filename = path.basename(imagePath).toLowerCase();
+  return filename
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[_-]/g, " ")
+    .replace(/\d+/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1 && !GENERIC_IMAGE_TOKENS.has(t));
+}
+
+function extractVisualHintsForProduct(product: (typeof shopData)[number]) {
+  const imagePaths = [...(product.imgs?.previews ?? []), ...(product.imgs?.thumbnails ?? [])];
+  const imageTokens = imagePaths.flatMap(extractImageNameTokens);
+  const titleTokens = normalizedTokens(product.title);
+  const categoryTokens = normalizedTokens(product.category.replace(/-/g, " "));
+  const descriptionTokens = normalizedTokens(product.description ?? "");
+
+  const extraHints: string[] = [];
+  if (titleTokens.includes("headset")) extraHints.push("headphone", "audio", "over-ear");
+  if (titleTokens.includes("watch")) extraHints.push("wearable", "wrist");
+  if (titleTokens.includes("router")) extraHints.push("network", "wifi");
+  if (titleTokens.includes("mouse")) extraHints.push("peripheral", "pointing-device");
+
+  return Array.from(new Set([...imageTokens, ...titleTokens, ...categoryTokens, ...descriptionTokens, ...extraHints])).slice(
+    0,
+    30
+  );
 }
 
 function retrieveFromCatalog(
@@ -207,9 +262,17 @@ function retrieveFromCatalog(
   const importantTokens = queryTokens.filter((t) => !stop.has(t));
   if (!importantTokens.length) return [];
 
+  const visualIntent = /\b(look|looks|style|design|color|shape|photo|image|picture|pictured|shown)\b/i.test(
+    query
+  );
+
   const scored = buildCatalog(mode)
     .map((p) => {
-      const tokens = new Set(normalizedTokens(`${p.title} ${p.category}`));
+      const tokens = new Set(
+        normalizedTokens(
+          `${p.title} ${p.category} ${p.description ?? ""} ${(p.visualHints ?? []).join(" ")}`
+        )
+      );
       let overlap = 0;
       for (const t of importantTokens) {
         if (tokens.has(t)) overlap += 1;
@@ -220,6 +283,7 @@ function retrieveFromCatalog(
       let score = base;
       if (cheapIntent) score += Math.max(0, 20 - p.price / 100);
       if (expensiveIntent) score += Math.min(20, p.price / 100);
+      if (visualIntent && p.visualHints?.length) score += 8;
       return {
         id: p.id,
         score: Math.max(1, Math.min(99, Math.round(score))),
@@ -254,6 +318,7 @@ Given USER_QUERY and CATALOG, return strict JSON only.
 
 Rules:
 - Use semantic understanding (type, intent, use-case, style, budget, exclusions, colors, brands).
+- Use visualHints and image filenames as extra visual cues (shape/style/device form), not only title.
 - Handle typos naturally.
 - Only return products that truly match.
 - If nothing matches, return empty matches.
@@ -419,8 +484,30 @@ async function queryWithRetriesAndFallback(
   retrievalMode: "strict" | "relaxed" = "strict"
 ) {
   let lastError = "no_provider_key";
-  let usedProvider: "gemini" | "openrouter" = "gemini";
-  let usedModel = GEMINI_MODEL;
+  let usedProvider: "gemini" | "openrouter" = "openrouter";
+  let usedModel = FREEFLOW_MODEL;
+
+  // Freeflow via OpenRouter is primary; Gemini is fallback.
+  if (openRouterApiKey) {
+    const models = [FREEFLOW_MODEL, ...configuredFreeflowFallbackModels()];
+    for (const model of models) {
+      usedProvider = "openrouter";
+      usedModel = model;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const res = await queryOpenRouter(openRouterApiKey, query, mode, model, retrievalMode);
+        if (res.result) return { ...res, provider: usedProvider };
+
+        lastError = res.error ?? "llm_failed";
+        const retryable =
+          lastError === "rate_limited" ||
+          lastError.startsWith("http_5") ||
+          lastError === "empty_response" ||
+          lastError === "json_parse_failed";
+        if (!retryable || attempt === 3) break;
+        await sleep(250 * 2 ** (attempt - 1));
+      }
+    }
+  }
 
   if (googleApiKey) {
     const models = [GEMINI_MODEL, ...configuredGeminiFallbackModels()];
@@ -440,30 +527,6 @@ async function queryWithRetriesAndFallback(
         if (!retryable || attempt === 3) break;
         await sleep(250 * 2 ** (attempt - 1));
       }
-    }
-  }
-
-  if (openRouterApiKey) {
-    usedProvider = "openrouter";
-    usedModel = OPENROUTER_MODEL;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      const res = await queryOpenRouter(
-        openRouterApiKey,
-        query,
-        mode,
-        OPENROUTER_MODEL,
-        retrievalMode
-      );
-      if (res.result) return { ...res, provider: usedProvider };
-
-      lastError = res.error ?? "llm_failed";
-      const retryable =
-        lastError === "rate_limited" ||
-        lastError.startsWith("http_5") ||
-        lastError === "empty_response" ||
-        lastError === "json_parse_failed";
-      if (!retryable || attempt === 3) break;
-      await sleep(250 * 2 ** (attempt - 1));
     }
   }
 
@@ -495,6 +558,31 @@ ${preNormalized}
 Original raw query:
 ${query}`;
 
+  // Use Freeflow first for normalization to keep one primary provider.
+  if (openRouterApiKey) {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openRouterApiKey}`,
+      },
+      body: JSON.stringify({
+        model: FREEFLOW_MODEL,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const raw = data?.choices?.[0]?.message?.content as string | undefined;
+      if (raw) {
+        const parsed = parseNormalizationJson(raw);
+        if (parsed) return parsed;
+      }
+    }
+  }
+
   if (googleApiKey) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${googleApiKey}`,
@@ -520,30 +608,6 @@ ${query}`;
     }
   }
 
-  if (openRouterApiKey) {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openRouterApiKey}`,
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const raw = data?.choices?.[0]?.message?.content as string | undefined;
-      if (raw) {
-        const parsed = parseNormalizationJson(raw);
-        if (parsed) return parsed;
-      }
-    }
-  }
-
   return { normalizedQuery: query, detectedLanguage: "unknown" };
 }
 
@@ -557,7 +621,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: "Please type what you need.",
         products: [],
-        debug: { source: "llm-only", model: GEMINI_MODEL },
+        debug: { source: "llm-only", model: FREEFLOW_MODEL },
       });
     }
 
@@ -568,7 +632,7 @@ export async function POST(req: Request) {
         message:
           "Assistant is in LLM-only mode but no provider key is set (GOOGLE_API_KEY or OPENROUTER_API_KEY).",
         products: [],
-        debug: { source: "llm-only", model: GEMINI_MODEL, error: "missing_provider_key" },
+        debug: { source: "llm-only", model: FREEFLOW_MODEL, error: "missing_provider_key" },
       });
     }
 
@@ -643,7 +707,7 @@ export async function POST(req: Request) {
         debug: {
           source: "llm-only",
           provider: llm.provider ?? "unknown",
-          model: llm.model ?? GEMINI_MODEL,
+          model: llm.model ?? FREEFLOW_MODEL,
           error: llm.error ?? "llm_failed",
           finalCount: 0,
           cache: "miss",
@@ -694,7 +758,7 @@ export async function POST(req: Request) {
       debug: {
         source: "llm-only",
         provider: llm.provider ?? "unknown",
-        model: llm.model ?? GEMINI_MODEL,
+        model: llm.model ?? FREEFLOW_MODEL,
         matchedIds: llm.result.matches.map((m) => m.id),
         finalCount: products.length,
         cache: "miss",
@@ -709,7 +773,7 @@ export async function POST(req: Request) {
         debug: {
           source: "llm-only",
           provider: "unknown",
-          model: GEMINI_MODEL,
+          model: FREEFLOW_MODEL,
           error: "server_exception",
           finalCount: 0,
         },
