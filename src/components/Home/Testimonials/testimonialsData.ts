@@ -2,46 +2,40 @@ import { Testimonial } from "@/types/testimonial";
 
 const testimonialsData: Testimonial[] = [
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Davis Dorwart",
+    review: `Fast delivery to Blida and exactly the same product as in the photos. Packaging was secure and customer support replied quickly.`,
+    authorName: "Yacine B.",
     authorImg: "/images/users/user-01.jpg",
-    authorRole: "Serial Entrepreneur",
+    authorRole: "Client - Blida",
   },
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Wilson Dias",
+    review: `I ordered from Oran and received my headset in great condition. The assistant helped me choose the right model for gaming.`,
+    authorName: "Sara K.",
     authorImg: "/images/users/user-02.jpg",
-    authorRole: "Backend Developer",
+    authorRole: "Client - Oran",
   },
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Miracle Exterm",
+    review: `Very good prices in Souma mode. The checkout was simple and the order confirmation was instant.`,
+    authorName: "Amine L.",
     authorImg: "/images/users/user-03.jpg",
-    authorRole: "Serial Entrepreneur",
+    authorRole: "Client - Setif",
   },
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Thomas Frank",
+    review: `The product quality is top and support answered my questions in Darija and French. Excellent local experience.`,
+    authorName: "Nesrine H.",
     authorImg: "/images/users/user-01.jpg",
-    authorRole: "Entrepreneur",
+    authorRole: "Client - Constantine",
   },
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Dave Smith",
+    review: `I compared several stores and Souma had the best value. Delivery to Tizi Ouzou was on time and communication was clear.`,
+    authorName: "Karim M.",
     authorImg: "/images/users/user-02.jpg",
-    authorRole: "Serial Entrepreneur",
+    authorRole: "Client - Tizi Ouzou",
   },
   {
-    review: `Lorem ipsum dolor sit amet, adipiscing elit. Donec
-    malesuada justo vitaeaugue suscipit beautiful vehicula`,
-    authorName: "Davis Dorwart",
+    review: `Trusted shop. I paid with local methods and everything went smoothly from order to delivery in Annaba.`,
+    authorName: "Lina A.",
     authorImg: "/images/users/user-03.jpg",
-    authorRole: "Serial Entrepreneur",
+    authorRole: "Client - Annaba",
   },
 ];
 

@@ -592,7 +592,7 @@ const MyAccount = () => {
                             </clipPath>
                           </defs>
                         </svg>
-                        Address: 7398 Smoke Ranch RoadLas Vegas, Nevada 89128
+                        Address: 12 Rue Didouche Mourad, Alger Centre, Algeria
                       </p>
                     </div>
                   </div>
@@ -698,7 +698,7 @@ const MyAccount = () => {
                             fill=""
                           />
                         </svg>
-                        Address: 7398 Smoke Ranch RoadLas Vegas, Nevada 89128
+                        Address: 12 Rue Didouche Mourad, Alger Centre, Algeria
                       </p>
                     </div>
                   </div>

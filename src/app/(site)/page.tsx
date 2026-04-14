@@ -2,8 +2,8 @@ import Home from "@/components/Home";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Souma Store | Nextjs E-commerce template",
-  description: "This is Home for Souma Store Template",
+  title: "Souma Store | Nextjs E-commerce",
+  description: "Home page for Souma Store",
   // other metadata
 };
 

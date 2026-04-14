@@ -32,7 +32,7 @@ const Footer = () => {
                     />
                   </svg>
                 </span>
-                685 Market Street,Las Vegas, LA 95820,United States.
+                12 Rue Didouche Mourad, Alger Centre, Alger, Algeria.
               </li>
 
               <li>
@@ -61,7 +61,7 @@ const Footer = () => {
                       fill="#FB923C"
                     />
                   </svg>
-                  (+099) 532-786-9843
+                  (+213) 770-123-456
                 </a>
               </li>
 
@@ -81,7 +81,7 @@ const Footer = () => {
                       fill="#FB923C"
                     />
                   </svg>
-                  support@example.com
+                  support@souma-store.dz
                 </a>
               </li>
             </ul>
