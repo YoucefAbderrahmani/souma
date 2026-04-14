@@ -72,7 +72,7 @@ const MyAccount = () => {
   const handellogout = async () => {
     setLogoutPending(true);
     try {
-      await authClient.signOut({
+      const response = await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
             Promise.resolve(refetch()).catch(() => {});
@@ -80,6 +80,11 @@ const MyAccount = () => {
           },
         },
       });
+      if (response?.error) {
+        toast.error(response.error.message || "Logout failed. Please try again.");
+      }
+    } catch {
+      toast.error("Logout failed. Please try again.");
     } finally {
       setLogoutPending(false);
     }
@@ -404,13 +409,15 @@ const MyAccount = () => {
                 }`}
               >
                 <p className="text-dark">
-                  Hello Annie (not Annie?
-                  <a
-                    href="#"
-                    className="text-red ease-out duration-200 hover:underline"
+                  Hello Annie (not Annie?{" "}
+                  <button
+                    type="button"
+                    onClick={handellogout}
+                    disabled={logoutPending}
+                    className="text-red ease-out duration-200 hover:underline disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    Log Out
-                  </a>
+                    {logoutPending ? "Logging out..." : "Log Out"}
+                  </button>
                   )
                 </p>
 
