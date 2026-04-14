@@ -59,6 +59,14 @@ const normalizeOrigin = (value: string | undefined): string | null => {
   }
 };
 
+const splitAndNormalizeOrigins = (value: string | undefined): string[] => {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((entry) => normalizeOrigin(entry))
+    .filter((origin): origin is string => Boolean(origin));
+};
+
 const trustedOrigins = Array.from(
   new Set(
     [
@@ -73,6 +81,8 @@ const trustedOrigins = Array.from(
       normalizeOrigin(process.env.BETTER_AUTH_URL),
       normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL),
       normalizeOrigin(process.env.VERCEL_URL),
+      normalizeOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+      ...splitAndNormalizeOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
     ].filter((origin): origin is string => Boolean(origin))
   )
 );
