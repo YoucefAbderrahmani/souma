@@ -1,0 +1,219 @@
+{
+  "1": {
+    "type": [
+      "gamepad",
+      "controller"
+    ],
+    "usage": [
+      "gaming"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "buttons",
+      "joystick",
+      "usb"
+    ]
+  },
+  "2": {
+    "type": [
+      "phone",
+      "smartphone"
+    ],
+    "usage": [
+      "work",
+      "travel"
+    ],
+    "color": [
+      "silver"
+    ],
+    "keywords": [
+      "screen",
+      "display",
+      "camera",
+      "battery"
+    ]
+  },
+  "3": {
+    "type": [
+      "laptop",
+      "computer",
+      "monitor"
+    ],
+    "usage": [
+      "work"
+    ],
+    "color": [
+      "silver"
+    ],
+    "keywords": [
+      "screen",
+      "display",
+      "monitor",
+      "desktop"
+    ]
+  },
+  "4": {
+    "type": [
+      "laptop",
+      "computer"
+    ],
+    "usage": [
+      "work",
+      "travel"
+    ],
+    "color": [
+      "silver"
+    ],
+    "keywords": [
+      "screen",
+      "display",
+      "keyboard",
+      "battery"
+    ]
+  },
+  "5": {
+    "type": [
+      "watch"
+    ],
+    "usage": [
+      "sport",
+      "travel"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "strap",
+      "fitness",
+      "heart rate"
+    ]
+  },
+  "6": {
+    "type": [
+      "mouse"
+    ],
+    "usage": [
+      "work",
+      "gaming"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "cursor",
+      "click",
+      "wireless"
+    ]
+  },
+  "7": {
+    "type": [
+      "tablet"
+    ],
+    "usage": [
+      "work",
+      "travel"
+    ],
+    "color": [
+      "silver"
+    ],
+    "keywords": [
+      "screen",
+      "display",
+      "touch"
+    ]
+  },
+  "8": {
+    "type": [
+      "router",
+      "wifi"
+    ],
+    "usage": [
+      "gaming",
+      "work"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "network",
+      "internet",
+      "wireless",
+      "antenna"
+    ]
+  },
+  "9": {
+    "type": [
+      "headphone",
+      "headset"
+    ],
+    "usage": [
+      "music",
+      "gaming"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "audio",
+      "sound",
+      "wireless",
+      "mic"
+    ]
+  },
+  "10": {
+    "type": [
+      "tshirt",
+      "shirt"
+    ],
+    "usage": [
+      "casual",
+      "daily"
+    ],
+    "color": [
+      "white"
+    ],
+    "keywords": [
+      "clothing",
+      "top",
+      "fashion"
+    ]
+  },
+  "11": {
+    "type": [
+      "pants",
+      "trousers"
+    ],
+    "usage": [
+      "casual",
+      "daily"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "clothing",
+      "bottom",
+      "fashion"
+    ]
+  },
+  "12": {
+    "type": [
+      "hat",
+      "cap"
+    ],
+    "usage": [
+      "casual",
+      "sport"
+    ],
+    "color": [
+      "black"
+    ],
+    "keywords": [
+      "clothing",
+      "headwear",
+      "fashion"
+    ]
+  }
+}
