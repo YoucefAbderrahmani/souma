@@ -15,6 +15,7 @@
     "esbuild": "0.25.8"
   },
   "dependencies": {
+    "@chargily/chargily-pay": "^2.1.0",
     "@esbuild-kit/esm-loader": "^2.6.5",
     "@google/genai": "^1.48.0",
     "@hookform/resolvers": "^5.2.1",

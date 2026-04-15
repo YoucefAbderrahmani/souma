@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import { sequenceEndPurchase } from "@/lib/sequence-client";
 import Login from "./Login";
@@ -8,11 +8,112 @@ import ShippingMethod from "./ShippingMethod";
 import PaymentMethod from "./PaymentMethod";
 import Coupon from "./Coupon";
 import Billing from "./Billing";
+import { useAppSelector } from "@/redux/store";
+import { selectTotalPrice } from "@/redux/features/cart-slice";
+import { useSelector } from "react-redux";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 const Checkout = () => {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const cartItems = useAppSelector((state) => state.cartReducer.items);
+  const totalPrice = useSelector(selectTotalPrice);
+  const searchParams = useSearchParams();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const paymentStatus = searchParams.get("payment");
+  const paymentBanner = useMemo(() => {
+    if (paymentStatus === "success") {
+      return {
+        text: "Payment completed successfully. Thank you for your order.",
+        className: "border-green-300 bg-green-50 text-green-700",
+      };
+    }
+    if (paymentStatus === "failed") {
+      return {
+        text: "Payment failed or was cancelled. Please try again.",
+        className: "border-red-300 bg-red-50 text-red-700",
+      };
+    }
+    return null;
+  }, [paymentStatus]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    sequenceEndPurchase();
+    setErrorMessage("");
+
+    if (cartItems.length === 0) {
+      const msg = "Your cart is empty. Add products before checkout.";
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const address = String(formData.get("address") ?? "").trim();
+    const town = String(formData.get("town") ?? "").trim();
+    const country = String(formData.get("country") ?? "").trim();
+    const notes = String(formData.get("notes") ?? "").trim();
+
+    if (!firstName || !lastName || !email || !phone || !address || !town) {
+      const msg = "Please fill all required billing fields before payment.";
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/payments/chargily/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          total: totalPrice,
+          items: cartItems.map((item) => ({
+            id: item.id,
+            title: item.title,
+            quantity: item.quantity,
+            unitPrice: item.discountedPrice,
+          })),
+          firstName,
+          lastName,
+          email,
+          phone,
+          address,
+          town,
+          country,
+          notes,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        checkoutUrl?: string;
+      };
+
+      if (!response.ok || !data.checkoutUrl) {
+        throw new Error(data.error || "Failed to start Chargily checkout.");
+      }
+
+      sequenceEndPurchase();
+      window.location.assign(data.checkoutUrl);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to connect to payment provider. Please try again.";
+      setErrorMessage(
+        message
+      );
+      toast.error(message);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -20,6 +121,14 @@ const Checkout = () => {
       <Breadcrumb title={"Checkout"} pages={["checkout"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          {paymentBanner ? (
+            <div
+              className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${paymentBanner.className}`}
+            >
+              {paymentBanner.text}
+            </div>
+          ) : null}
+
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
               {/* <!-- checkout left --> */}
@@ -75,44 +184,29 @@ const Checkout = () => {
                     </div>
 
                     {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">iPhone 14 Plus , 6/128GB</p>
+                    {cartItems.length > 0 ? (
+                      cartItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-5 border-b border-gray-3"
+                        >
+                          <div>
+                            <p className="text-dark">
+                              {item.title} x {item.quantity}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-dark text-right whitespace-nowrap">
+                              {(item.discountedPrice * item.quantity).toFixed(2)} DA
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-5 border-b border-gray-3">
+                        <p className="text-dark-4">Your cart is empty.</p>
                       </div>
-                      <div>
-                        <p className="text-dark text-right whitespace-nowrap">899.00 DA</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Asus RT Dual Band Router</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right whitespace-nowrap">129.00 DA</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Havit HV-G69 USB Gamepad</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right whitespace-nowrap">29.00 DA</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Shipping Fee</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right whitespace-nowrap">15.00 DA</p>
-                      </div>
-                    </div>
+                    )}
 
                     {/* <!-- total --> */}
                     <div className="flex items-center justify-between pt-5">
@@ -121,7 +215,7 @@ const Checkout = () => {
                       </div>
                       <div>
                         <p className="font-medium text-lg text-dark text-right whitespace-nowrap">
-                          1072.00 DA
+                          {totalPrice.toFixed(2)} DA
                         </p>
                       </div>
                     </div>
@@ -140,10 +234,21 @@ const Checkout = () => {
                 {/* <!-- checkout button --> */}
                 <button
                   type="submit"
-                  className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
+                  disabled={isSubmitting}
+                  className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Process to Checkout
+                  {isSubmitting ? "Redirecting to Chargily..." : "Pay with Chargily"}
                 </button>
+                {cartItems.length === 0 ? (
+                  <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+                    Your cart is empty. Add products first, then click checkout.
+                  </p>
+                ) : null}
+                {errorMessage ? (
+                  <p className="mt-3 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+                    {errorMessage}
+                  </p>
+                ) : null}
               </div>
             </div>
           </form>

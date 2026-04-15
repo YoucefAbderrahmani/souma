@@ -18,6 +18,7 @@ import { SessionProvider } from "../context/SessionProvider";
 import { PriceModeProvider } from "../context/PriceModeContext";
 import SmartShoppingAssistant from "@/components/Common/SmartShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
+import CartPersistence from "@/components/Common/CartPersistence";
 
 export default function RootLayout({
   children,
@@ -45,6 +46,7 @@ export default function RootLayout({
             <SessionProvider>
               <PriceModeProvider>
                 <ReduxProvider>
+                  <CartPersistence />
                   <CartModalProvider>
                     <PreviewSliderProvider>
                       <Header />
