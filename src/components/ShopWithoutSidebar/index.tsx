@@ -172,66 +172,66 @@ const ShopWithoutSidebar = () => {
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] bg-blue text-white hover:text-white hover:bg-blue"
                       >
                         1
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         2
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         3
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         4
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         5
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         ...
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         10
-                      </a>
+                      </button>
                     </li>
 
                     <li>

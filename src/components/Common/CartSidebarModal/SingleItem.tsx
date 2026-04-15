@@ -2,12 +2,27 @@ import React from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Image from "next/image";
+import Link from "next/link";
+import { updateproductDetails } from "@/redux/features/product-details";
+import { useRouter } from "next/navigation";
+import { sequenceStartProduct } from "@/lib/sequence-client";
 
 const SingleItem = ({ item, removeItemFromCart }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const handleRemoveFromCart = () => {
     dispatch(removeItemFromCart(item.id));
+  };
+
+  const handleOpenProduct = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    dispatch(updateproductDetails({ ...item }));
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("productDetails", JSON.stringify(item));
+    }
+    sequenceStartProduct(item.title);
+    router.push("/shop-details");
   };
 
   return (
@@ -19,7 +34,9 @@ const SingleItem = ({ item, removeItemFromCart }) => {
 
         <div>
           <h3 className="font-medium text-dark mb-1 ease-out duration-200 hover:text-blue">
-            <a href="#"> {item.title} </a>
+            <Link href="/shop-details" onClick={handleOpenProduct}>
+              {item.title}
+            </Link>
           </h3>
           <p className="text-custom-sm whitespace-nowrap">Price: {item.discountedPrice} DA</p>
         </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -36,7 +37,7 @@ const Footer = () => {
               </li>
 
               <li>
-                <a href="#" className="flex items-center gap-4.5">
+                <a href="tel:+213770123456" className="flex items-center gap-4.5">
                   <svg
                     width="24"
                     height="24"
@@ -66,7 +67,7 @@ const Footer = () => {
               </li>
 
               <li>
-                <a href="#" className="flex items-center gap-4.5">
+                <a href="mailto:support@souma-store.dz" className="flex items-center gap-4.5">
                   <svg
                     width="24"
                     height="24"
@@ -89,7 +90,9 @@ const Footer = () => {
             {/* <!-- Social Links start --> */}
             <div className="flex items-center gap-4 mt-7.5">
               <a
-                href="#"
+                href="https://facebook.com"
+                target="_blank"
+                rel="noreferrer"
                 aria-label="Facebook Social Link"
                 className="flex ease-out duration-200 hover:text-blue"
               >
@@ -114,7 +117,9 @@ const Footer = () => {
               </a>
 
               <a
-                href="#"
+                href="https://x.com"
+                target="_blank"
+                rel="noreferrer"
                 aria-label="Twitter Social Link"
                 className="flex ease-out duration-200 hover:text-blue"
               >
@@ -134,7 +139,9 @@ const Footer = () => {
               </a>
 
               <a
-                href="#"
+                href="https://instagram.com"
+                target="_blank"
+                rel="noreferrer"
                 aria-label="Instagram Social Link"
                 className="flex ease-out duration-200 hover:text-blue"
               >
@@ -169,7 +176,9 @@ const Footer = () => {
               </a>
 
               <a
-                href="#"
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noreferrer"
                 aria-label="Linkedin Social Link"
                 className="flex ease-out duration-200 hover:text-blue"
               >
@@ -203,29 +212,29 @@ const Footer = () => {
 
             <ul className="flex flex-col gap-3.5">
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/my-account">
                   My Account
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/signin">
                   Login / Register
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/cart">
                   Cart
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/wishlist">
                   Wishlist
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/shop-with-sidebar">
                   Shop
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -237,29 +246,29 @@ const Footer = () => {
 
             <ul className="flex flex-col gap-3">
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/privacy-policy">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/refund-policy">
                   Refund Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/terms-of-use">
                   Terms of Use
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
-                  FAQ’s
-                </a>
+                <Link className="ease-out duration-200 hover:text-blue" href="/faq">
+                  FAQ&apos;s
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/contact">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -277,7 +286,9 @@ const Footer = () => {
               <li>
                 <a
                   className="inline-flex items-center gap-3 py-[9px] pl-4 pr-7.5 text-white rounded-md bg-dark ease-out duration-200 hover:bg-opacity-95"
-                  href="#"
+                  href="https://www.apple.com/app-store/"
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   <svg
                     className="fill-current"
@@ -305,7 +316,9 @@ const Footer = () => {
               <li>
                 <a
                   className="inline-flex items-center gap-3 py-[9px] pl-4 pr-8.5 text-white rounded-md bg-blue ease-out duration-200 hover:bg-opacity-95"
-                  href="#"
+                  href="https://play.google.com/store"
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   <svg
                     className="fill-current"

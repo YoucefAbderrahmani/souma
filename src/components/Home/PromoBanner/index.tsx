@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 const PromoBanner = () => {
   return (
@@ -21,12 +22,12 @@ const PromoBanner = () => {
               A15 Bionic, with a 5‑core GPU, powers all the latest features.
             </p>
 
-            <a
-              href="#"
+            <Link
+              href="/shop-with-sidebar"
               className="inline-flex font-medium text-custom-sm text-white bg-blue py-[11px] px-9.5 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
             >
               Buy Now
-            </a>
+            </Link>
           </div>
 
           <Image
@@ -62,12 +63,12 @@ const PromoBanner = () => {
                 Flat 20% off
               </p>
 
-              <a
-                href="#"
+              <Link
+                href="/shop-with-sidebar"
                 className="inline-flex font-medium text-custom-sm text-white bg-teal py-2.5 px-8.5 rounded-md ease-out duration-200 hover:bg-teal-dark mt-9"
               >
                 Grab Now
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -95,12 +96,12 @@ const PromoBanner = () => {
                 everything.
               </p>
 
-              <a
-                href="#"
+              <Link
+                href="/shop-with-sidebar"
                 className="inline-flex font-medium text-custom-sm text-white bg-orange py-2.5 px-8.5 rounded-md ease-out duration-200 hover:bg-orange-dark mt-7.5"
               >
                 Buy Now
-              </a>
+              </Link>
             </div>
           </div>
         </div>

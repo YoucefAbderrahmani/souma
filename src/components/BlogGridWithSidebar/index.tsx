@@ -80,66 +80,66 @@ const BlogGridWithSidebar = () => {
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] bg-blue text-white hover:text-white hover:bg-blue"
                       >
                         1
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         2
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         3
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         4
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         5
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         ...
-                      </a>
+                      </button>
                     </li>
 
                     <li>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
                       >
                         10
-                      </a>
+                      </button>
                     </li>
 
                     <li>
@@ -192,61 +192,61 @@ const BlogGridWithSidebar = () => {
 
                 <div className="p-4 sm:p-6">
                   <div className="flex flex-wrap gap-3.5">
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Desktop
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Macbook
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       PC
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Watch
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       USB Cable
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Mouse
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Windows PC
-                    </a>
+                    </button>
 
-                    <a
+                    <button
+                      type="button"
                       className="inline-flex hover:text-white border border-gray-3 py-2 px-4 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
-                      href="#"
                     >
                       Monitor
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

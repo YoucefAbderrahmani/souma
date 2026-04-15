@@ -539,8 +539,8 @@ const ShopDetails = () => {
                         Purchase Now
                       </button>
 
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 ease-out duration-200 hover:text-white hover:bg-dark hover:border-transparent"
                       >
                         <svg
@@ -558,7 +558,7 @@ const ShopDetails = () => {
                             fill=""
                           />
                         </svg>
-                      </a>
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -680,7 +680,7 @@ const ShopDetails = () => {
                       {/* <!-- review item --> */}
                       <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
                         <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
+                          <div className="flex items-center gap-4">
                             <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
                               <Image
                                 src="/images/users/user-01.jpg"
@@ -699,7 +699,7 @@ const ShopDetails = () => {
                                 Serial Entrepreneur
                               </p>
                             </div>
-                          </a>
+                          </div>
 
                           <div className="flex items-center gap-1">
                             <span className="cursor-pointer text-[#FBB040]">
@@ -794,7 +794,7 @@ const ShopDetails = () => {
                       {/* <!-- review item --> */}
                       <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
                         <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
+                          <div className="flex items-center gap-4">
                             <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
                               <Image
                                 src="/images/users/user-01.jpg"
@@ -813,7 +813,7 @@ const ShopDetails = () => {
                                 Serial Entrepreneur
                               </p>
                             </div>
-                          </a>
+                          </div>
 
                           <div className="flex items-center gap-1">
                             <span className="cursor-pointer text-[#FBB040]">
@@ -908,7 +908,7 @@ const ShopDetails = () => {
                       {/* <!-- review item --> */}
                       <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
                         <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
+                          <div className="flex items-center gap-4">
                             <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
                               <Image
                                 src="/images/users/user-01.jpg"
@@ -927,7 +927,7 @@ const ShopDetails = () => {
                                 Serial Entrepreneur
                               </p>
                             </div>
-                          </a>
+                          </div>
 
                           <div className="flex items-center gap-1">
                             <span className="cursor-pointer text-[#FBB040]">

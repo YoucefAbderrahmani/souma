@@ -1,7 +1,17 @@
+"use client";
+
 import React from "react";
 import Breadcrumb from "../Common/Breadcrumb";
+import { useRouter } from "next/navigation";
 
 const Contact = () => {
+  const router = useRouter();
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push("/mail-success");
+  };
+
   return (
     <>
       <Breadcrumb title={"Contact"} pages={["contact"]} />
@@ -87,7 +97,7 @@ const Contact = () => {
             </div>
 
             <div className="xl:max-w-[770px] w-full bg-white rounded-xl shadow-1 p-4 sm:p-7.5 xl:p-10">
-              <form>
+              <form onSubmit={handleSubmit}>
                 <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
                   <div className="w-full">
                     <label htmlFor="firstName" className="block mb-2.5">
