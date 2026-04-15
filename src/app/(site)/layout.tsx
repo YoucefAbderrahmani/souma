@@ -32,6 +32,11 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning={true}>
+      <head>
+        <title>Souma Store</title>
+        <meta name="description" content="Souma Store ecommerce website" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body suppressHydrationWarning={true}>
         {loading ? (
           <PreLoader />
