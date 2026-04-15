@@ -175,6 +175,28 @@ export const costumer_order_to_productTable = pgTable(
   ]
 );
 
+export const productReviewTable = pgTable("product_review", {
+  id: text("id").primaryKey(),
+  productLocalId: integer("product_local_id").notNull(),
+  productTitle: text("product_title").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const siteFeedbackTable = pgTable("site_feedback", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 //Relations
 export const userRelations = relations(user, ({ many }) => ({
   wishlists: many(wishlistTable), // One user has many wishlists

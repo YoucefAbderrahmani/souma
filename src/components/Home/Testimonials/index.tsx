@@ -1,16 +1,37 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useRef } from "react";
-import testimonialsData from "./testimonialsData";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
+import { useSession } from "@/app/context/SessionProvider";
 
 // Import Swiper styles
 import "swiper/css/navigation";
 import "swiper/css";
 import SingleItem from "./SingleItem";
+import { Testimonial } from "@/types/testimonial";
+
+type SiteFeedback = {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    lastname: string;
+    image: string | null;
+  };
+};
 
 const Testimonials = () => {
   const sliderRef = useRef(null);
+  const { session, isPending } = useSession();
+  const [feedbacks, setFeedbacks] = useState<SiteFeedback[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
@@ -21,6 +42,75 @@ const Testimonials = () => {
     if (!sliderRef.current) return;
     sliderRef.current.swiper.slideNext();
   }, []);
+
+  const testimonials: Testimonial[] = useMemo(
+    () =>
+      feedbacks.map((item) => ({
+        review: item.comment,
+        authorName: `${item.user.name} ${item.user.lastname}`.trim(),
+        authorImg:
+          item.user.image && item.user.image.startsWith("/")
+            ? item.user.image
+            : "/images/users/user-01.jpg",
+        authorRole: `User feedback • ${new Date(item.createdAt).toLocaleDateString()}`,
+      })),
+    [feedbacks]
+  );
+
+  const loadFeedbacks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/feedbacks", { cache: "no-store" });
+      if (!response.ok) throw new Error("Failed to fetch feedback.");
+      const data = (await response.json()) as { feedbacks?: SiteFeedback[] };
+      setFeedbacks(Array.isArray(data.feedbacks) ? data.feedbacks : []);
+    } catch {
+      toast.error("Unable to load feedback right now.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFeedbacks();
+  }, [loadFeedbacks]);
+
+  const handleSubmitFeedback = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!session?.user?.id) {
+      toast.error("Please sign in to share feedback.");
+      return;
+    }
+    if (comment.trim().length < 6) {
+      toast.error("Please write at least 6 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/feedbacks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating,
+          comment: comment.trim(),
+        }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to submit feedback.");
+      }
+      setComment("");
+      setRating(5);
+      toast.success("Feedback posted.");
+      await loadFeedbacks();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit feedback.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <section className="overflow-hidden pb-16.5">
@@ -83,31 +173,93 @@ const Testimonials = () => {
               </div>
             </div>
 
-            <Swiper
-              ref={sliderRef}
-              slidesPerView={3}
-              spaceBetween={20}
-              breakpoints={{
-                // when window width is >= 640px
-                0: {
-                  slidesPerView: 1,
-                },
-                1000: {
-                  slidesPerView: 2,
-                  // spaceBetween: 4,
-                },
-                // when window width is >= 768px
-                1200: {
-                  slidesPerView: 3,
-                },
-              }}
-            >
-              {testimonialsData.map((item, key) => (
-                <SwiperSlide key={key}>
-                  <SingleItem testimonial={item} />
-                </SwiperSlide>
-              ))}
-            </Swiper>
+            {loading ? (
+              <div className="rounded-xl bg-white p-6 shadow-1">Loading feedback...</div>
+            ) : testimonials.length === 0 ? (
+              <div className="rounded-xl bg-white p-6 shadow-1 text-dark-4">
+                No feedback posted yet.
+              </div>
+            ) : (
+              <Swiper
+                ref={sliderRef}
+                slidesPerView={3}
+                spaceBetween={20}
+                breakpoints={{
+                  0: {
+                    slidesPerView: 1,
+                  },
+                  1000: {
+                    slidesPerView: 2,
+                  },
+                  1200: {
+                    slidesPerView: 3,
+                  },
+                }}
+              >
+                {testimonials.map((item, key) => (
+                  <SwiperSlide key={key}>
+                    <SingleItem testimonial={item} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            )}
+          </div>
+
+          <div className="mt-8 rounded-xl bg-white p-5 shadow-1 sm:p-7">
+            <h3 className="text-xl font-semibold text-dark">Share Your Feedback</h3>
+            {!isPending && !session?.user?.id ? (
+              <p className="mt-2 text-dark-4">Sign in to post feedback from your account.</p>
+            ) : (
+              <p className="mt-2 text-dark-4">Your feedback will appear in the testimonials slider.</p>
+            )}
+
+            <form onSubmit={handleSubmitFeedback} className="mt-5">
+              <div className="mb-4">
+                <p className="mb-2.5">Rating</p>
+                <div className="flex items-center gap-2 text-2xl">
+                  {Array.from({ length: 5 }).map((_, index) => {
+                    const value = index + 1;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setRating(value)}
+                        className={value <= rating ? "text-[#FBB040]" : "text-gray-4"}
+                        aria-label={`Set feedback rating ${value}`}
+                        disabled={!session?.user?.id || submitting}
+                      >
+                        ★
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label htmlFor="feedback-comment" className="mb-2.5 block">
+                  Feedback
+                </label>
+                <textarea
+                  id="feedback-comment"
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Tell us about your experience"
+                  className="w-full rounded-md border border-gray-3 bg-gray-1 p-4 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                  disabled={!session?.user?.id || submitting}
+                />
+                <p className="mt-2 text-custom-sm text-dark-4">{comment.length}/500</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!session?.user?.id || submitting}
+                className="inline-flex rounded-md bg-blue px-6 py-3 font-medium text-white duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? "Posting..." : "Post Feedback"}
+              </button>
+            </form>
           </div>
         </div>
       </div>
