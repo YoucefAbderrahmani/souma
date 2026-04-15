@@ -26,6 +26,12 @@ function sanitizeText(value: string | undefined, maxLen = 250) {
   return (value ?? "").trim().slice(0, maxLen);
 }
 
+function normalizeChargilyCheckoutUrl(raw: string) {
+  // Some responses may return http://pay.chargily.dz/... in test mode.
+  // Force https to avoid browser mixed-content/navigation issues.
+  return raw.replace(/^http:\/\/pay\.chargily\.(dz|net)\//i, "https://pay.chargily.$1/");
+}
+
 function toFlatMetadata(input: {
   source: string;
   userId: string | null;
@@ -156,7 +162,8 @@ export async function POST(req: NextRequest) {
       url?: string;
     };
 
-    const checkoutUrl = data?.checkout_url || data?.url;
+    const checkoutUrlRaw = data?.checkout_url || data?.url;
+    const checkoutUrl = checkoutUrlRaw ? normalizeChargilyCheckoutUrl(checkoutUrlRaw) : "";
     if (!checkoutUrl) {
       return NextResponse.json(
         { error: "Chargily response did not include checkout url." },
