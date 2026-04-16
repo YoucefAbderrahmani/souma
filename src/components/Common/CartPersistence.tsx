@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { setCartItems, type CartItem } from "@/redux/features/cart-slice";
@@ -49,15 +49,23 @@ const CartPersistence = () => {
   const { session, isPending } = useSession();
   const activeStorageKeyRef = useRef<string | null>(null);
   const hydratedRef = useRef(false);
+  const [sessionResolved, setSessionResolved] = useState(false);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
-  const userId = session?.user?.id?.trim() || null;
+  useEffect(() => {
+    if (isPending) return;
+    setResolvedUserId(session?.user?.id?.trim() || null);
+    setSessionResolved(true);
+  }, [isPending, session?.user?.id]);
+
+  const userId = resolvedUserId;
   const targetStorageKey = useMemo(
     () => (userId ? getUserCartKey(userId) : GUEST_CART_KEY),
     [userId]
   );
 
   useEffect(() => {
-    if (isPending) return;
+    if (!sessionResolved) return;
 
     const userCart = parseStoredCart(window.localStorage.getItem(targetStorageKey));
 
@@ -75,16 +83,16 @@ const CartPersistence = () => {
     dispatch(setCartItems(userCart));
     activeStorageKeyRef.current = targetStorageKey;
     hydratedRef.current = true;
-  }, [dispatch, isPending, targetStorageKey, userId]);
+  }, [dispatch, sessionResolved, targetStorageKey, userId]);
 
   useEffect(() => {
-    if (isPending || !hydratedRef.current) return;
+    if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
     window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
-  }, [cartItems, isPending, targetStorageKey]);
+  }, [cartItems, sessionResolved, targetStorageKey]);
 
   useEffect(() => {
-    if (isPending || !hydratedRef.current) return;
+    if (!sessionResolved || !hydratedRef.current) return;
 
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage) return;
@@ -95,7 +103,7 @@ const CartPersistence = () => {
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, [dispatch, isPending, targetStorageKey]);
+  }, [dispatch, sessionResolved, targetStorageKey]);
 
   return null;
 };
