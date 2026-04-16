@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { parseProductContent } from "@/lib/product-content";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
+import ProductPageAssistant from "./ProductPageAssistant";
 
 const ShopDetails = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -677,6 +678,7 @@ const ShopDetails = () => {
           <RecentlyViewdItems />
 
           <Newsletter />
+          <ProductPageAssistant product={product} availabilityLabel="In Stock" />
         </>
       )}
     </>

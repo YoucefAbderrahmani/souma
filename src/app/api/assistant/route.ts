@@ -10,6 +10,11 @@ import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
 type AssistantRequest = {
   query: string;
   mode: "detail" | "jomla";
+  contextProduct?: {
+    title?: string;
+    availability?: string;
+    category?: string;
+  };
 };
 
 type LlmMatch = {
@@ -291,13 +296,22 @@ function retrieveFromCatalog(
 function buildPrompt(
   query: string,
   mode: "detail" | "jomla",
-  retrievalMode: "strict" | "relaxed" = "strict"
+  retrievalMode: "strict" | "relaxed" = "strict",
+  contextProduct?: AssistantRequest["contextProduct"]
 ) {
   const catalog = buildCatalog(mode);
   const extra =
     retrievalMode === "relaxed"
       ? `\nRelaxed retrieval mode:\n- If strict exact-name match is not found, return the closest semantically relevant products.\n- Understand slug-like categories (example: "laptop-pc" means laptops/computers).\n- For requests like "cheapest X", prioritize lower price among relevant items.\n`
       : "";
+  const productContext = contextProduct
+    ? `\nCURRENT_PRODUCT_CONTEXT:\n${JSON.stringify({
+        title: sanitizeText(contextProduct.title, 160),
+        availability: sanitizeText(contextProduct.availability, 60),
+        category: sanitizeText(contextProduct.category, 120),
+      })}`
+    : "";
+
   return `You are an ecommerce shopping assistant.
 Given USER_QUERY and CATALOG, return strict JSON only.
 
@@ -305,6 +319,8 @@ Rules:
 - Use semantic understanding (type, intent, use-case, style, budget, exclusions, colors, brands).
 - Use visualHints and image filenames as extra visual cues (shape/style/device form), not only title.
 - Handle typos naturally.
+- If USER_QUERY is a direct question (e.g. availability, fit, compatibility), answer it clearly in summary even when matches are empty.
+- If CURRENT_PRODUCT_CONTEXT is provided and the question is about current item availability, use it directly in summary.
 - Only return products that truly match.
 - If nothing matches, return empty matches.
 - score must be 0..100.
@@ -322,6 +338,7 @@ JSON schema:
 
 USER_QUERY:
 ${query}
+${productContext}
 
 CATALOG:
 ${JSON.stringify(catalog)}`;
@@ -393,7 +410,8 @@ async function queryGemini(
   query: string,
   mode: "detail" | "jomla",
   modelName: string,
-  retrievalMode: "strict" | "relaxed" = "strict"
+  retrievalMode: "strict" | "relaxed" = "strict",
+  contextProduct?: AssistantRequest["contextProduct"]
 ): Promise<LlmQueryResult> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
@@ -401,7 +419,12 @@ async function queryGemini(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: buildPrompt(query, mode, retrievalMode) }] }],
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: buildPrompt(query, mode, retrievalMode, contextProduct) }],
+          },
+        ],
         generationConfig: {
           temperature: 0.15,
           responseMimeType: "application/json",
@@ -430,7 +453,8 @@ async function queryOpenRouter(
   query: string,
   mode: "detail" | "jomla",
   modelName: string,
-  retrievalMode: "strict" | "relaxed" = "strict"
+  retrievalMode: "strict" | "relaxed" = "strict",
+  contextProduct?: AssistantRequest["contextProduct"]
 ): Promise<LlmQueryResult> {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -442,7 +466,7 @@ async function queryOpenRouter(
       model: modelName,
       temperature: 0.15,
       response_format: { type: "json_object" },
-      messages: [{ role: "user", content: buildPrompt(query, mode, retrievalMode) }],
+      messages: [{ role: "user", content: buildPrompt(query, mode, retrievalMode, contextProduct) }],
     }),
   });
 
@@ -466,7 +490,8 @@ async function queryWithRetriesAndFallback(
   openRouterApiKey: string | undefined,
   query: string,
   mode: "detail" | "jomla",
-  retrievalMode: "strict" | "relaxed" = "strict"
+  retrievalMode: "strict" | "relaxed" = "strict",
+  contextProduct?: AssistantRequest["contextProduct"]
 ) {
   let lastError = "no_provider_key";
   let usedProvider: "gemini" | "openrouter" = "openrouter";
@@ -479,7 +504,14 @@ async function queryWithRetriesAndFallback(
       usedProvider = "openrouter";
       usedModel = model;
       for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const res = await queryOpenRouter(openRouterApiKey, query, mode, model, retrievalMode);
+        const res = await queryOpenRouter(
+          openRouterApiKey,
+          query,
+          mode,
+          model,
+          retrievalMode,
+          contextProduct
+        );
         if (res.result) return { ...res, provider: usedProvider };
 
         lastError = res.error ?? "llm_failed";
@@ -500,7 +532,14 @@ async function queryWithRetriesAndFallback(
       usedProvider = "gemini";
       usedModel = model;
       for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const res = await queryGemini(googleApiKey, query, mode, model, retrievalMode);
+        const res = await queryGemini(
+          googleApiKey,
+          query,
+          mode,
+          model,
+          retrievalMode,
+          contextProduct
+        );
         if (res.result) return { ...res, provider: usedProvider };
 
         lastError = res.error ?? "llm_failed";
@@ -636,6 +675,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as AssistantRequest;
     const query = body.query?.trim();
     const mode = body.mode === "jomla" ? "jomla" : "detail";
+    const contextProduct = body.contextProduct;
 
     if (!query) {
       return NextResponse.json({
@@ -711,9 +751,10 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         message:
-          products.length > 0
-            ? cached.summary || `I found ${products.length} matching products.`
-            : "No related items found in store for this request.",
+          cached.summary ||
+          (products.length > 0
+            ? `I found ${products.length} matching products.`
+            : "No related items found in store for this request."),
         products,
         explanation: cached.matches,
         clarification: cached.clarification,
@@ -737,7 +778,8 @@ export async function POST(req: NextRequest) {
       openRouterApiKey,
       effectiveQuery,
       mode,
-      "strict"
+      "strict",
+      contextProduct
     );
 
     if (!llm.result) {
@@ -766,9 +808,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           message:
-            products.length > 0
-              ? similarCached.summary || `I found ${products.length} matching products.`
-              : "No related items found in store for this request.",
+            similarCached.summary ||
+            (products.length > 0
+              ? `I found ${products.length} matching products.`
+              : "No related items found in store for this request."),
           products,
           explanation: similarCached.matches,
           clarification: similarCached.clarification,
@@ -830,7 +873,8 @@ export async function POST(req: NextRequest) {
         openRouterApiKey,
         effectiveQuery,
         mode,
-        "relaxed"
+        "relaxed",
+        contextProduct
       );
       if (relaxed.result) {
         llm = relaxed;
@@ -874,9 +918,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       message:
-        products.length > 0
-          ? llm.result.summary || `I found ${products.length} matching products.`
-          : "No related items found in store for this request.",
+        llm.result.summary ||
+        (products.length > 0
+          ? `I found ${products.length} matching products.`
+          : "No related items found in store for this request."),
       products,
       explanation: llm.result.matches,
       clarification: llm.result.clarification,
