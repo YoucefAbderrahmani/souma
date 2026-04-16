@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import shopData from "@/components/Shop/shopData";
 import path from "path";
+import { transliterate } from "transliteration";
 import { auth } from "@/server/lib/auth";
 import { resolveSequenceKeyMaybe } from "@/app/api/sequence/_cookie";
 import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
@@ -46,87 +47,6 @@ type CacheEntry = {
 };
 
 const responseCache = new Map<string, CacheEntry>();
-
-const MULTILINGUAL_TOKEN_MAP: Record<string, string> = {
-  // Darja / Maghrebi latinized forms
-  "a7mar": "red",
-  "7mar": "red",
-  "hamra": "red",
-  "7amra": "red",
-  "ahmar": "red",
-  "hamr": "red",
-  "azraq": "blue",
-  "zar9a": "blue",
-  "zra9": "blue",
-  "azr9": "blue",
-  "akhder": "green",
-  "khder": "green",
-  "asfar": "yellow",
-  "byed": "white",
-  "byadh": "white",
-  "k7el": "black",
-  "kahla": "black",
-  "ghali": "expensive",
-  "ghalia": "expensive",
-  "rkhis": "cheap",
-  "r5is": "cheap",
-  "rkhissa": "cheap",
-  "lghali": "expensive",
-  "bzaaf": "very",
-  "bzaf": "very",
-  "chwiya": "a bit",
-  "shwiya": "a bit",
-  "kbir": "big",
-  "sghir": "small",
-  "mzyan": "good",
-  "zwin": "nice",
-  "zwina": "nice",
-  "laptopat": "laptops",
-  "portable": "laptop",
-  "ordinateur": "computer",
-  "pc": "computer",
-  "clavier": "keyboard",
-  "souris": "mouse",
-  "ecouteur": "earphone",
-  "casque": "headphone",
-  "telephone": "phone",
-  "telifoun": "phone",
-  "telefon": "phone",
-  "portablephone": "phone",
-  "mlih": "good",
-  مليح: "good",
-  هاتف: "phone",
-  جوال: "phone",
-  تلفون: "phone",
-  هاتفك: "phone",
-  لابتوب: "laptop",
-  حاسوب: "computer",
-  كمبيوتر: "computer",
-  كيبورد: "keyboard",
-  لوحة: "keyboard",
-  ماوس: "mouse",
-  فأرة: "mouse",
-  سماعة: "headphone",
-  سماعات: "headphone",
-  رخيص: "cheap",
-  غالي: "expensive",
-  غالية: "expensive",
-  احمر: "red",
-  ازرق: "blue",
-  اخضر: "green",
-  اصفر: "yellow",
-  اسود: "black",
-  ابيض: "white",
-  "ma3lich": "it's okay",
-  "machi": "not",
-  "mashi": "not",
-  "bla": "without",
-  بدون: "without",
-  بلا: "without",
-  and: "and",
-  ou: "or",
-  wa: "and",
-};
 
 function configuredGeminiFallbackModels() {
   const fromEnv = process.env.ASSISTANT_LLM_FALLBACK_MODELS ?? "";
@@ -179,28 +99,18 @@ function normalizeArabicScript(text: string) {
     .replace(/[\u064B-\u065F]/g, "");
 }
 
-function normalizeToken(token: string) {
-  const lower = token.toLowerCase();
-  const latinKey = lower.replace(/[^a-z0-9]/g, "");
-  const arabicKey = normalizeArabicScript(lower).replace(/[^\u0600-\u06FF0-9]/g, "");
-
-  if (latinKey && MULTILINGUAL_TOKEN_MAP[latinKey]) return MULTILINGUAL_TOKEN_MAP[latinKey];
-  if (arabicKey && MULTILINGUAL_TOKEN_MAP[arabicKey]) return MULTILINGUAL_TOKEN_MAP[arabicKey];
-  if (MULTILINGUAL_TOKEN_MAP[lower]) return MULTILINGUAL_TOKEN_MAP[lower];
-  return lower;
-}
-
 function normalizeMultilingualQuery(text: string) {
-  const phraseNormalized = normalizeArabicScript(text.toLowerCase())
-    .replace(/\bpc portable\b/g, "laptop")
-    .replace(/\bordinateur portable\b/g, "laptop")
-    .replace(/\bsmart phone\b/g, "phone")
-    .replace(/\btel(e|é)phone portable\b/g, "phone");
+  const normalizedArabic = normalizeArabicScript(text.toLowerCase())
+    .replace(/[\u200E\u200F]/g, " ")
+    .replace(/[’']/g, "");
+  const arabiziApprox = normalizedArabic
+    .replace(/3/g, "a")
+    .replace(/7/g, "h")
+    .replace(/9/g, "q")
+    .replace(/5/g, "kh");
+  const transliterated = transliterate(arabiziApprox);
 
-  return phraseNormalized
-    .split(/\s+/)
-    .map((token) => normalizeToken(token))
-    .join(" ");
+  return `${normalizedArabic} ${transliterated}`.replace(/\s+/g, " ").trim();
 }
 
 function tokenize(text: string) {
@@ -620,7 +530,9 @@ async function normalizeQueryWithLlm(
 ) {
   const preNormalized = normalizeMultilingualQuery(query);
   const prompt = `Detect the language of USER_QUERY and rewrite it into concise English ecommerce intent.
+Support Algerian Darija written in Arabic script and Arabizi (Latin + numbers like 3, 5, 7, 9).
 Preserve exact constraints: price limits, quantity, exclusions, colors, brands, usage.
+If USER_QUERY is mixed language (Arabic/French/English), keep the intent faithful and unambiguous.
 Return strict JSON only:
 {
   "normalizedQuery": string,
