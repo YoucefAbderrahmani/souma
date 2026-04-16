@@ -111,7 +111,7 @@ const AddressModal = ({ isOpen, closeModal }) => {
 
               <button
                 type="submit"
-                className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-3 px-7 font-medium text-white shadow-2 transition hover:brightness-110"
               >
                 Save Changes
               </button>

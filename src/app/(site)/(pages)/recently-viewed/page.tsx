@@ -46,7 +46,7 @@ const RecentlyViewedPage = () => {
                 </div>
                 <Link
                   href="/shop-details"
-                  className="inline-flex items-center justify-center rounded-md bg-blue px-6 py-3 font-medium text-white transition hover:bg-blue-dark"
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-6 py-3 font-medium text-white shadow-2 transition hover:brightness-110"
                 >
                   Open Product
                 </Link>
@@ -60,7 +60,7 @@ const RecentlyViewedPage = () => {
               </p>
               <Link
                 href="/shop-with-sidebar"
-                className="mt-6 inline-flex items-center justify-center rounded-md bg-blue px-6 py-3 font-medium text-white transition hover:bg-blue-dark"
+                className="mt-6 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-6 py-3 font-medium text-white shadow-2 transition hover:brightness-110"
               >
                 Go to Shop
               </Link>

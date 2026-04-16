@@ -181,7 +181,7 @@ const ShopDetails = () => {
                       {product.title}
                     </h2>
 
-                    <div className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5">
+                    <div className="inline-flex rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-0.5 px-2.5 font-medium text-custom-sm text-white shadow-sm">
                       30% OFF
                     </div>
                   </div>
@@ -331,7 +331,7 @@ const ShopDetails = () => {
                   <h3 className="mb-4.5 flex flex-col items-start gap-0.5">
                     {typeof jomlaPrice === "number" ? (
                       <>
-                        <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent">
+                        <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
                           {jomlaPrice.toFixed(2)} DA
                         </span>
                         <span className="text-sm sm:text-base text-dark-4 line-through whitespace-nowrap">
@@ -536,7 +536,7 @@ const ShopDetails = () => {
                       <button
                         type="button"
                         onClick={handlePurchaseNow}
-                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
+                        className="inline-flex items-center justify-center font-medium text-white bg-gradient-to-r from-blue to-[#6677ff] py-3 px-7 rounded-full shadow-2 transition hover:brightness-110"
                       >
                         Purchase Now
                       </button>

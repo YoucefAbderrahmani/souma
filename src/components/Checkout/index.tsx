@@ -220,7 +220,7 @@ const Checkout = () => {
                 <p className="mt-2 text-sm text-dark-4">complete your payment process</p>
                 <button
                   type="button"
-                  className="mt-5 rounded-md bg-blue px-4 py-2 text-sm font-medium text-white hover:bg-blue-dark"
+                  className="mt-5 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-4 py-2 text-sm font-medium text-white shadow-2 transition hover:brightness-110"
                   onClick={() => setShowPaymentPopup(false)}
                 >
                   OK
@@ -360,7 +360,7 @@ const Checkout = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-7.5 flex w-full items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-3 px-6 font-medium text-white shadow-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Redirecting to Chargily..." : "Pay with Chargily"}
                 </button>

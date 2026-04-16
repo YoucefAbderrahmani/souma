@@ -39,7 +39,7 @@ const Newsletter = () => {
                   />
                   <button
                     type="submit"
-                    className="inline-flex justify-center py-3 px-7 text-white bg-blue font-medium rounded-md ease-out duration-200 hover:bg-blue-dark"
+                    className="inline-flex items-center justify-center py-3 px-7 text-white bg-gradient-to-r from-blue to-[#6677ff] font-medium rounded-full shadow-2 transition hover:brightness-110"
                   >
                     Subscribe
                   </button>

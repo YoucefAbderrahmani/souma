@@ -100,7 +100,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
 
             <button
               onClick={() => handleAddToCart()}
-              className="inline-flex font-medium text-custom-sm py-[7px] px-5 rounded-[5px] bg-blue text-white ease-out duration-200 hover:bg-blue-dark"
+              className="inline-flex items-center justify-center font-medium text-custom-sm py-[7px] px-5 rounded-full bg-gradient-to-r from-blue to-[#6677ff] text-white shadow-2 transition hover:brightness-110"
             >
               Add to cart
             </button>
@@ -141,7 +141,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
             <span className="flex flex-col items-start gap-0.5 font-medium">
               {typeof jomlaPrice === "number" ? (
                 <>
-                  <span className="whitespace-nowrap bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent text-lg">
+                  <span className="whitespace-nowrap text-[#FB923C] text-lg">
                     {jomlaPrice.toFixed(2)} DA
                   </span>
                   <span className="text-dark-4 line-through whitespace-nowrap text-sm">

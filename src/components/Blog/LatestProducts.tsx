@@ -52,7 +52,7 @@ const LatestProducts = ({ products }) => {
                 <div className="text-custom-sm">
                   {typeof jomlaPrice === "number" ? (
                     <>
-                      <p className="bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent whitespace-nowrap">
+                      <p className="text-[#FB923C] whitespace-nowrap">
                         Price: {jomlaPrice.toFixed(2)} DA
                       </p>
                       <p className="text-dark-4 text-xs whitespace-nowrap line-through">

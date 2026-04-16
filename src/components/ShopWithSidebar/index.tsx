@@ -329,7 +329,7 @@ const ShopWithSidebar = ({ products }: { products: Product[] }) => {
                     <li>
                       <button
                         type="button"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] bg-blue text-white hover:text-white hover:bg-blue"
+                        className="flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-1.5 px-3.5 text-white shadow-sm transition hover:brightness-110"
                       >
                         1
                       </button>
