@@ -254,7 +254,7 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
               <button
                 type="button"
                 onClick={handleAsk}
-                className="rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-4 py-2.5 text-sm font-medium text-white shadow-2 transition hover:brightness-110 disabled:opacity-60"
+                className="rounded-2xl bg-blue px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? "..." : "Send"}

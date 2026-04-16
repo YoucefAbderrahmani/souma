@@ -255,7 +255,7 @@ const Testimonials = () => {
               <button
                 type="submit"
                 disabled={!session?.user?.id || submitting}
-                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-6 py-3 font-medium text-white shadow-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex rounded-md bg-blue px-6 py-3 font-medium text-white duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Posting..." : "Post Feedback"}
               </button>

@@ -41,7 +41,7 @@ const ForgotPasswordPage = () => {
 
               <button
                 type="submit"
-                className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-6 py-3 font-medium text-white shadow-2 transition hover:brightness-110"
+                className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue px-6 py-3 font-medium text-white transition hover:bg-blue-dark"
               >
                 Send reset instructions
               </button>

@@ -325,7 +325,7 @@ const QuickViewModal = () => {
                   <span className="flex flex-col items-start gap-0.5">
                     {typeof jomlaPrice === "number" ? (
                       <>
-                        <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-[#FB923C]">
+                        <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent">
                           {jomlaPrice.toFixed(2)} DA
                         </span>
                         <span className="font-medium text-dark-4 text-lg xl:text-2xl line-through whitespace-nowrap">
@@ -411,7 +411,8 @@ const QuickViewModal = () => {
                 <button
                   disabled={quantity === 0 && true}
                   onClick={() => handleAddToCart()}
-                  className="inline-flex items-center justify-center font-medium text-white bg-gradient-to-r from-blue to-[#6677ff] py-3 px-7 rounded-full shadow-2 transition hover:brightness-110"
+                  className={`inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark
+                  `}
                 >
                   Add to Cart
                 </button>

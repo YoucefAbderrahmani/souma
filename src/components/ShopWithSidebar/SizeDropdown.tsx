@@ -45,7 +45,7 @@ const SizeDropdown = () => {
       >
         <label
           htmlFor="sizeM"
-          className="flex cursor-pointer select-none items-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] text-white shadow-sm transition hover:brightness-110"
+          className="cursor-pointer select-none flex items-center rounded-md bg-blue text-white hover:bg-blue hover:text-white"
         >
           <div className="relative">
             <input type="radio" name="size" id="sizeM" className="sr-only" />

@@ -139,7 +139,7 @@ const SmartShoppingAssistant = () => {
         <button
           type="button"
           onClick={() => setOpen((s) => !s)}
-          className="fixed bottom-6 right-6 z-[100000] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue to-[#6677ff] text-white px-5 py-3 shadow-2 transition hover:brightness-110"
+          className="fixed bottom-6 right-6 z-[100000] inline-flex items-center gap-2 rounded-full bg-blue text-white px-5 py-3 shadow-2 transition hover:brightness-110"
         >
           <span className="inline-block h-2 w-2 rounded-full bg-white/90" />
           AI Assistant
@@ -148,7 +148,7 @@ const SmartShoppingAssistant = () => {
 
       {open && !isCartModalOpen && !isProductPage ? (
         <div className="fixed bottom-22 right-6 z-[100000] w-[400px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-3xl border border-gray-3 bg-white shadow-2">
-          <div className="bg-gradient-to-r from-blue to-[#6677ff] px-5 py-4 text-white">
+          <div className="bg-blue px-5 py-4 text-white">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Smart Shopping Assistant</h3>
               <button
@@ -223,7 +223,7 @@ const SmartShoppingAssistant = () => {
               <button
                 type="button"
                 onClick={handleAsk}
-                className="rounded-full bg-gradient-to-r from-blue to-[#6677ff] px-4 py-2.5 text-sm font-medium text-white shadow-2 transition hover:brightness-110 disabled:opacity-60"
+                className="rounded-2xl bg-blue px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? "Thinking..." : "Send"}

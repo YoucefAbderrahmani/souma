@@ -107,7 +107,7 @@ const CounDown = () => {
 
             <Link
               href="/shop-with-sidebar"
-              className="mt-7.5 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-3 px-9.5 font-medium text-custom-sm text-white shadow-2 transition hover:brightness-110"
+              className="inline-flex font-medium text-custom-sm text-white bg-blue py-3 px-9.5 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
             >
               Check it Out!
             </Link>

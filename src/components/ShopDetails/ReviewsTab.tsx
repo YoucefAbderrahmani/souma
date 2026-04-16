@@ -213,7 +213,7 @@ const ReviewsTab = ({ productId, productTitle }: { productId: number; productTit
             <button
               type="submit"
               disabled={!session?.user?.id || submitting}
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-3 px-7 font-medium text-white shadow-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Submitting..." : "Submit Review"}
             </button>

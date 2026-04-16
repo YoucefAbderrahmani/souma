@@ -19,7 +19,7 @@ const Coupon = () => {
 
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue to-[#6677ff] py-3 px-6 font-medium text-white shadow-2 transition hover:brightness-110"
+            className="inline-flex font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark"
           >
             Apply
           </button>
