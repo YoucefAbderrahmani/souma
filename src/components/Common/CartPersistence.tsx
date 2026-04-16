@@ -75,6 +75,20 @@ const CartPersistence = () => {
     window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
   }, [cartItems, isPending, targetStorageKey]);
 
+  useEffect(() => {
+    if (isPending || !hydratedRef.current) return;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return;
+      if (event.key !== targetStorageKey) return;
+
+      dispatch(setCartItems(parseStoredCart(event.newValue)));
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [dispatch, isPending, targetStorageKey]);
+
   return null;
 };
 

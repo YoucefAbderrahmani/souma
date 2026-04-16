@@ -10,10 +10,12 @@ import Coupon from "./Coupon";
 import Billing from "./Billing";
 import { useAppSelector } from "@/redux/store";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
+import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
+import { AppDispatch } from "@/redux/store";
 
 type CheckoutFormValues = {
   firstName: string;
@@ -40,6 +42,7 @@ const INITIAL_FORM_VALUES: CheckoutFormValues = {
 };
 
 const Checkout = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
   const searchParams = useSearchParams();
@@ -71,6 +74,13 @@ const Checkout = () => {
     }
     return null;
   }, [paymentStatus]);
+
+  React.useEffect(() => {
+    if (paymentStatus === "success" && cartItems.length > 0) {
+      dispatch(removeAllItemsFromCart());
+      toast.success("Payment confirmed. Your cart has been cleared.");
+    }
+  }, [cartItems.length, dispatch, paymentStatus]);
 
   React.useEffect(() => {
     if (isPending) return;
@@ -172,7 +182,15 @@ const Checkout = () => {
       }
 
       sequenceEndPurchase();
-      window.location.assign(data.checkoutUrl);
+      const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
+      if (!paymentTab) {
+        // Fallback if popup blocking prevents opening a new tab.
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+
+      setIsSubmitting(false);
+      toast.success("Chargily checkout opened in a new tab.");
     } catch (error) {
       const message =
         error instanceof Error
