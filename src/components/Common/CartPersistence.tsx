@@ -12,15 +12,23 @@ function getUserCartKey(userId: string) {
   return `souma_cart_user_${userId}`;
 }
 
-function isValidCartItem(value: unknown): value is CartItem {
+function isValidCartItem(value: unknown): value is Partial<CartItem> {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<CartItem>;
+  const parsedId = typeof item.id === "number" ? item.id : Number(item.id);
+  const parsedPrice = typeof item.price === "number" ? item.price : Number(item.price);
+  const parsedDiscountedPrice =
+    typeof item.discountedPrice === "number"
+      ? item.discountedPrice
+      : Number(item.discountedPrice);
+  const parsedQuantity =
+    typeof item.quantity === "number" ? item.quantity : Number(item.quantity);
   return (
-    typeof item.id === "number" &&
+    Number.isFinite(parsedId) &&
     typeof item.title === "string" &&
-    typeof item.price === "number" &&
-    typeof item.discountedPrice === "number" &&
-    typeof item.quantity === "number"
+    Number.isFinite(parsedPrice) &&
+    Number.isFinite(parsedDiscountedPrice) &&
+    Number.isFinite(parsedQuantity)
   );
 }
 
@@ -29,7 +37,7 @@ function parseStoredCart(raw: string | null): CartItem[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidCartItem);
+    return parsed.filter(isValidCartItem) as CartItem[];
   } catch {
     return [];
   }

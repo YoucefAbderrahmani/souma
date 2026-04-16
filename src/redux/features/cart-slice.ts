@@ -17,6 +17,34 @@ export type CartItem = {
   };
 };
 
+function toFiniteNumber(value: unknown, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeCartItem(input: Partial<CartItem> | null | undefined): CartItem | null {
+  if (!input || typeof input !== "object") return null;
+
+  const id = toFiniteNumber(input.id, NaN);
+  if (!Number.isInteger(id)) return null;
+
+  const title = typeof input.title === "string" ? input.title.trim() : "";
+  if (!title) return null;
+
+  const price = toFiniteNumber(input.price, 0);
+  const discountedPrice = toFiniteNumber(input.discountedPrice, price);
+  const quantity = Math.max(1, Math.floor(toFiniteNumber(input.quantity, 1)));
+
+  return {
+    id,
+    title,
+    price,
+    discountedPrice,
+    quantity,
+    imgs: input.imgs,
+  };
+}
+
 const initialState: InitialState = {
   items: [],
 };
@@ -26,8 +54,10 @@ export const cart = createSlice({
   initialState,
   reducers: {
     addItemToCart: (state, action: PayloadAction<CartItem>) => {
-      const { id, title, price, quantity, discountedPrice, imgs } =
-        action.payload;
+      const normalizedItem = normalizeCartItem(action.payload);
+      if (!normalizedItem) return;
+
+      const { id, title, price, quantity, discountedPrice, imgs } = normalizedItem;
       const existingItem = state.items.find((item) => item.id === id);
 
       if (existingItem) {
@@ -51,7 +81,9 @@ export const cart = createSlice({
       state,
       action: PayloadAction<{ id: number; quantity: number }>
     ) => {
-      const { id, quantity } = action.payload;
+      const id = toFiniteNumber(action.payload.id, NaN);
+      const quantity = Math.max(1, Math.floor(toFiniteNumber(action.payload.quantity, 1)));
+      if (!Number.isInteger(id)) return;
       const existingItem = state.items.find((item) => item.id === id);
 
       if (existingItem) {
@@ -63,7 +95,9 @@ export const cart = createSlice({
       state.items = [];
     },
     setCartItems: (state, action: PayloadAction<CartItem[]>) => {
-      state.items = action.payload;
+      state.items = action.payload
+        .map((item) => normalizeCartItem(item))
+        .filter((item): item is CartItem => Boolean(item));
     },
   },
 });
