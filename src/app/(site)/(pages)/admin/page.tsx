@@ -43,13 +43,13 @@ const AdminPage = async () => {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/my-account"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
                 Go to My Account
               </Link>
               <Link
                 href="/"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
                 Back to Home
               </Link>
@@ -104,7 +104,7 @@ const AdminPage = async () => {
             <p className="text-sm text-dark-4">Welcome back</p>
             <h1 className="text-2xl font-semibold text-dark">Admin Panel</h1>
           </div>
-          <span className="rounded-full bg-blue-light-5 px-3 py-1 text-xs font-medium text-blue">
+          <span className="rounded-full bg-[#FFF7F0] px-3 py-1 text-xs font-medium text-[#FB923C]">
             Role: admin
           </span>
         </div>
@@ -129,13 +129,13 @@ const AdminPage = async () => {
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/my-account"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               My account
             </Link>
             <Link
               href="/sequence"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Sequences
             </Link>

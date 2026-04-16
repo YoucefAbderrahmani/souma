@@ -331,7 +331,7 @@ const ShopDetails = () => {
                   <h3 className="mb-4.5 flex flex-col items-start gap-0.5">
                     {typeof jomlaPrice === "number" ? (
                       <>
-                        <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent">
+                        <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
                           {jomlaPrice.toFixed(2)} DA
                         </span>
                         <span className="text-sm sm:text-base text-dark-4 line-through whitespace-nowrap">

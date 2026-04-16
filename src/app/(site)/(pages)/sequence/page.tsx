@@ -40,13 +40,13 @@ const SequenceAdminPage = async () => {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/my-account"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
                 Go to My Account
               </Link>
               <Link
                 href="/admin"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
                 Admin home
               </Link>
@@ -73,7 +73,7 @@ const SequenceAdminPage = async () => {
           </div>
           <Link
             href="/admin"
-            className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-blue hover:text-blue"
+            className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
           >
             Back to admin
           </Link>
