@@ -49,6 +49,7 @@ const Checkout = () => {
   const { session, isPending } = useSession();
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [formValues, setFormValues] = useState<CheckoutFormValues>(INITIAL_FORM_VALUES);
 
   const userId = session?.user?.id?.trim() || "guest";
@@ -184,13 +185,15 @@ const Checkout = () => {
       sequenceEndPurchase();
       const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
       if (!paymentTab) {
-        // Fallback if popup blocking prevents opening a new tab.
-        window.location.assign(data.checkoutUrl);
+        setErrorMessage("Popup blocked. Please allow popups to continue payment in a new tab.");
+        toast.error("Popup blocked. Please allow popups to continue payment.");
+        setIsSubmitting(false);
         return;
       }
 
+      setShowPaymentPopup(true);
       setIsSubmitting(false);
-      toast.success("Chargily checkout opened in a new tab.");
+      toast.success("Chargily opened in a new tab. Complete your payment process.");
     } catch (error) {
       const message =
         error instanceof Error
@@ -210,6 +213,21 @@ const Checkout = () => {
       <Breadcrumb title={"Checkout"} pages={["checkout"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          {showPaymentPopup ? (
+            <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-dark/40 px-4">
+              <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-1">
+                <h3 className="text-lg font-semibold text-dark">Payment Started</h3>
+                <p className="mt-2 text-sm text-dark-4">complete your payment process</p>
+                <button
+                  type="button"
+                  className="mt-5 rounded-md bg-blue px-4 py-2 text-sm font-medium text-white hover:bg-blue-dark"
+                  onClick={() => setShowPaymentPopup(false)}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          ) : null}
           {paymentBanner ? (
             <div
               className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${paymentBanner.className}`}
