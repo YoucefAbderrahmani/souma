@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import {
@@ -84,9 +84,9 @@ const CartSidebarModal = () => {
             <div className="flex flex-col gap-6">
               {/* <!-- cart item --> */}
               {cartItems.length > 0 ? (
-                cartItems.map((item, key) => (
+                cartItems.map((item) => (
                   <SingleItem
-                    key={key}
+                    key={item.id}
                     item={item}
                     removeItemFromCart={removeItemFromCart}
                   />

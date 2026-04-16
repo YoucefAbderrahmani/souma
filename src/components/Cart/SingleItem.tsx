@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import {
@@ -13,8 +13,6 @@ import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 
 const SingleItem = ({ item }) => {
-  const [quantity, setQuantity] = useState(item.quantity);
-
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
@@ -23,14 +21,16 @@ const SingleItem = ({ item }) => {
   };
 
   const handleIncreaseQuantity = () => {
-    setQuantity(quantity + 1);
-    dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity + 1 }));
+    dispatch(
+      updateCartItemQuantity({ id: item.id, quantity: item.quantity + 1 })
+    );
   };
 
   const handleDecreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-      dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity - 1 }));
+    if (item.quantity > 1) {
+      dispatch(
+        updateCartItemQuantity({ id: item.id, quantity: item.quantity - 1 })
+      );
     } else {
       return;
     }
@@ -93,7 +93,7 @@ const SingleItem = ({ item }) => {
           </button>
 
           <span className="flex items-center justify-center w-16 h-11.5 border-x border-gray-4">
-            {quantity}
+            {item.quantity}
           </span>
 
           <button
@@ -123,7 +123,9 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[200px]">
-        <p className="text-dark whitespace-nowrap">{item.discountedPrice * quantity} DA</p>
+        <p className="text-dark whitespace-nowrap">
+          {item.discountedPrice * item.quantity} DA
+        </p>
       </div>
 
       <div className="min-w-[50px] flex justify-end">
