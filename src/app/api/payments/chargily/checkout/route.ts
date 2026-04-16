@@ -144,12 +144,12 @@ export async function POST(req: NextRequest) {
       }),
     };
     const explicitMode = process.env.CHARGILY_MODE?.trim().toLowerCase();
-    const mode =
-      explicitMode === "live" || explicitMode === "test"
-        ? explicitMode
-        : secretKey.startsWith("test_")
-          ? "test"
-          : "live";
+    const secretKeyIsTest = secretKey.startsWith("test_");
+    let mode: "live" | "test" = secretKeyIsTest ? "test" : "live";
+    if (explicitMode === "live" || explicitMode === "test") {
+      // Safety: never allow live mode with a test key.
+      mode = secretKeyIsTest && explicitMode === "live" ? "test" : explicitMode;
+    }
 
     const client = new ChargilyClient({
       api_key: secretKey,
