@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import shopData from "@/components/Shop/shopData";
 import { updateproductDetails } from "@/redux/features/product-details";
@@ -36,7 +36,9 @@ const SmartShoppingAssistant = () => {
   const { mode } = usePriceMode();
   const { isCartModalOpen } = useCartModalContext();
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useDispatch();
+  const isProductPage = pathname === "/shop-details";
 
   React.useEffect(() => {
     if (isCartModalOpen) {
@@ -133,7 +135,7 @@ const SmartShoppingAssistant = () => {
 
   return (
     <>
-      {!isCartModalOpen ? (
+      {!isCartModalOpen && !isProductPage ? (
         <button
           type="button"
           onClick={() => setOpen((s) => !s)}
@@ -144,7 +146,7 @@ const SmartShoppingAssistant = () => {
         </button>
       ) : null}
 
-      {open && !isCartModalOpen ? (
+      {open && !isCartModalOpen && !isProductPage ? (
         <div className="fixed bottom-22 right-6 z-[100000] w-[400px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-3xl border border-gray-3 bg-white shadow-2">
           <div className="bg-blue px-5 py-4 text-white">
             <div className="flex items-center justify-between">

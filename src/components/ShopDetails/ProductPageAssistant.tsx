@@ -9,6 +9,7 @@ import shopData from "@/components/Shop/shopData";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { parseProductContent } from "@/lib/product-content";
 
 type ProductPageAssistantProps = {
   product: Product;
@@ -26,6 +27,75 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
   const [response, setResponse] = React.useState("");
   const [recommendations, setRecommendations] = React.useState<typeof shopData>([]);
   const [loading, setLoading] = React.useState(false);
+  const parsedContent = React.useMemo(
+    () => parseProductContent(product.description),
+    [product.description]
+  );
+
+  const answerProductQuestion = React.useCallback(
+    (rawQuery: string) => {
+      const q = rawQuery.toLowerCase().trim();
+      const isAvailabilityQuestion =
+        /(available|availability|in stock|stock|disponible|dispo|متوفر|موجود|كاين|kayen|kayn)/i.test(
+          q
+        );
+      const isColorQuestion = /(color|couleur|لون)/i.test(q);
+      const isSizeOrSpecQuestion =
+        /(size|taille|spec|specs|ram|storage|capacity|option|version|model|مقاس|حجم|نسخة|سعة|رام)/i.test(
+          q
+        );
+      const isArrivalQuestion =
+        /(arrival|arrive|restock|back in stock|when.*available|متى|وقتاش|امتى)/i.test(q);
+
+      if (isArrivalQuestion) {
+        const arrivalRow = parsedContent.additionalInfo.find((row) =>
+          /(arrival|restock|availability|arrivage|next)/i.test(row.key)
+        );
+        return arrivalRow
+          ? `${arrivalRow.key}: ${arrivalRow.value}`
+          : "Next arrival is not confirmed yet. Please check again soon.";
+      }
+
+      const colors = parsedContent.colors.map((c) => c.name.toLowerCase());
+      const mentionedColor = colors.find((color) => q.includes(color));
+      if (isColorQuestion || mentionedColor) {
+        if (!mentionedColor) {
+          return colors.length
+            ? `Available colors: ${parsedContent.colors.map((c) => c.name).join(", ")}.`
+            : "Color options are not listed for this item.";
+        }
+        return colors.includes(mentionedColor)
+          ? `Yes, ${mentionedColor} color is available.`
+          : `No, ${mentionedColor} color is not available for this item.`;
+      }
+
+      if (isSizeOrSpecQuestion) {
+        const allOptions = parsedContent.specifications.flatMap((spec) =>
+          spec.options.map((opt) => ({ specName: spec.name, label: opt.label.toLowerCase() }))
+        );
+        const matchedOption = allOptions.find((opt) => q.includes(opt.label));
+        if (matchedOption) {
+          return `Yes, ${matchedOption.label} is available in ${matchedOption.specName}.`;
+        }
+
+        if (parsedContent.specifications.length > 0) {
+          const quickSpecs = parsedContent.specifications
+            .map((spec) => `${spec.name}: ${spec.options.map((o) => o.label).join(", ")}`)
+            .join(" | ");
+          return `Available options: ${quickSpecs}`;
+        }
+      }
+
+      if (isAvailabilityQuestion) {
+        return /in stock/i.test(availabilityLabel)
+          ? "Yes, this item is currently available."
+          : `Current availability: ${availabilityLabel}.`;
+      }
+
+      return null;
+    },
+    [availabilityLabel, parsedContent.additionalInfo, parsedContent.colors, parsedContent.specifications]
+  );
 
   React.useEffect(() => {
     setOpen(false);
@@ -33,7 +103,7 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
     const timer = window.setTimeout(() => {
       setVisible(true);
       setOpen(true);
-    }, 10000);
+    }, 15000);
     return () => window.clearTimeout(timer);
   }, [product.id]);
 
@@ -49,6 +119,13 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
   const handleAsk = async () => {
     const text = query.trim();
     if (!text || loading) return;
+
+    const localAnswer = answerProductQuestion(text);
+    if (localAnswer) {
+      setResponse(localAnswer);
+      setRecommendations([]);
+      return;
+    }
 
     setLoading(true);
     try {
