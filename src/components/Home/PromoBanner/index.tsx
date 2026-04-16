@@ -24,7 +24,7 @@ const PromoBanner = () => {
 
             <Link
               href="/shop-with-sidebar"
-              className="inline-flex font-medium text-custom-sm text-white bg-blue py-[11px] px-9.5 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
+              className="inline-flex items-center justify-center font-medium text-custom-sm text-white bg-gradient-to-r from-blue to-[#6677ff] py-[11px] px-9.5 rounded-full shadow-2 transition hover:brightness-110 mt-7.5"
             >
               Buy Now
             </Link>
@@ -88,7 +88,11 @@ const PromoBanner = () => {
               </span>
 
               <h2 className="font-bold text-xl lg:text-heading-4 text-dark mb-2.5">
-                Up to <span className="text-orange">40%</span> off
+                Up to{" "}
+                <span className="bg-gradient-to-r from-blue to-[#6677ff] bg-clip-text text-transparent">
+                  40%
+                </span>{" "}
+                off
               </h2>
 
               <p className="max-w-[285px] text-custom-sm">
@@ -98,7 +102,7 @@ const PromoBanner = () => {
 
               <Link
                 href="/shop-with-sidebar"
-                className="inline-flex font-medium text-custom-sm text-white bg-orange py-2.5 px-8.5 rounded-md ease-out duration-200 hover:bg-orange-dark mt-7.5"
+                className="inline-flex items-center justify-center font-medium text-custom-sm text-white bg-gradient-to-r from-blue to-[#6677ff] py-2.5 px-8.5 rounded-full shadow-2 transition hover:brightness-110 mt-7.5"
               >
                 Buy Now
               </Link>
