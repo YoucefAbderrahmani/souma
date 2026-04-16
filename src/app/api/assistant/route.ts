@@ -53,6 +53,10 @@ type CacheEntry = {
 
 const responseCache = new Map<string, CacheEntry>();
 
+function sanitizeText(value: string | undefined, maxLen = 250) {
+  return (value ?? "").trim().slice(0, maxLen);
+}
+
 function configuredGeminiFallbackModels() {
   const fromEnv = process.env.ASSISTANT_LLM_FALLBACK_MODELS ?? "";
   return fromEnv
