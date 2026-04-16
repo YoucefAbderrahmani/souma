@@ -9,6 +9,18 @@ import { usePriceMode } from "@/app/context/PriceModeContext";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 
+const ASSISTANT_BROWSER_SESSION_KEY = "sq_browser_session";
+
+function getAssistantBrowserSessionId() {
+  if (typeof window === "undefined") return "";
+  try {
+    const id = window.localStorage.getItem(ASSISTANT_BROWSER_SESSION_KEY);
+    return id && id.length >= 8 ? id : "";
+  } catch {
+    return "";
+  }
+}
+
 const SmartShoppingAssistant = () => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -17,6 +29,9 @@ const SmartShoppingAssistant = () => {
   const [bundle, setBundle] = useState<typeof shopData>([]);
   const [loading, setLoading] = useState(false);
   const [assistantSource, setAssistantSource] = useState("");
+  const [lastRequestId, setLastRequestId] = useState("");
+  const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
+  const [lastNormalizedQuery, setLastNormalizedQuery] = useState("");
 
   const { mode } = usePriceMode();
   const { isCartModalOpen } = useCartModalContext();
@@ -29,7 +44,28 @@ const SmartShoppingAssistant = () => {
     }
   }, [isCartModalOpen]);
 
-  const openDetails = (product: (typeof shopData)[number]) => {
+  const openDetails = (product: (typeof shopData)[number], position: number) => {
+    if (lastRequestId) {
+      fetch("/api/assistant/telemetry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(getAssistantBrowserSessionId()
+            ? { "X-Sequence-Session": getAssistantBrowserSessionId() }
+            : {}),
+        },
+        body: JSON.stringify({
+          eventType: "result_click",
+          requestId: lastRequestId,
+          mode,
+          rawQuery: lastSubmittedQuery,
+          normalizedQuery: lastNormalizedQuery,
+          productId: product.id,
+          position,
+        }),
+      }).catch(() => {});
+    }
+
     if (typeof window !== "undefined") {
       window.localStorage.setItem("productDetails", JSON.stringify(product));
     }
@@ -42,6 +78,7 @@ const SmartShoppingAssistant = () => {
     const text = query.trim();
     if (!text) return;
 
+    setLastSubmittedQuery(text);
     setLoading(true);
     try {
       const res = await fetch("/api/assistant", {
@@ -53,6 +90,8 @@ const SmartShoppingAssistant = () => {
       const data = (await res.json()) as {
         message: string;
         products: typeof shopData;
+        requestId?: string;
+        normalizedQuery?: string;
         debug?: {
           source: "llm-only";
           model?: string;
@@ -65,6 +104,8 @@ const SmartShoppingAssistant = () => {
 
       setResponse(data.message ?? "Assistant response unavailable.");
       setRecommendations(data.products ?? []);
+      setLastRequestId(data.requestId ?? "");
+      setLastNormalizedQuery(data.normalizedQuery ?? text);
       setAssistantSource(
         `Provider: ${data.debug?.provider ?? "gemini"} | model: ${data.debug?.model ?? "gemini"} | cache: ${data.debug?.cache ?? "miss"} | final: ${data.debug?.finalCount ?? 0}${data.debug?.error ? ` | error: ${data.debug.error}` : ""}`
       );
@@ -83,6 +124,8 @@ const SmartShoppingAssistant = () => {
       setRecommendations([]);
       setBundle([]);
       setAssistantSource("");
+      setLastRequestId("");
+      setLastNormalizedQuery("");
     } finally {
       setLoading(false);
     }
@@ -129,14 +172,14 @@ const SmartShoppingAssistant = () => {
             {recommendations.length ? (
               <div className="space-y-3 pt-1">
                 <p className="text-sm font-medium text-dark">Recommended for you</p>
-                {recommendations.map((item) => {
+                {recommendations.map((item, index) => {
                   const price = mode === "detail" ? item.detailPrice : item.jomlaPrice;
                   const image = item.imgs?.thumbnails?.[0] ?? item.imgs?.previews?.[0] ?? "";
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => openDetails(item)}
+                      onClick={() => openDetails(item, index)}
                       className="w-full rounded-2xl border border-gray-3 bg-white px-4 py-3 text-left transition hover:border-blue"
                     >
                       <div className="flex items-center gap-3">

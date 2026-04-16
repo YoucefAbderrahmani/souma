@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 import shopData from "@/components/Shop/shopData";
 import path from "path";
+import { auth } from "@/server/lib/auth";
+import { resolveSequenceKeyMaybe } from "@/app/api/sequence/_cookie";
+import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
 
 type AssistantRequest = {
   query: string;
@@ -43,38 +47,85 @@ type CacheEntry = {
 
 const responseCache = new Map<string, CacheEntry>();
 
-const DARJA_LATIN_MAP: Record<string, string> = {
+const MULTILINGUAL_TOKEN_MAP: Record<string, string> = {
+  // Darja / Maghrebi latinized forms
   "a7mar": "red",
   "7mar": "red",
   "hamra": "red",
   "7amra": "red",
+  "ahmar": "red",
+  "hamr": "red",
   "azraq": "blue",
   "zar9a": "blue",
   "zra9": "blue",
+  "azr9": "blue",
   "akhder": "green",
   "khder": "green",
   "asfar": "yellow",
+  "byed": "white",
+  "byadh": "white",
+  "k7el": "black",
+  "kahla": "black",
   "ghali": "expensive",
   "ghalia": "expensive",
   "rkhis": "cheap",
   "r5is": "cheap",
+  "rkhissa": "cheap",
+  "lghali": "expensive",
   "bzaaf": "very",
   "bzaf": "very",
   "chwiya": "a bit",
   "shwiya": "a bit",
   "kbir": "big",
   "sghir": "small",
+  "mzyan": "good",
+  "zwin": "nice",
+  "zwina": "nice",
   "laptopat": "laptops",
   "portable": "laptop",
+  "ordinateur": "computer",
+  "pc": "computer",
+  "clavier": "keyboard",
   "souris": "mouse",
+  "ecouteur": "earphone",
+  "casque": "headphone",
+  "telephone": "phone",
   "telifoun": "phone",
   "telefon": "phone",
+  "portablephone": "phone",
   "mlih": "good",
   مليح: "good",
+  هاتف: "phone",
+  جوال: "phone",
+  تلفون: "phone",
+  هاتفك: "phone",
+  لابتوب: "laptop",
+  حاسوب: "computer",
+  كمبيوتر: "computer",
+  كيبورد: "keyboard",
+  لوحة: "keyboard",
+  ماوس: "mouse",
+  فأرة: "mouse",
+  سماعة: "headphone",
+  سماعات: "headphone",
+  رخيص: "cheap",
+  غالي: "expensive",
+  غالية: "expensive",
+  احمر: "red",
+  ازرق: "blue",
+  اخضر: "green",
+  اصفر: "yellow",
+  اسود: "black",
+  ابيض: "white",
   "ma3lich": "it's okay",
   "machi": "not",
   "mashi": "not",
   "bla": "without",
+  بدون: "without",
+  بلا: "without",
+  and: "and",
+  ou: "or",
+  wa: "and",
 };
 
 function configuredGeminiFallbackModels() {
@@ -119,9 +170,42 @@ function setCachedResult(query: string, mode: "detail" | "jomla", result: LlmRes
   });
 }
 
+function normalizeArabicScript(text: string) {
+  return text
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[ؤئ]/g, "ء")
+    .replace(/[\u064B-\u065F]/g, "");
+}
+
+function normalizeToken(token: string) {
+  const lower = token.toLowerCase();
+  const latinKey = lower.replace(/[^a-z0-9]/g, "");
+  const arabicKey = normalizeArabicScript(lower).replace(/[^\u0600-\u06FF0-9]/g, "");
+
+  if (latinKey && MULTILINGUAL_TOKEN_MAP[latinKey]) return MULTILINGUAL_TOKEN_MAP[latinKey];
+  if (arabicKey && MULTILINGUAL_TOKEN_MAP[arabicKey]) return MULTILINGUAL_TOKEN_MAP[arabicKey];
+  if (MULTILINGUAL_TOKEN_MAP[lower]) return MULTILINGUAL_TOKEN_MAP[lower];
+  return lower;
+}
+
+function normalizeMultilingualQuery(text: string) {
+  const phraseNormalized = normalizeArabicScript(text.toLowerCase())
+    .replace(/\bpc portable\b/g, "laptop")
+    .replace(/\bordinateur portable\b/g, "laptop")
+    .replace(/\bsmart phone\b/g, "phone")
+    .replace(/\btel(e|é)phone portable\b/g, "phone");
+
+  return phraseNormalized
+    .split(/\s+/)
+    .map((token) => normalizeToken(token))
+    .join(" ");
+}
+
 function tokenize(text: string) {
   return new Set(
-    text
+    normalizeMultilingualQuery(text)
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
@@ -129,17 +213,8 @@ function tokenize(text: string) {
   );
 }
 
-function normalizeDarjaLatin(text: string) {
-  const rawTokens = text.split(/\s+/);
-  const normalized = rawTokens.map((token) => {
-    const stripped = token.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return DARJA_LATIN_MAP[stripped] ? token.replace(stripped, DARJA_LATIN_MAP[stripped]) : token;
-  });
-  return normalized.join(" ");
-}
-
 function normalizedTokens(text: string) {
-  return text
+  return normalizeMultilingualQuery(text)
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/-/g, " ")
@@ -543,7 +618,7 @@ async function normalizeQueryWithLlm(
   openRouterApiKey: string | undefined,
   query: string
 ) {
-  const preNormalized = normalizeDarjaLatin(query);
+  const preNormalized = normalizeMultilingualQuery(query);
   const prompt = `Detect the language of USER_QUERY and rewrite it into concise English ecommerce intent.
 Preserve exact constraints: price limits, quantity, exclusions, colors, brands, usage.
 Return strict JSON only:
@@ -608,10 +683,43 @@ ${query}`;
     }
   }
 
-  return { normalizedQuery: query, detectedLanguage: "unknown" };
+  return { normalizedQuery: preNormalized || query, detectedLanguage: "unknown" };
 }
 
-export async function POST(req: Request) {
+async function logSearchTelemetrySafely(input: {
+  requestId: string;
+  sessionKey: string | null;
+  userId: string | null;
+  mode: "detail" | "jomla";
+  rawQuery: string;
+  normalizedQuery: string;
+  detectedLanguage: string;
+  provider?: string;
+  model?: string;
+  error?: string;
+  cacheStatus: "hit" | "miss";
+  resultCount: number;
+  matchedIds?: number[];
+}) {
+  try {
+    await logAssistantSearchTelemetry(input);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown_error";
+    console.warn("[assistant-telemetry] failed to write telemetry row:", reason);
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  const sessionKey = resolveSequenceKeyMaybe(req);
+  let userId: string | null = null;
+  try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    userId = session?.user?.id ?? null;
+  } catch {
+    userId = null;
+  }
+
   try {
     const body = (await req.json()) as AssistantRequest;
     const query = body.query?.trim();
@@ -621,30 +729,73 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: "Please type what you need.",
         products: [],
-        debug: { source: "llm-only", model: FREEFLOW_MODEL },
+        requestId,
+        debug: { source: "llm-only", model: FREEFLOW_MODEL, requestId },
       });
     }
 
     const googleApiKey = process.env.GOOGLE_API_KEY;
     const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+    const localNormalizedQuery = normalizeMultilingualQuery(query) || query;
+
     if (!googleApiKey && !openRouterApiKey) {
+      await logSearchTelemetrySafely({
+        requestId,
+        sessionKey,
+        userId,
+        mode,
+        rawQuery: query,
+        normalizedQuery: localNormalizedQuery,
+        detectedLanguage: "unknown",
+        provider: "none",
+        model: FREEFLOW_MODEL,
+        error: "missing_provider_key",
+        cacheStatus: "miss",
+        resultCount: 0,
+        matchedIds: [],
+      });
+
       return NextResponse.json({
         message:
           "Assistant is in LLM-only mode but no provider key is set (GOOGLE_API_KEY or OPENROUTER_API_KEY).",
         products: [],
-        debug: { source: "llm-only", model: FREEFLOW_MODEL, error: "missing_provider_key" },
+        normalizedQuery: localNormalizedQuery,
+        requestId,
+        debug: {
+          source: "llm-only",
+          model: FREEFLOW_MODEL,
+          error: "missing_provider_key",
+          requestId,
+        },
       });
     }
 
     const productById = new Map(shopData.map((p) => [p.id, p]));
     const normalized = await normalizeQueryWithLlm(googleApiKey, openRouterApiKey, query);
-    const effectiveQuery = normalized.normalizedQuery || query;
+    const effectiveQuery = normalized.normalizedQuery || localNormalizedQuery || query;
+    const detectedLanguage = normalized.detectedLanguage ?? "unknown";
 
     const cached = getCachedResult(effectiveQuery, mode);
     if (cached) {
       const products = cached.matches
         .map((m) => productById.get(m.id))
         .filter((p): p is (typeof shopData)[number] => Boolean(p));
+      const matchedIds = cached.matches.map((m) => m.id);
+
+      await logSearchTelemetrySafely({
+        requestId,
+        sessionKey,
+        userId,
+        mode,
+        rawQuery: query,
+        normalizedQuery: effectiveQuery,
+        detectedLanguage,
+        provider: "cache",
+        model: "cached",
+        cacheStatus: "hit",
+        resultCount: products.length,
+        matchedIds,
+      });
 
       return NextResponse.json({
         message:
@@ -654,13 +805,17 @@ export async function POST(req: Request) {
         products,
         explanation: cached.matches,
         clarification: cached.clarification,
+        normalizedQuery: effectiveQuery,
+        requestId,
         debug: {
           source: "llm-only",
           provider: "cache",
           model: "cached",
-          matchedIds: cached.matches.map((m) => m.id),
+          matchedIds,
           finalCount: products.length,
           cache: "hit",
+          detectedLanguage,
+          requestId,
         },
       });
     }
@@ -672,12 +827,30 @@ export async function POST(req: Request) {
       mode,
       "strict"
     );
+
     if (!llm.result) {
-      const similarCached = getSimilarCachedResult(query, mode);
+      const similarCached = getSimilarCachedResult(effectiveQuery, mode);
       if (similarCached) {
         const products = similarCached.matches
           .map((m) => productById.get(m.id))
           .filter((p): p is (typeof shopData)[number] => Boolean(p));
+        const matchedIds = similarCached.matches.map((m) => m.id);
+
+        await logSearchTelemetrySafely({
+          requestId,
+          sessionKey,
+          userId,
+          mode,
+          rawQuery: query,
+          normalizedQuery: effectiveQuery,
+          detectedLanguage,
+          provider: "cache",
+          model: "similar-cached",
+          error: llm.error ?? "llm_failed",
+          cacheStatus: "hit",
+          resultCount: products.length,
+          matchedIds,
+        });
 
         return NextResponse.json({
           message:
@@ -687,6 +860,8 @@ export async function POST(req: Request) {
           products,
           explanation: similarCached.matches,
           clarification: similarCached.clarification,
+          normalizedQuery: effectiveQuery,
+          requestId,
           debug: {
             source: "llm-only",
             provider: "cache",
@@ -694,9 +869,27 @@ export async function POST(req: Request) {
             error: llm.error ?? "llm_failed",
             finalCount: products.length,
             cache: "hit",
+            detectedLanguage,
+            requestId,
           },
         });
       }
+
+      await logSearchTelemetrySafely({
+        requestId,
+        sessionKey,
+        userId,
+        mode,
+        rawQuery: query,
+        normalizedQuery: effectiveQuery,
+        detectedLanguage,
+        provider: llm.provider ?? "unknown",
+        model: llm.model ?? FREEFLOW_MODEL,
+        error: llm.error ?? "llm_failed",
+        cacheStatus: "miss",
+        resultCount: 0,
+        matchedIds: [],
+      });
 
       return NextResponse.json({
         message:
@@ -704,6 +897,8 @@ export async function POST(req: Request) {
             ? "All configured LLM providers are rate-limited right now. Try again in a minute."
             : "LLM request failed. Please rephrase or retry.",
         products: [],
+        normalizedQuery: effectiveQuery,
+        requestId,
         debug: {
           source: "llm-only",
           provider: llm.provider ?? "unknown",
@@ -711,6 +906,8 @@ export async function POST(req: Request) {
           error: llm.error ?? "llm_failed",
           finalCount: 0,
           cache: "miss",
+          detectedLanguage,
+          requestId,
         },
       });
     }
@@ -745,7 +942,23 @@ export async function POST(req: Request) {
     const products = llm.result.matches
       .map((m) => productById.get(m.id))
       .filter((p): p is (typeof shopData)[number] => Boolean(p));
+    const matchedIds = llm.result.matches.map((m) => m.id);
     setCachedResult(effectiveQuery, mode, llm.result);
+
+    await logSearchTelemetrySafely({
+      requestId,
+      sessionKey,
+      userId,
+      mode,
+      rawQuery: query,
+      normalizedQuery: effectiveQuery,
+      detectedLanguage,
+      provider: llm.provider ?? "unknown",
+      model: llm.model ?? FREEFLOW_MODEL,
+      cacheStatus: "miss",
+      resultCount: products.length,
+      matchedIds,
+    });
 
     return NextResponse.json({
       message:
@@ -755,14 +968,17 @@ export async function POST(req: Request) {
       products,
       explanation: llm.result.matches,
       clarification: llm.result.clarification,
+      normalizedQuery: effectiveQuery,
+      requestId,
       debug: {
         source: "llm-only",
         provider: llm.provider ?? "unknown",
         model: llm.model ?? FREEFLOW_MODEL,
-        matchedIds: llm.result.matches.map((m) => m.id),
+        matchedIds,
         finalCount: products.length,
         cache: "miss",
-        detectedLanguage: normalized.detectedLanguage ?? "unknown",
+        detectedLanguage,
+        requestId,
       },
     });
   } catch {
@@ -770,12 +986,14 @@ export async function POST(req: Request) {
       {
         message: "Assistant temporarily unavailable. Please try again.",
         products: [],
+        requestId,
         debug: {
           source: "llm-only",
           provider: "unknown",
           model: FREEFLOW_MODEL,
           error: "server_exception",
           finalCount: 0,
+          requestId,
         },
       },
       { status: 200 }

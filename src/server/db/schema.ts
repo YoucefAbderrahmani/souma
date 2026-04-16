@@ -197,6 +197,32 @@ export const siteFeedbackTable = pgTable("site_feedback", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+/**
+ * Assistant search telemetry for relevance tuning:
+ * - search_query: one row per assistant request/response.
+ * - result_click: one row when user clicks a recommended item.
+ */
+export const assistantSearchTelemetryTable = pgTable("assistant_search_telemetry", {
+  id: uuid().primaryKey().defaultRandom(),
+  eventType: varchar("event_type", { length: 32 }).notNull(),
+  requestId: varchar("request_id", { length: 64 }).notNull(),
+  sessionKey: varchar("session_key", { length: 64 }),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  mode: varchar("mode", { length: 16 }).notNull().default("detail"),
+  rawQuery: text("raw_query"),
+  normalizedQuery: text("normalized_query"),
+  detectedLanguage: varchar("detected_language", { length: 64 }),
+  provider: varchar("provider", { length: 64 }),
+  model: varchar("model", { length: 128 }),
+  error: text("error"),
+  cacheStatus: varchar("cache_status", { length: 16 }),
+  resultCount: integer("result_count").notNull().default(0),
+  matchedIdsJson: text("matched_ids_json"),
+  clickedProductId: integer("clicked_product_id"),
+  clickedPosition: integer("clicked_position"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 //Relations
 export const userRelations = relations(user, ({ many }) => ({
   wishlists: many(wishlistTable), // One user has many wishlists
