@@ -73,6 +73,8 @@ const CartPersistence = () => {
   const cartLenRef = useRef(0);
   cartLenRef.current = cartItems.length;
   const activeStorageKeyRef = useRef<string | null>(null);
+  /** Same-tab `storage` echoes after `setItem` in some browsers; ignore those to avoid persist↔storage loops. */
+  const lastLocalWriteByKeyRef = useRef<Record<string, string>>({});
   const hydratedRef = useRef(false);
   const [sessionResolved, setSessionResolved] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
@@ -124,7 +126,9 @@ const CartPersistence = () => {
         });
         // #endregion
         dispatch(setCartItems(guestCart));
-        window.localStorage.setItem(targetStorageKey, JSON.stringify(guestCart));
+        const mergedJson = JSON.stringify(guestCart);
+        lastLocalWriteByKeyRef.current[targetStorageKey] = mergedJson;
+        window.localStorage.setItem(targetStorageKey, mergedJson);
         activeStorageKeyRef.current = targetStorageKey;
         hydratedRef.current = true;
         return;
@@ -154,7 +158,9 @@ const CartPersistence = () => {
     // #endregion
     if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
-    window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
+    const json = JSON.stringify(cartItems);
+    lastLocalWriteByKeyRef.current[targetStorageKey] = json;
+    window.localStorage.setItem(targetStorageKey, json);
   }, [cartItems, sessionResolved, targetStorageKey]);
 
   useEffect(() => {
@@ -163,6 +169,18 @@ const CartPersistence = () => {
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage) return;
       if (event.key !== targetStorageKey) return;
+      if (
+        event.key &&
+        event.newValue != null &&
+        event.newValue === lastLocalWriteByKeyRef.current[event.key]
+      ) {
+        // #region agent log
+        dbgLog("E", "CartPersistence.tsx:storage:skipEcho", "ignored same-tab echo of own write", {
+          key: event.key,
+        });
+        // #endregion
+        return;
+      }
 
       const parsed = parseStoredCart(event.newValue);
       // #region agent log
