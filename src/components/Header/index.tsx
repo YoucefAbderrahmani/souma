@@ -18,6 +18,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
+import { shouldShowAdminNav } from "@/lib/admin-nav";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -324,12 +325,12 @@ const Header = () => {
                         </p>
                       </div>
                     </Link>
-                    {session.user?.role === "admin" && (
+                    {shouldShowAdminNav(session.user) && (
                       <Link
                         href="/admin"
                         className="shrink-0 rounded-md border border-[#FB923C] bg-white px-3 py-2 text-center text-custom-sm font-medium text-[#FB923C] transition hover:bg-[#FB923C] hover:text-white"
                       >
-                        Admin
+                        Admin panel
                       </Link>
                     )}
                   </div>
@@ -501,6 +502,18 @@ const Header = () => {
                       </li>
                     )
                   )}
+                  {!isPending && session?.user && shouldShowAdminNav(session.user) && (
+                    <li className="group relative before:w-0 before:h-[3px] before:bg-[#FB923C] before:absolute before:left-0 before:top-0 before:rounded-b-[3px] before:ease-out before:duration-200 hover:before:w-full">
+                      <Link
+                        href="/admin"
+                        className={`font-medium text-[#FB923C] hover:text-blue text-custom-sm flex ${
+                          stickyMenu ? "xl:py-4" : "xl:py-6"
+                        }`}
+                      >
+                        Admin panel
+                      </Link>
+                    </li>
+                  )}
                 </ul>
               </nav>
               {/* //   <!-- Main Nav End --> */}
@@ -552,6 +565,16 @@ const Header = () => {
                   </Link>
                 </li>
 
+                {!isPending && session?.user && shouldShowAdminNav(session.user) && (
+                  <li className="py-4">
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-1.5 font-medium text-custom-sm text-[#FB923C] hover:text-blue"
+                    >
+                      Admin panel
+                    </Link>
+                  </li>
+                )}
                 <li className="py-4">
                   <Link
                     href="/wishlist"

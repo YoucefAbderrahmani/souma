@@ -33,6 +33,7 @@ import { updateUserData, updateUserPassword } from "./action";
 import { toast } from "sonner";
 import { UserPasswordChangeSchema } from "@/types/auth";
 import { Spinner } from "../Common/Spinner";
+import { shouldShowAdminNav } from "@/lib/admin-nav";
 const MyAccount = () => {
   const router = useRouter();
   const { session, isPending, error, refetch } = useSession();
@@ -234,7 +235,7 @@ const MyAccount = () => {
                         </svg>
                         Dashboard
                       </button>
-                      {session.user.role === "admin" && (
+                      {shouldShowAdminNav(session.user) && (
                         <Link
                           href="/admin"
                           className="flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 bg-gray-1 text-dark-2 hover:bg-blue hover:text-white"
@@ -448,7 +449,7 @@ const MyAccount = () => {
                   password and account details.
                 </p>
 
-                {session.user.role === "admin" && (
+                {shouldShowAdminNav(session.user) && (
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Link
                       href="/admin"
