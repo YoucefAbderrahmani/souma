@@ -18,7 +18,6 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
-import { shouldShowAdminNav } from "@/lib/admin-nav";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -325,14 +324,6 @@ const Header = () => {
                         </p>
                       </div>
                     </Link>
-                    {shouldShowAdminNav(session.user) && (
-                      <Link
-                        href="/admin"
-                        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-[#FB923C] bg-white px-2.5 text-xs font-semibold text-[#FB923C] transition hover:bg-[#FB923C] hover:text-white sm:h-10 sm:px-3 sm:text-custom-sm"
-                      >
-                        Admin
-                      </Link>
-                    )}
                   </div>
                 ) : (
                   <Link href="/signin" className="flex items-center gap-2.5">
