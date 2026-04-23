@@ -74,12 +74,6 @@ export const menuData: Menu[] = [
         path: "/my-account",
       },
       {
-        id: 75,
-        title: "Admin Panel",
-        newTab: false,
-        path: "/admin",
-      },
-      {
         id: 70,
         title: "Contact",
         newTab: false,
