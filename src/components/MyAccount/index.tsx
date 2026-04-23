@@ -234,6 +234,27 @@ const MyAccount = () => {
                         </svg>
                         Dashboard
                       </button>
+                      {session.user.role === "admin" && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 bg-gray-1 text-dark-2 hover:bg-blue hover:text-white"
+                        >
+                          <svg
+                            className="fill-current shrink-0"
+                            width="22"
+                            height="22"
+                            viewBox="0 0 22 22"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M11 2.0625L3.4375 5.5V10.3125C3.4375 14.7839 6.70586 18.8798 11 19.9375C15.2941 18.8798 18.5625 14.7839 18.5625 10.3125V5.5L11 2.0625Z"
+                              fill=""
+                            />
+                          </svg>
+                          Admin panel
+                        </Link>
+                      )}
                       <button
                         onClick={() => setActiveTab("orders")}
                         className={`flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 hover:bg-blue hover:text-white ${
