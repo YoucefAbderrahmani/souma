@@ -14,6 +14,8 @@ import { parseProductContent } from "@/lib/product-content";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
+import { useProductPageMicroTracking } from "@/hooks/useProductPageMicroTracking";
+import { trackSalesMicroEvent } from "@/lib/sales-analyst-client";
 
 const ShopDetails = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -89,12 +91,28 @@ const ShopDetails = () => {
     return selectedPrice;
   }, [activeColor, baseDetailPrice, colorOptions, parsedContent, selectedSpecs]);
 
+  const salesMicro = useProductPageMicroTracking({
+    productId: product.id,
+    productTitle: product.title,
+    previewImg,
+    activeTab,
+    activeColor,
+    selectedSpecs,
+    detailPrice,
+  });
+
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
+    salesMicro.onGalleryZoom();
     openPreviewModal();
   };
 
   const handlePurchaseNow = () => {
+    trackSalesMicroEvent("purchase_now_click", {
+      quantity,
+      detail_price: detailPrice,
+      active_color: activeColor,
+    });
     dispatch(
       addItemToCart({
         ...product,
@@ -108,7 +126,13 @@ const ShopDetails = () => {
 
   return (
     <>
-      <Breadcrumb title={"Shop Details"} pages={["shop details"]} />
+      <Breadcrumb
+        title={"Shop Details"}
+        pages={["shop details"]}
+        onHomeClick={() =>
+          trackSalesMicroEvent("breadcrumb_click", { target: "home", href: "/" })
+        }
+      />
 
       {product.title === "" ? (
         "Please add product"
@@ -177,7 +201,10 @@ const ShopDetails = () => {
                 {/* <!-- product content --> */}
                 <div className="max-w-[539px] w-full">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
+                    <h2
+                      ref={salesMicro.titleRef}
+                      className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark"
+                    >
                       {product.title}
                     </h2>
 
@@ -328,7 +355,10 @@ const ShopDetails = () => {
                     </div>
                   </div>
 
-                  <h3 className="mb-4.5 flex flex-col items-start gap-0.5">
+                  <h3
+                    ref={salesMicro.priceRef}
+                    className="mb-4.5 flex flex-col items-start gap-0.5"
+                  >
                     {typeof jomlaPrice === "number" ? (
                       <>
                         <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
@@ -668,7 +698,11 @@ const ShopDetails = () => {
 
               {/* <!-- tab content three start --> */}
               <div className={activeTab === "tabThree" ? "block" : "hidden"}>
-                <ReviewsTab productId={product.id} productTitle={product.title} />
+                <ReviewsTab
+                  productId={product.id}
+                  productTitle={product.title}
+                  salesTracking
+                />
               </div>
               {/* <!-- tab content three end --> */}
               {/* <!--== tab content end ==--> */}

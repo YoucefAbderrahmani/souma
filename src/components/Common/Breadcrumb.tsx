@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import React from "react";
 
-const Breadcrumb = ({ title, pages }) => {
+type BreadcrumbProps = {
+  title: string;
+  pages: string[];
+  /** Fires before navigation when the user clicks Home (sales / funnel analytics). */
+  onHomeClick?: () => void;
+};
+
+const Breadcrumb = ({ title, pages, onHomeClick }: BreadcrumbProps) => {
   return (
     <div className="overflow-hidden shadow-breadcrumb pt-[209px] sm:pt-[155px] lg:pt-[95px] xl:pt-[165px]">
       <div className="border-t border-gray-3">
@@ -13,13 +22,20 @@ const Breadcrumb = ({ title, pages }) => {
 
             <ul className="flex items-center gap-2">
               <li className="text-custom-sm hover:text-blue">
-                <Link href="/">Home /</Link>
+                <Link
+                  href="/"
+                  onClick={() => {
+                    onHomeClick?.();
+                  }}
+                >
+                  Home /
+                </Link>
               </li>
 
               {pages.length > 0 &&
                 pages.map((page, key) => (
                   <li className="text-custom-sm last:text-blue capitalize" key={key}>
-                    {page} 
+                    {page}
                   </li>
                 ))}
             </ul>

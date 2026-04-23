@@ -16,6 +16,73 @@ type ProductPageAssistantProps = {
   availabilityLabel: string;
 };
 
+type LocalAnswerLocale = "ar" | "fr" | "en" | "dz";
+
+function detectLocalAnswerLocale(query: string): LocalAnswerLocale {
+  const q = query.toLowerCase();
+  if (/[\u0600-\u06ff]/.test(query)) return "ar";
+  if (/(kayen|kayn|wa9tach|wesh|wach|chhal|bzzaf|machi)/i.test(q)) return "dz";
+  if (/(disponible|couleur|taille|arrivage|quand|stock)/i.test(q)) return "fr";
+  return "en";
+}
+
+function localizeAnswer(locale: LocalAnswerLocale, key: string, vars?: Record<string, string>) {
+  const templates: Record<LocalAnswerLocale, Record<string, string>> = {
+    ar: {
+      arrival_unknown: "موعد التوفر القادم غير مؤكد حالياً. يرجى التحقق لاحقاً.",
+      colors_list: "الألوان المتوفرة: {{colors}}.",
+      color_not_listed: "خيارات الألوان غير مذكورة لهذا المنتج.",
+      color_yes: "نعم، اللون {{color}} متوفر.",
+      color_no: "لا، اللون {{color}} غير متوفر لهذا المنتج.",
+      option_yes: "نعم، خيار {{option}} متوفر ضمن {{spec}}.",
+      options_list: "الخيارات المتوفرة: {{options}}",
+      availability_yes: "نعم، هذا المنتج متوفر حالياً.",
+      availability_status: "حالة التوفر الحالية: {{availability}}.",
+    },
+    fr: {
+      arrival_unknown: "Le prochain arrivage n'est pas encore confirmé. Revenez bientôt.",
+      colors_list: "Couleurs disponibles : {{colors}}.",
+      color_not_listed: "Les couleurs ne sont pas indiquées pour cet article.",
+      color_yes: "Oui, la couleur {{color}} est disponible.",
+      color_no: "Non, la couleur {{color}} n'est pas disponible pour cet article.",
+      option_yes: "Oui, l'option {{option}} est disponible dans {{spec}}.",
+      options_list: "Options disponibles : {{options}}",
+      availability_yes: "Oui, cet article est actuellement disponible.",
+      availability_status: "Disponibilite actuelle : {{availability}}.",
+    },
+    dz: {
+      arrival_unknown: "الريستوك الجاي مازال ما تأكدش. عاود شيك من بعد.",
+      colors_list: "الألوان لي كاينين: {{colors}}.",
+      color_not_listed: "ألوان هاد المنتج ماهمش مذكورين.",
+      color_yes: "ايه، اللون {{color}} كاين.",
+      color_no: "لا، اللون {{color}} ماكانش فهاد المنتج.",
+      option_yes: "ايه، الأوبشن {{option}} كاين فـ {{spec}}.",
+      options_list: "الأوبشنز لي كاينين: {{options}}",
+      availability_yes: "ايه، هاد السلعة كاينة حالياً.",
+      availability_status: "الحالة الحالية للتوفر: {{availability}}.",
+    },
+    en: {
+      arrival_unknown: "Next arrival is not confirmed yet. Please check again soon.",
+      colors_list: "Available colors: {{colors}}.",
+      color_not_listed: "Color options are not listed for this item.",
+      color_yes: "Yes, {{color}} color is available.",
+      color_no: "No, {{color}} color is not available for this item.",
+      option_yes: "Yes, {{option}} is available in {{spec}}.",
+      options_list: "Available options: {{options}}",
+      availability_yes: "Yes, this item is currently available.",
+      availability_status: "Current availability: {{availability}}.",
+    },
+  };
+
+  let out = templates[locale][key] ?? templates.en[key] ?? "";
+  if (vars) {
+    Object.entries(vars).forEach(([k, v]) => {
+      out = out.replaceAll(`{{${k}}}`, v);
+    });
+  }
+  return out;
+}
+
 const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssistantProps) => {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -35,6 +102,7 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
   const answerProductQuestion = React.useCallback(
     (rawQuery: string) => {
       const q = rawQuery.toLowerCase().trim();
+      const locale = detectLocalAnswerLocale(rawQuery);
       const isAvailabilityQuestion =
         /(available|availability|in stock|stock|disponible|dispo|متوفر|موجود|كاين|kayen|kayn)/i.test(
           q
@@ -53,7 +121,7 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
         );
         return arrivalRow
           ? `${arrivalRow.key}: ${arrivalRow.value}`
-          : "Next arrival is not confirmed yet. Please check again soon.";
+          : localizeAnswer(locale, "arrival_unknown");
       }
 
       const colors = parsedContent.colors.map((c) => c.name.toLowerCase());
@@ -61,12 +129,14 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
       if (isColorQuestion || mentionedColor) {
         if (!mentionedColor) {
           return colors.length
-            ? `Available colors: ${parsedContent.colors.map((c) => c.name).join(", ")}.`
-            : "Color options are not listed for this item.";
+            ? localizeAnswer(locale, "colors_list", {
+                colors: parsedContent.colors.map((c) => c.name).join(", "),
+              })
+            : localizeAnswer(locale, "color_not_listed");
         }
         return colors.includes(mentionedColor)
-          ? `Yes, ${mentionedColor} color is available.`
-          : `No, ${mentionedColor} color is not available for this item.`;
+          ? localizeAnswer(locale, "color_yes", { color: mentionedColor })
+          : localizeAnswer(locale, "color_no", { color: mentionedColor });
       }
 
       if (isSizeOrSpecQuestion) {
@@ -75,21 +145,24 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
         );
         const matchedOption = allOptions.find((opt) => q.includes(opt.label));
         if (matchedOption) {
-          return `Yes, ${matchedOption.label} is available in ${matchedOption.specName}.`;
+          return localizeAnswer(locale, "option_yes", {
+            option: matchedOption.label,
+            spec: matchedOption.specName,
+          });
         }
 
         if (parsedContent.specifications.length > 0) {
           const quickSpecs = parsedContent.specifications
             .map((spec) => `${spec.name}: ${spec.options.map((o) => o.label).join(", ")}`)
             .join(" | ");
-          return `Available options: ${quickSpecs}`;
+          return localizeAnswer(locale, "options_list", { options: quickSpecs });
         }
       }
 
       if (isAvailabilityQuestion) {
         return /in stock/i.test(availabilityLabel)
-          ? "Yes, this item is currently available."
-          : `Current availability: ${availabilityLabel}.`;
+          ? localizeAnswer(locale, "availability_yes")
+          : localizeAnswer(locale, "availability_status", { availability: availabilityLabel });
       }
 
       return null;

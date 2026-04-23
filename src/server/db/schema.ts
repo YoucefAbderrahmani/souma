@@ -223,6 +223,25 @@ export const assistantSearchTelemetryTable = pgTable("assistant_search_telemetry
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+/**
+ * Micro-interaction events for AI sales / funnel analysis (product page, checkout context).
+ * Payload is JSON; event names are lowercase snake_case (e.g. image_index_viewed, price_hover).
+ */
+export const salesMicroEventTable = pgTable("sales_micro_event", {
+  id: uuid().primaryKey().defaultRandom(),
+  sessionKey: varchar("session_key", { length: 64 }).notNull(),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  productLocalId: integer("product_local_id"),
+  productTitle: text("product_title"),
+  pagePath: varchar("page_path", { length: 512 }).notNull(),
+  referrer: text("referrer"),
+  eventName: varchar("event_name", { length: 80 }).notNull(),
+  payloadJson: text("payload_json"),
+  clientEventAt: timestamp("client_event_at", { mode: "date" }),
+  sequenceIndex: integer("sequence_index").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 //Relations
 export const userRelations = relations(user, ({ many }) => ({
   wishlists: many(wishlistTable), // One user has many wishlists

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
+import { trackSalesMicroEvent } from "@/lib/sales-analyst-client";
 
 type ProductReview = {
   id: string;
@@ -26,13 +27,23 @@ const renderStars = (rating: number) =>
     </span>
   ));
 
-const ReviewsTab = ({ productId, productTitle }: { productId: number; productTitle: string }) => {
+type ReviewsTabProps = {
+  productId: number;
+  productTitle: string;
+  /** When true, emits review_filter_applied, review_scroll_depth, etc. */
+  salesTracking?: boolean;
+};
+
+const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps) => {
   const { session, isPending } = useSession();
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const scrollDepthTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const averageRating = useMemo(() => {
     if (!reviews.length) return 0;
@@ -57,6 +68,52 @@ const ReviewsTab = ({ productId, productTitle }: { productId: number; productTit
   useEffect(() => {
     loadReviews();
   }, [loadReviews]);
+
+  const filteredReviews = useMemo(() => {
+    if (!salesTracking || reviewFilter === "all") return reviews;
+    return reviews.filter((r) => r.rating === reviewFilter);
+  }, [reviews, reviewFilter, salesTracking]);
+
+  const emitScrollDepth = useCallback(
+    (seenCount: number) => {
+      if (!salesTracking) return;
+      if (scrollDepthTimer.current) clearTimeout(scrollDepthTimer.current);
+      scrollDepthTimer.current = setTimeout(() => {
+        trackSalesMicroEvent("review_scroll_depth", {
+          reviews_seen_count: seenCount,
+          filter_rating: reviewFilter === "all" ? null : reviewFilter,
+          total_loaded: reviews.length,
+        });
+      }, 900);
+    },
+    [reviewFilter, reviews.length, salesTracking]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (scrollDepthTimer.current) clearTimeout(scrollDepthTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!salesTracking || !listRef.current || filteredReviews.length === 0) return;
+    const root = listRef.current;
+    const seen = new Set<number>();
+    const cards = root.querySelectorAll("[data-review-card]");
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting || !(en.target instanceof HTMLElement)) return;
+          const idx = Number(en.target.dataset.reviewIdx);
+          if (Number.isFinite(idx)) seen.add(idx);
+        });
+        emitScrollDepth(seen.size);
+      },
+      { root: null, threshold: 0.55 }
+    );
+    cards.forEach((c) => io.observe(c));
+    return () => io.disconnect();
+  }, [emitScrollDepth, filteredReviews, salesTracking]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -115,9 +172,41 @@ const ReviewsTab = ({ productId, productTitle }: { productId: number; productTit
             No reviews yet. Be the first to review this product.
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            {reviews.map((review) => (
-              <div key={review.id} className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            {salesTracking && (
+              <div className="flex flex-wrap gap-2">
+                {(["all", 1, 2, 3, 4, 5] as const).map((f) => (
+                  <button
+                    key={f === "all" ? "all" : `star-${f}`}
+                    type="button"
+                    onClick={() => {
+                      setReviewFilter(f);
+                      if (f !== "all" && salesTracking) {
+                        trackSalesMicroEvent("review_filter_applied", {
+                          rating: f,
+                          one_star_seeker: f === 1,
+                        });
+                      }
+                    }}
+                    className={`rounded-full border px-3 py-1 text-custom-sm font-medium duration-200 ${
+                      reviewFilter === f
+                        ? "border-blue bg-blue text-white"
+                        : "border-gray-3 bg-white text-dark hover:border-blue"
+                    }`}
+                  >
+                    {f === "all" ? "All" : `${f}★`}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div ref={listRef} className="flex flex-col gap-6">
+            {filteredReviews.map((review, idx) => (
+              <div
+                key={review.id}
+                data-review-card
+                data-review-idx={idx}
+                className="rounded-xl bg-white shadow-1 p-4 sm:p-6"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-1 flex items-center justify-center">
@@ -149,6 +238,7 @@ const ReviewsTab = ({ productId, productTitle }: { productId: number; productTit
                 <p className="text-dark mt-4">{review.comment}</p>
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>

@@ -2,6 +2,11 @@
 import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import { sequenceEndPurchase } from "@/lib/sequence-client";
+import {
+  flushSalesMicroEventsNow,
+  setSalesMicroPageContext,
+  trackSalesMicroEvent,
+} from "@/lib/sales-analyst-client";
 import Login from "./Login";
 import Shipping from "./Shipping";
 import ShippingMethod from "./ShippingMethod";
@@ -75,6 +80,13 @@ const Checkout = () => {
     }
     return null;
   }, [paymentStatus]);
+
+  React.useEffect(() => {
+    setSalesMicroPageContext({
+      pagePath: "/checkout",
+      product: null,
+    });
+  }, []);
 
   React.useEffect(() => {
     if (paymentStatus === "success" && cartItems.length > 0) {
@@ -183,6 +195,11 @@ const Checkout = () => {
       }
 
       sequenceEndPurchase();
+      trackSalesMicroEvent("checkout_chargily_redirect", {
+        total_dzd: totalPrice,
+        cart_line_items: cartItems.length,
+      });
+      void flushSalesMicroEventsNow();
       const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
       if (!paymentTab) {
         setErrorMessage("Popup blocked. Please allow popups to continue payment in a new tab.");

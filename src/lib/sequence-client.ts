@@ -1,31 +1,19 @@
 "use client";
 
-const STORAGE_KEY = "sq_browser_session";
-const HEADER = "X-Sequence-Session";
-
-function getOrCreateBrowserSessionId(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    let id = localStorage.getItem(STORAGE_KEY);
-    if (!id || id.length < 8) {
-      id = crypto.randomUUID();
-      localStorage.setItem(STORAGE_KEY, id);
-    }
-    return id;
-  } catch {
-    return "";
-  }
-}
+import {
+  getOrCreateBrowserSequenceSessionId,
+  SEQUENCE_SESSION_HEADER,
+} from "@/lib/browser-sequence-session";
 
 function post(path: string, body: object) {
   if (typeof window === "undefined") return;
-  const sid = getOrCreateBrowserSessionId();
+  const sid = getOrCreateBrowserSequenceSessionId();
   if (!sid) return;
   fetch(path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      [HEADER]: sid,
+      [SEQUENCE_SESSION_HEADER]: sid,
     },
     body: JSON.stringify(body),
     credentials: "include",

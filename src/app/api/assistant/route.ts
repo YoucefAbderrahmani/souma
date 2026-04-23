@@ -41,6 +41,7 @@ type QueryNormalizationResult = {
   normalizedQuery: string;
   detectedLanguage?: string;
 };
+type ResponseLocale = "ar" | "fr" | "en" | "dz";
 
 const GEMINI_MODEL = "gemini-2.0-flash";
 const FREEFLOW_MODEL = process.env.ASSISTANT_FREEFLOW_MODEL?.trim() || "openrouter/auto";
@@ -55,6 +56,82 @@ const responseCache = new Map<string, CacheEntry>();
 
 function sanitizeText(value: string | undefined, maxLen = 250) {
   return (value ?? "").trim().slice(0, maxLen);
+}
+
+function detectResponseLocale(query: string, detectedLanguage?: string): ResponseLocale {
+  const normalizedDetected = (detectedLanguage ?? "").toLowerCase();
+  const q = query.toLowerCase();
+  if (/[\u0600-\u06ff]/.test(query) || normalizedDetected.startsWith("ar")) return "ar";
+  if (normalizedDetected.startsWith("fr")) return "fr";
+  if (/(kayen|kayn|wa9tach|wesh|wach|chhal|bzzaf|ma(k|ch))/i.test(q)) return "dz";
+  if (/(disponible|couleur|taille|arrivage|quand|produit|prix|cherche)/i.test(q)) return "fr";
+  return "en";
+}
+
+function translateMessage(
+  locale: ResponseLocale,
+  key:
+    | "type_query"
+    | "missing_provider"
+    | "found_matches"
+    | "no_related"
+    | "rate_limited"
+    | "llm_failed"
+    | "catalog_matches"
+    | "assistant_unavailable",
+  count = 0
+) {
+  const templates = {
+    ar: {
+      type_query: "يرجى كتابة ما تحتاجه.",
+      missing_provider:
+        "المساعد في وضع الذكاء الاصطناعي فقط، لكن لا يوجد مفتاح مزود مفعّل (GOOGLE_API_KEY أو OPENROUTER_API_KEY).",
+      found_matches: `وجدت ${count} منتجات مطابقة.`,
+      no_related: "لم أجد منتجات مرتبطة بهذا الطلب في المتجر.",
+      rate_limited:
+        "كل مزودي الذكاء الاصطناعي لديهم ضغط حالياً. يرجى المحاولة بعد دقيقة.",
+      llm_failed: "فشل طلب المساعد. يرجى إعادة الصياغة أو المحاولة مجدداً.",
+      catalog_matches: `وجدت ${count} نتائج من فهرس المتجر لطلبك.`,
+      assistant_unavailable: "المساعد غير متاح مؤقتاً. حاول مرة أخرى.",
+    },
+    fr: {
+      type_query: "Veuillez écrire ce dont vous avez besoin.",
+      missing_provider:
+        "L'assistant est en mode IA uniquement, mais aucune clé fournisseur n'est configurée (GOOGLE_API_KEY ou OPENROUTER_API_KEY).",
+      found_matches: `J'ai trouvé ${count} produits correspondants.`,
+      no_related: "Aucun produit lié n'a été trouvé pour cette demande.",
+      rate_limited:
+        "Tous les fournisseurs IA sont limités pour le moment. Réessayez dans une minute.",
+      llm_failed: "La requête IA a échoué. Reformulez ou réessayez.",
+      catalog_matches: `J'ai trouvé ${count} correspondances du catalogue pour votre demande.`,
+      assistant_unavailable: "Assistant temporairement indisponible. Veuillez réessayer.",
+    },
+    dz: {
+      type_query: "اكتب واش تحتاج من فضلك.",
+      missing_provider:
+        "المساعد راه خدام بنظام الذكاء الاصطناعي بصح ماكانش مفتاح مزوّد مفعّل (GOOGLE_API_KEY ولا OPENROUTER_API_KEY).",
+      found_matches: `لقيت ${count} منتجات مناسبين لطلبك.`,
+      no_related: "مالقيتش منتجات مناسبة لهاد الطلب فالمتجر.",
+      rate_limited: "المزوّدين كامل راهوم مضغوطين دكا. عاود بعد دقيقة.",
+      llm_failed: "وقع مشكل فطلب المساعد. عاود صيّغ السؤال ولا جرّب مرة أخرى.",
+      catalog_matches: `لقيت ${count} نتائج من الكاتالوغ تاع المتجر.`,
+      assistant_unavailable: "المساعد ماشي متوفر مؤقتاً. عاود جرّب.",
+    },
+    en: {
+      type_query: "Please type what you need.",
+      missing_provider:
+        "Assistant is in LLM-only mode but no provider key is set (GOOGLE_API_KEY or OPENROUTER_API_KEY).",
+      found_matches: `I found ${count} matching products.`,
+      no_related: "No related items found in store for this request.",
+      rate_limited:
+        "All configured LLM providers are rate-limited right now. Try again in a minute.",
+      llm_failed: "LLM request failed. Please rephrase or retry.",
+      catalog_matches: `I found ${count} catalog matches for your request.`,
+      assistant_unavailable: "Assistant temporarily unavailable. Please try again.",
+    },
+  } as const;
+
+  return templates[locale][key];
 }
 
 function configuredGeminiFallbackModels() {
@@ -301,7 +378,8 @@ function buildPrompt(
   query: string,
   mode: "detail" | "jomla",
   retrievalMode: "strict" | "relaxed" = "strict",
-  contextProduct?: AssistantRequest["contextProduct"]
+  contextProduct?: AssistantRequest["contextProduct"],
+  detectedLanguage?: string
 ) {
   const catalog = buildCatalog(mode);
   const extra =
@@ -329,6 +407,8 @@ Rules:
 - If nothing matches, return empty matches.
 - score must be 0..100.
 - max 8 matches, sorted by score desc.
+- Write summary, clarification, and reason in the same language as USER_QUERY.
+- detectedLanguage hint: ${detectedLanguage ?? "unknown"}.
 ${extra}
 
 JSON schema:
@@ -415,7 +495,8 @@ async function queryGemini(
   mode: "detail" | "jomla",
   modelName: string,
   retrievalMode: "strict" | "relaxed" = "strict",
-  contextProduct?: AssistantRequest["contextProduct"]
+  contextProduct?: AssistantRequest["contextProduct"],
+  detectedLanguage?: string
 ): Promise<LlmQueryResult> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
@@ -426,7 +507,7 @@ async function queryGemini(
         contents: [
           {
             role: "user",
-            parts: [{ text: buildPrompt(query, mode, retrievalMode, contextProduct) }],
+            parts: [{ text: buildPrompt(query, mode, retrievalMode, contextProduct, detectedLanguage) }],
           },
         ],
         generationConfig: {
@@ -458,7 +539,8 @@ async function queryOpenRouter(
   mode: "detail" | "jomla",
   modelName: string,
   retrievalMode: "strict" | "relaxed" = "strict",
-  contextProduct?: AssistantRequest["contextProduct"]
+  contextProduct?: AssistantRequest["contextProduct"],
+  detectedLanguage?: string
 ): Promise<LlmQueryResult> {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -470,7 +552,12 @@ async function queryOpenRouter(
       model: modelName,
       temperature: 0.15,
       response_format: { type: "json_object" },
-      messages: [{ role: "user", content: buildPrompt(query, mode, retrievalMode, contextProduct) }],
+      messages: [
+        {
+          role: "user",
+          content: buildPrompt(query, mode, retrievalMode, contextProduct, detectedLanguage),
+        },
+      ],
     }),
   });
 
@@ -495,7 +582,8 @@ async function queryWithRetriesAndFallback(
   query: string,
   mode: "detail" | "jomla",
   retrievalMode: "strict" | "relaxed" = "strict",
-  contextProduct?: AssistantRequest["contextProduct"]
+  contextProduct?: AssistantRequest["contextProduct"],
+  detectedLanguage?: string
 ) {
   let lastError = "no_provider_key";
   let usedProvider: "gemini" | "openrouter" = "openrouter";
@@ -514,7 +602,8 @@ async function queryWithRetriesAndFallback(
           mode,
           model,
           retrievalMode,
-          contextProduct
+          contextProduct,
+          detectedLanguage
         );
         if (res.result) return { ...res, provider: usedProvider };
 
@@ -542,7 +631,8 @@ async function queryWithRetriesAndFallback(
           mode,
           model,
           retrievalMode,
-          contextProduct
+          contextProduct,
+          detectedLanguage
         );
         if (res.result) return { ...res, provider: usedProvider };
 
@@ -680,10 +770,11 @@ export async function POST(req: NextRequest) {
     const query = body.query?.trim();
     const mode = body.mode === "jomla" ? "jomla" : "detail";
     const contextProduct = body.contextProduct;
+    const preDetectedLocale = detectResponseLocale(query ?? "");
 
     if (!query) {
       return NextResponse.json({
-        message: "Please type what you need.",
+        message: translateMessage(preDetectedLocale, "type_query"),
         products: [],
         requestId,
         debug: { source: "llm-only", model: FREEFLOW_MODEL, requestId },
@@ -712,8 +803,7 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({
-        message:
-          "Assistant is in LLM-only mode but no provider key is set (GOOGLE_API_KEY or OPENROUTER_API_KEY).",
+        message: translateMessage(preDetectedLocale, "missing_provider"),
         products: [],
         normalizedQuery: localNormalizedQuery,
         requestId,
@@ -730,6 +820,7 @@ export async function POST(req: NextRequest) {
     const normalized = await normalizeQueryWithLlm(googleApiKey, openRouterApiKey, query);
     const effectiveQuery = normalized.normalizedQuery || localNormalizedQuery || query;
     const detectedLanguage = normalized.detectedLanguage ?? "unknown";
+    const responseLocale = detectResponseLocale(query, detectedLanguage);
 
     const cached = getCachedResult(effectiveQuery, mode);
     if (cached) {
@@ -757,8 +848,8 @@ export async function POST(req: NextRequest) {
         message:
           cached.summary ||
           (products.length > 0
-            ? `I found ${products.length} matching products.`
-            : "No related items found in store for this request."),
+            ? translateMessage(responseLocale, "found_matches", products.length)
+            : translateMessage(responseLocale, "no_related")),
         products,
         explanation: cached.matches,
         clarification: cached.clarification,
@@ -783,7 +874,8 @@ export async function POST(req: NextRequest) {
       effectiveQuery,
       mode,
       "strict",
-      contextProduct
+      contextProduct,
+      detectedLanguage
     );
 
     if (!llm.result) {
@@ -814,8 +906,8 @@ export async function POST(req: NextRequest) {
           message:
             similarCached.summary ||
             (products.length > 0
-              ? `I found ${products.length} matching products.`
-              : "No related items found in store for this request."),
+              ? translateMessage(responseLocale, "found_matches", products.length)
+              : translateMessage(responseLocale, "no_related")),
           products,
           explanation: similarCached.matches,
           clarification: similarCached.clarification,
@@ -853,8 +945,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         message:
           llm.error === "rate_limited"
-            ? "All configured LLM providers are rate-limited right now. Try again in a minute."
-            : "LLM request failed. Please rephrase or retry.",
+            ? translateMessage(responseLocale, "rate_limited")
+            : translateMessage(responseLocale, "llm_failed"),
         products: [],
         normalizedQuery: effectiveQuery,
         requestId,
@@ -878,7 +970,8 @@ export async function POST(req: NextRequest) {
         effectiveQuery,
         mode,
         "relaxed",
-        contextProduct
+        contextProduct,
+        detectedLanguage
       );
       if (relaxed.result) {
         llm = relaxed;
@@ -891,7 +984,7 @@ export async function POST(req: NextRequest) {
         llm = {
           result: {
             matches: fallbackMatches,
-            summary: `I found ${fallbackMatches.length} catalog matches for your request.`,
+            summary: translateMessage(responseLocale, "catalog_matches", fallbackMatches.length),
           },
           provider: "catalog-fallback",
           model: "semantic-retrieval",
@@ -924,8 +1017,8 @@ export async function POST(req: NextRequest) {
       message:
         llm.result.summary ||
         (products.length > 0
-          ? `I found ${products.length} matching products.`
-          : "No related items found in store for this request."),
+          ? translateMessage(responseLocale, "found_matches", products.length)
+          : translateMessage(responseLocale, "no_related")),
       products,
       explanation: llm.result.matches,
       clarification: llm.result.clarification,
@@ -945,7 +1038,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json(
       {
-        message: "Assistant temporarily unavailable. Please try again.",
+        message: translateMessage("en", "assistant_unavailable"),
         products: [],
         requestId,
         debug: {

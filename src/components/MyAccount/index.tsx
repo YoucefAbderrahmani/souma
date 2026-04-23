@@ -428,12 +428,18 @@ const MyAccount = () => {
                 </p>
 
                 {session.user.role === "admin" && (
-                  <div className="mt-6">
+                  <div className="mt-6 flex flex-wrap gap-3">
                     <Link
                       href="/admin"
                       className="inline-flex rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
                     >
                       Go to Admin Panel
+                    </Link>
+                    <Link
+                      href="/admin/sales-analytics"
+                      className="inline-flex rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+                    >
+                      Sales micro-events
                     </Link>
                   </div>
                 )}
