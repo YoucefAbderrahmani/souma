@@ -10,18 +10,20 @@ import { publicApiUrl } from "@/lib/public-api-url";
 // #region agent log
 /** HTTPS (Vercel) blocks http://127.0.0.1; use same-origin API → server logs + local NDJSON in dev. */
 function dbgLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown>) {
-  const body = JSON.stringify({
+  const payload = {
     sessionId: "ee41ca",
     hypothesisId,
     location,
     message,
     data,
     timestamp: Date.now(),
-  });
+  };
+  // Browser console: filter by "cart-debug" in DevTools (works on Vercel + localhost).
+  console.info("[cart-debug]", payload);
   fetch(publicApiUrl("/api/debug/cart-log"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body,
+    body: JSON.stringify(payload),
     keepalive: true,
   }).catch(() => {});
 }
