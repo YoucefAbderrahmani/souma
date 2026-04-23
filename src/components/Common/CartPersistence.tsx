@@ -66,15 +66,31 @@ function parseStoredCart(raw: string | null): CartItem[] {
   }
 }
 
+/** Module scope: survives Strict Mode remounts and matches any `storage` listener instance. */
+const LAST_LOCAL_CART_JSON_BY_KEY: Record<string, string> = Object.create(null);
+
+function recordLocalCartWrite(key: string, json: string) {
+  LAST_LOCAL_CART_JSON_BY_KEY[key] = json;
+}
+
+/** Stable semantic fingerprint (ignores JSON key order / object shape noise). */
+function cartFingerprint(items: CartItem[]): string {
+  return [...items]
+    .slice()
+    .sort((a, b) => a.id - b.id)
+    .map((i) => [i.id, i.quantity, i.price, i.discountedPrice, i.title].join("\x1e"))
+    .join("\x1f");
+}
+
 const CartPersistence = () => {
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const { session, isPending } = useSession();
   const cartLenRef = useRef(0);
   cartLenRef.current = cartItems.length;
+  const cartItemsRef = useRef<CartItem[]>(cartItems);
+  cartItemsRef.current = cartItems;
   const activeStorageKeyRef = useRef<string | null>(null);
-  /** Same-tab `storage` echoes after `setItem` in some browsers; ignore those to avoid persist↔storage loops. */
-  const lastLocalWriteByKeyRef = useRef<Record<string, string>>({});
   const hydratedRef = useRef(false);
   const [sessionResolved, setSessionResolved] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
@@ -127,7 +143,7 @@ const CartPersistence = () => {
         // #endregion
         dispatch(setCartItems(guestCart));
         const mergedJson = JSON.stringify(guestCart);
-        lastLocalWriteByKeyRef.current[targetStorageKey] = mergedJson;
+        recordLocalCartWrite(targetStorageKey, mergedJson);
         window.localStorage.setItem(targetStorageKey, mergedJson);
         activeStorageKeyRef.current = targetStorageKey;
         hydratedRef.current = true;
@@ -159,7 +175,7 @@ const CartPersistence = () => {
     if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
     const json = JSON.stringify(cartItems);
-    lastLocalWriteByKeyRef.current[targetStorageKey] = json;
+    recordLocalCartWrite(targetStorageKey, json);
     window.localStorage.setItem(targetStorageKey, json);
   }, [cartItems, sessionResolved, targetStorageKey]);
 
@@ -169,23 +185,31 @@ const CartPersistence = () => {
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage) return;
       if (event.key !== targetStorageKey) return;
-      if (
-        event.key &&
-        event.newValue != null &&
-        event.newValue === lastLocalWriteByKeyRef.current[event.key]
-      ) {
+      const key = event.key;
+      if (key && event.newValue != null && event.newValue === LAST_LOCAL_CART_JSON_BY_KEY[key]) {
         // #region agent log
         dbgLog("E", "CartPersistence.tsx:storage:skipEcho", "ignored same-tab echo of own write", {
-          key: event.key,
+          key,
         });
         // #endregion
         return;
       }
 
       const parsed = parseStoredCart(event.newValue);
+      if (cartFingerprint(cartItemsRef.current) === cartFingerprint(parsed)) {
+        // #region agent log
+        dbgLog("E", "CartPersistence.tsx:storage:skipNoop", "ignored storage; cart unchanged vs redux", {
+          key,
+          parsedLen: parsed.length,
+        });
+        // #endregion
+        recordLocalCartWrite(targetStorageKey, event.newValue ?? JSON.stringify(parsed));
+        return;
+      }
+
       // #region agent log
-      dbgLog("E", "CartPersistence.tsx:storage", "storage event", {
-        key: event.key,
+      dbgLog("E", "CartPersistence.tsx:storage", "storage event apply", {
+        key,
         newValueLen: event.newValue?.length ?? 0,
         parsedLen: parsed.length,
       });
