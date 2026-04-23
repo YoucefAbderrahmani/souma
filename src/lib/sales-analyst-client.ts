@@ -4,8 +4,9 @@ import {
   getOrCreateBrowserSequenceSessionId,
   SEQUENCE_SESSION_HEADER,
 } from "@/lib/browser-sequence-session";
+import { publicApiUrl } from "@/lib/public-api-url";
 
-const API = "/api/sales-analyst/events";
+const API = () => publicApiUrl("/api/sales-analyst/events");
 const FLUSH_MS = 1800;
 const MAX_BATCH = 30;
 
@@ -108,7 +109,7 @@ export async function flushSalesMicroEventsNow(): Promise<void> {
   try {
     const sid = getOrCreateBrowserSequenceSessionId();
     if (!sid) return;
-    await fetch(API, {
+    await fetch(API(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -134,9 +135,9 @@ export function flushSalesMicroEventsBeacon(): boolean {
   if (!sid) return false;
   const body = buildBody(batch);
   try {
-    const ok = navigator.sendBeacon(API, new Blob([body], { type: "application/json" }));
+    const ok = navigator.sendBeacon(API(), new Blob([body], { type: "application/json" }));
     if (!ok) {
-      void fetch(API, {
+      void fetch(API(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,

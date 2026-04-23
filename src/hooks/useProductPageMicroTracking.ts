@@ -59,6 +59,19 @@ export function useProductPageMicroTracking({
     });
 
     try {
+      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      if (nav?.entryType === "navigation") {
+        trackSalesMicroEvent("page_navigation_timing", {
+          ttfb_ms: Math.round(Math.max(0, nav.responseStart - nav.requestStart)),
+          dom_content_loaded_ms: Math.round(Math.max(0, nav.domContentLoadedEventEnd - nav.fetchStart)),
+          load_event_end_ms: Math.round(Math.max(0, nav.loadEventEnd - nav.fetchStart)),
+        });
+      }
+    } catch {
+      trackSalesMicroEvent("page_navigation_timing", { unsupported: true });
+    }
+
+    try {
       const po = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const last = entries[entries.length - 1] as PerformanceEntry & {
@@ -183,12 +196,37 @@ export function useProductPageMicroTracking({
 
   useEffect(() => {
     const onVis = () => {
-      trackSalesMicroEvent(document.hidden ? "tab_switch_hidden" : "tab_switch_visible", {
+      trackSalesMicroEvent("tab_switch_event", {
+        document_hidden: document.hidden,
         visibility_state: document.visibilityState,
       });
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  useEffect(() => {
+    const root = typeof document !== "undefined" ? document.querySelector("main video") : null;
+    if (!(root instanceof HTMLVideoElement)) return;
+    let lastReportedPct = -1;
+    const onTime = () => {
+      const d = root.duration;
+      if (!d || !Number.isFinite(d) || d <= 0) return;
+      const pct = Math.min(100, Math.round((100 * root.currentTime) / d));
+      if (pct < lastReportedPct + 4 && pct < 100) return;
+      lastReportedPct = pct;
+      trackSalesMicroEvent("video_percentage_watched", {
+        percent: pct,
+        watched_seconds: Math.round(root.currentTime),
+        duration_ms: Math.round(d * 1000),
+      });
+    };
+    root.addEventListener("timeupdate", onTime);
+    root.addEventListener("ended", onTime);
+    return () => {
+      root.removeEventListener("timeupdate", onTime);
+      root.removeEventListener("ended", onTime);
+    };
   }, []);
 
   useEffect(() => {

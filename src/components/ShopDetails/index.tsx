@@ -442,7 +442,16 @@ const ShopDetails = () => {
                                   id={`color-${color.name}-${key}`}
                                   className="sr-only"
                                   checked={activeColor === color.name}
-                                  onChange={() => setActiveColor(color.name)}
+                                  onChange={() => {
+                                    if (color.inStock === false) {
+                                      trackSalesMicroEvent("out_of_stock_click", {
+                                        axis: "color",
+                                        color: color.name,
+                                      });
+                                      return;
+                                    }
+                                    setActiveColor(color.name);
+                                  }}
                                 />
                                 <div
                                   className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${

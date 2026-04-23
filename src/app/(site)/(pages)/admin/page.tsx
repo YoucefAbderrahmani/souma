@@ -145,6 +145,12 @@ const AdminPage = async () => {
             >
               Sales micro-events
             </Link>
+            <Link
+              href="/admin/ai-sales-analyst"
+              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              AI Sales Analyst (full table)
+            </Link>
           </div>
         </div>
         <AdminPanels

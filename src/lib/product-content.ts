@@ -18,6 +18,8 @@ export type ProductStructuredContent = {
   colors: Array<{
     name: string;
     price?: number;
+    /** When false, selection is blocked and `out_of_stock_click` is tracked. */
+    inStock?: boolean;
   }>;
   colorHasPriceOverride?: boolean;
   specifications: ProductSpec[];
@@ -75,13 +77,20 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
       parsedColors.length > 0 && typeof parsedColors[0] === "string"
         ? parsedColors.map((name) => ({ name: String(name) }))
         : parsedColors
-            .map((item) => ({
-              name: String((item as { name?: string })?.name ?? "").trim(),
-              price:
-                typeof (item as { price?: unknown })?.price === "number"
-                  ? Number((item as { price?: number }).price)
-                  : undefined,
-            }))
+            .map((item) => {
+              const raw = item as { name?: string; price?: unknown; inStock?: unknown };
+              let inStock: boolean | undefined;
+              if (raw.inStock !== undefined) {
+                const v = raw.inStock;
+                if (v === false || v === "false" || v === 0) inStock = false;
+                else if (v === true || v === "true" || v === 1) inStock = true;
+              }
+              return {
+                name: String(raw?.name ?? "").trim(),
+                price: typeof raw.price === "number" ? Number(raw.price) : undefined,
+                ...(inStock === undefined ? {} : { inStock }),
+              };
+            })
             .filter((item) => item.name);
 
     return {
