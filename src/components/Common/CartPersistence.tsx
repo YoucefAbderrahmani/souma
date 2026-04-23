@@ -5,6 +5,27 @@ import { useDispatch } from "react-redux";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { setCartItems, type CartItem } from "@/redux/features/cart-slice";
 import { useSession } from "@/app/context/SessionProvider";
+import { publicApiUrl } from "@/lib/public-api-url";
+
+// #region agent log
+/** HTTPS (Vercel) blocks http://127.0.0.1; use same-origin API → server logs + local NDJSON in dev. */
+function dbgLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown>) {
+  const body = JSON.stringify({
+    sessionId: "ee41ca",
+    hypothesisId,
+    location,
+    message,
+    data,
+    timestamp: Date.now(),
+  });
+  fetch(publicApiUrl("/api/debug/cart-log"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+// #endregion
 
 const GUEST_CART_KEY = "souma_cart_guest_v1";
 
@@ -47,12 +68,20 @@ const CartPersistence = () => {
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const { session, isPending } = useSession();
+  const cartLenRef = useRef(0);
+  cartLenRef.current = cartItems.length;
   const activeStorageKeyRef = useRef<string | null>(null);
   const hydratedRef = useRef(false);
   const [sessionResolved, setSessionResolved] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // #region agent log
+    dbgLog("B", "CartPersistence.tsx:sessionEffect", "session gate", {
+      isPending,
+      userId: session?.user?.id ?? null,
+    });
+    // #endregion
     if (isPending) return;
     setResolvedUserId(session?.user?.id?.trim() || null);
     setSessionResolved(true);
@@ -67,11 +96,31 @@ const CartPersistence = () => {
   useEffect(() => {
     if (!sessionResolved) return;
 
-    const userCart = parseStoredCart(window.localStorage.getItem(targetStorageKey));
+    const rawUser = window.localStorage.getItem(targetStorageKey);
+    const rawGuest = window.localStorage.getItem(GUEST_CART_KEY);
+    const userCart = parseStoredCart(rawUser);
+    const guestCart = parseStoredCart(rawGuest);
+
+    // #region agent log
+    dbgLog("A", "CartPersistence.tsx:hydrate:before", "hydrate inputs", {
+      targetStorageKey,
+      userId: userId ?? null,
+      reduxCartLen: cartLenRef.current,
+      userCartLen: userCart.length,
+      guestCartLen: guestCart.length,
+      rawUserLen: rawUser?.length ?? 0,
+      rawGuestLen: rawGuest?.length ?? 0,
+      hydratedBefore: hydratedRef.current,
+    });
+    // #endregion
 
     if (userId && userCart.length === 0) {
-      const guestCart = parseStoredCart(window.localStorage.getItem(GUEST_CART_KEY));
       if (guestCart.length > 0) {
+        // #region agent log
+        dbgLog("A", "CartPersistence.tsx:hydrate:branch", "merge guest→user", {
+          guestCartLen: guestCart.length,
+        });
+        // #endregion
         dispatch(setCartItems(guestCart));
         window.localStorage.setItem(targetStorageKey, JSON.stringify(guestCart));
         activeStorageKeyRef.current = targetStorageKey;
@@ -80,12 +129,27 @@ const CartPersistence = () => {
       }
     }
 
+    // #region agent log
+    dbgLog("A", "CartPersistence.tsx:hydrate:setFromStorage", "dispatch setCartItems(userCart)", {
+      userCartLen: userCart.length,
+      reduxCartLenBefore: cartLenRef.current,
+    });
+    // #endregion
     dispatch(setCartItems(userCart));
     activeStorageKeyRef.current = targetStorageKey;
     hydratedRef.current = true;
   }, [dispatch, sessionResolved, targetStorageKey, userId]);
 
   useEffect(() => {
+    // #region agent log
+    dbgLog("D", "CartPersistence.tsx:persist:gate", "persist gate", {
+      sessionResolved,
+      hydrated: hydratedRef.current,
+      activeKey: activeStorageKeyRef.current,
+      targetStorageKey,
+      cartLen: cartItems.length,
+    });
+    // #endregion
     if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
     window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
@@ -98,7 +162,15 @@ const CartPersistence = () => {
       if (event.storageArea !== window.localStorage) return;
       if (event.key !== targetStorageKey) return;
 
-      dispatch(setCartItems(parseStoredCart(event.newValue)));
+      const parsed = parseStoredCart(event.newValue);
+      // #region agent log
+      dbgLog("E", "CartPersistence.tsx:storage", "storage event", {
+        key: event.key,
+        newValueLen: event.newValue?.length ?? 0,
+        parsedLen: parsed.length,
+      });
+      // #endregion
+      dispatch(setCartItems(parsed));
     };
 
     window.addEventListener("storage", handleStorage);
