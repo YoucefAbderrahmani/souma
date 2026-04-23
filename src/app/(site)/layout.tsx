@@ -19,6 +19,7 @@ import { PriceModeProvider } from "../context/PriceModeContext";
 import SmartShoppingAssistant from "@/components/Common/SmartShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
 import CartPersistence from "@/components/Common/CartPersistence";
+import FloatingAdminButton from "@/components/Common/FloatingAdminButton";
 
 export default function RootLayout({
   children,
@@ -60,6 +61,7 @@ export default function RootLayout({
                   </CartModalProvider>
                   <Toaster />
                   <ScrollToTop />
+                  <FloatingAdminButton />
                   <Footer />
                 </ReduxProvider>
               </PriceModeProvider>
