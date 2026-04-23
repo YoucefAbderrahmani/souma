@@ -257,8 +257,8 @@ const Header = () => {
             {/* <!-- divider --> */}
             <span className="hidden xl:block w-px h-7.5 bg-gray-4"></span>
 
-            <div className="flex w-full lg:w-auto justify-between items-center gap-5">
-              <div className="flex items-center gap-5">
+            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center justify-end gap-3 sm:gap-5 lg:flex-nowrap lg:justify-end">
+              <div className="flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-2 sm:gap-3">
                 {isPending ? (
                   <div className="flex items-center gap-2.5">
                     <svg
@@ -291,10 +291,10 @@ const Header = () => {
                     </div>
                   </div>
                 ) : session ? (
-                  <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                     <Link
                       href="/my-account"
-                      className="flex items-center gap-2.5"
+                      className="flex min-w-0 items-center gap-2 sm:gap-2.5"
                     >
                       <svg
                         width="24"
@@ -328,9 +328,9 @@ const Header = () => {
                     {shouldShowAdminNav(session.user) && (
                       <Link
                         href="/admin"
-                        className="shrink-0 rounded-md border border-[#FB923C] bg-white px-3 py-2 text-center text-custom-sm font-medium text-[#FB923C] transition hover:bg-[#FB923C] hover:text-white"
+                        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-[#FB923C] bg-white px-2.5 text-xs font-semibold text-[#FB923C] transition hover:bg-[#FB923C] hover:text-white sm:h-10 sm:px-3 sm:text-custom-sm"
                       >
-                        Admin panel
+                        Admin
                       </Link>
                     )}
                   </div>
@@ -366,10 +366,11 @@ const Header = () => {
                     </div>
                   </Link>
                 )}
+              </div>
 
                 <button
                   onClick={handleOpenCartModal}
-                  className="flex items-center gap-2.5"
+                  className="flex shrink-0 items-center gap-2.5"
                 >
                   <span className="inline-block relative">
                     <svg
@@ -417,7 +418,6 @@ const Header = () => {
                     </p>
                   </div>
                 </button>
-              </div>
 
               {/* <!-- Hamburger Toggle BTN --> */}
               <button
@@ -502,18 +502,6 @@ const Header = () => {
                       </li>
                     )
                   )}
-                  {!isPending && session?.user && shouldShowAdminNav(session.user) && (
-                    <li className="group relative before:w-0 before:h-[3px] before:bg-[#FB923C] before:absolute before:left-0 before:top-0 before:rounded-b-[3px] before:ease-out before:duration-200 hover:before:w-full">
-                      <Link
-                        href="/admin"
-                        className={`font-medium text-[#FB923C] hover:text-blue text-custom-sm flex ${
-                          stickyMenu ? "xl:py-4" : "xl:py-6"
-                        }`}
-                      >
-                        Admin panel
-                      </Link>
-                    </li>
-                  )}
                 </ul>
               </nav>
               {/* //   <!-- Main Nav End --> */}
@@ -565,16 +553,6 @@ const Header = () => {
                   </Link>
                 </li>
 
-                {!isPending && session?.user && shouldShowAdminNav(session.user) && (
-                  <li className="py-4">
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-1.5 font-medium text-custom-sm text-[#FB923C] hover:text-blue"
-                    >
-                      Admin panel
-                    </Link>
-                  </li>
-                )}
                 <li className="py-4">
                   <Link
                     href="/wishlist"

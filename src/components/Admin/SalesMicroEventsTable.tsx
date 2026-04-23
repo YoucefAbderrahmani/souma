@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
+import { publicApiUrl } from "@/lib/public-api-url";
 
 const POLL_MS = 4000;
 
@@ -41,13 +42,26 @@ export default function SalesMicroEventsTable({ initialSessions }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/sales-micro-events", {
+      const res = await fetch(publicApiUrl("/api/admin/sales-micro-events"), {
         credentials: "include",
         cache: "no-store",
       });
       if (!mounted.current) return;
       if (!res.ok) {
-        setFetchError(res.status === 403 ? "No permission" : `Error ${res.status}`);
+        let detail = "";
+        try {
+          const body = (await res.json()) as { message?: string; error?: string };
+          detail = body.message || body.error || "";
+        } catch {
+          /* ignore */
+        }
+        setFetchError(
+          res.status === 403
+            ? "No permission"
+            : res.status === 500 && detail
+              ? detail
+              : `Error ${res.status}`
+        );
         return;
       }
       const data = (await res.json()) as { sessions?: SalesMicroSessionAdmin[] };

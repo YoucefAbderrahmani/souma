@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ShoppingSequenceDTO } from "@/types/shopping-sequence";
+import { publicApiUrl } from "@/lib/public-api-url";
 
 const POLL_MS = 3000;
 
@@ -22,7 +23,7 @@ export default function SequencesLiveTable({ initialSequences }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/sequences", {
+      const res = await fetch(publicApiUrl("/api/admin/sequences"), {
         credentials: "include",
         cache: "no-store",
       });

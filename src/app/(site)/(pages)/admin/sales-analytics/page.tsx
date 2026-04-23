@@ -9,6 +9,7 @@ import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import SalesMicroEventsTable from "@/components/Admin/SalesMicroEventsTable";
 import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-events-admin";
+import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
 
 export const metadata: Metadata = {
   title: "Sales micro-events | Souma Store Admin",
@@ -57,7 +58,17 @@ const SalesAnalyticsAdminPage = async () => {
     );
   }
 
-  const initialSessions = await listSalesMicroSessionsForAdmin({ maxSessions: 80 });
+  let initialSessions: SalesMicroSessionAdmin[] = [];
+  let serverError: string | null = null;
+  try {
+    initialSessions = await listSalesMicroSessionsForAdmin({ maxSessions: 80 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    serverError =
+      message.includes("sales_micro_event") || message.includes("does not exist")
+        ? 'Database is missing the "sales_micro_event" table. Run drizzle/0003_sales_micro_event.sql on Neon, then reload.'
+        : message;
+  }
 
   return (
     <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
@@ -82,7 +93,11 @@ const SalesAnalyticsAdminPage = async () => {
           </Link>
         </div>
 
-        <SalesMicroEventsTable initialSessions={initialSessions} />
+        {serverError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{serverError}</div>
+        ) : (
+          <SalesMicroEventsTable initialSessions={initialSessions} />
+        )}
       </section>
     </main>
   );
