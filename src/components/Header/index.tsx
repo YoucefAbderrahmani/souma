@@ -18,7 +18,6 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -360,8 +359,6 @@ const Header = () => {
                   </Link>
                 )}
               </div>
-
-              <ThemeToggle />
 
                 <button
                   onClick={handleOpenCartModal}
