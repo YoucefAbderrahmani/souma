@@ -113,14 +113,16 @@ export default function AdminPanels({ users, products }: Props) {
   }, [addSoumaMode, addPriceInput]);
 
   return (
-    <div className="mt-10">
-      <div className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Main workspace</p>
-        <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
+      <aside className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5 lg:sticky lg:top-28">
+        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Navigation</p>
+
+        <div className="mt-4 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">Main tabs</p>
           <button
             type="button"
             onClick={() => setMainTab("seller")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
               mainTab === "seller"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
@@ -131,7 +133,7 @@ export default function AdminPanels({ users, products }: Props) {
           <button
             type="button"
             onClick={() => setMainTab("data-tracking")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
               mainTab === "data-tracking"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
@@ -140,16 +142,16 @@ export default function AdminPanels({ users, products }: Props) {
             Data Tracking
           </button>
         </div>
-      </div>
 
-      {mainTab === "seller" ? (
-        <div className="mt-4 rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Seller sub-tabs</p>
-          <div className="mt-3 flex flex-wrap gap-2">
+        {mainTab === "seller" ? (
+          <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">
+              Seller sub-tabs
+            </p>
             <button
               type="button"
               onClick={() => setActiveTab("users")}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                 activeTab === "users"
                   ? "bg-blue text-white shadow-sm"
                   : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
@@ -160,7 +162,7 @@ export default function AdminPanels({ users, products }: Props) {
             <button
               type="button"
               onClick={() => setActiveTab("add-product")}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                 activeTab === "add-product"
                   ? "bg-blue text-white shadow-sm"
                   : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
@@ -171,7 +173,7 @@ export default function AdminPanels({ users, products }: Props) {
             <button
               type="button"
               onClick={() => setActiveTab("products")}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                 activeTab === "products"
                   ? "bg-blue text-white shadow-sm"
                   : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
@@ -180,43 +182,48 @@ export default function AdminPanels({ users, products }: Props) {
               Stock & Edit Items
             </button>
           </div>
-        </div>
-      ) : (
-        <section className="mt-6 rounded-xl border border-gray-3 bg-white p-5">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-dark">Data Tracking sub-tabs</h2>
-            <p className="mt-1 text-sm text-dark-4">
-              Sequence flow, assistant activity, and analytics pages are grouped here.
+        ) : (
+          <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">
+              Data tracking pages
             </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Link
               href="/sequence"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Sequences
             </Link>
             <Link
               href="/admin/item-assistant"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Item Assistant Tracking
             </Link>
             <Link
               href="/admin/sales-analytics"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Session Timeline
             </Link>
             <Link
               href="/admin/ai-sales-analyst"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               AI Sales Analyst
             </Link>
           </div>
-        </section>
-      )}
+        )}
+      </aside>
+
+      <div>
+        {mainTab === "data-tracking" ? (
+          <section className="rounded-xl border border-gray-3 bg-white p-5">
+            <h2 className="text-lg font-semibold text-dark">Data Tracking</h2>
+            <p className="mt-1 text-sm text-dark-4">
+              Use the left sidebar to quickly jump to sequences, assistant tracking, and analytics pages.
+            </p>
+          </section>
+        ) : null}
 
       {mainTab === "seller" && activeTab === "users" && (
         <section className="mt-6">
@@ -905,6 +912,7 @@ export default function AdminPanels({ users, products }: Props) {
           ) : null}
         </section>
       )}
+      </div>
     </div>
   );
 }
