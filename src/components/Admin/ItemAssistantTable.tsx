@@ -12,8 +12,6 @@ import { publicApiUrl } from "@/lib/public-api-url";
 import { salesMicroEventCategory } from "@/lib/sales-micro-event-category";
 import { extractPayloadDurationMs } from "@/lib/sales-micro-payload-duration";
 
-const POLL_MS = 4000;
-
 function fmtIso(iso: string | null | undefined) {
   if (!iso) return "—";
   return iso.replace("T", " ").slice(0, 23);
@@ -126,32 +124,7 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
   }, []);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    const start = () => {
-      if (interval) return;
-      interval = setInterval(loadList, POLL_MS);
-    };
-    const stop = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-    const onVis = () => {
-      if (document.visibilityState === "visible") {
-        loadList();
-        start();
-      } else stop();
-    };
-    if (document.visibilityState === "visible") {
-      loadList();
-      start();
-    }
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      stop();
-    };
+    void loadList();
   }, [loadList]);
 
   const loadDetail = useCallback(async (productLocalId: number) => {
@@ -189,20 +162,11 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
     void loadDetail(id);
   };
 
-  useEffect(() => {
-    if (expandedId == null) return;
-    if (document.visibilityState !== "visible") return;
-    const interval = setInterval(() => {
-      void loadDetail(expandedId);
-    }, POLL_MS);
-    return () => clearInterval(interval);
-  }, [expandedId, loadDetail]);
-
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-dark-4">
         <span>
-          Products with telemetry · refresh every {POLL_MS / 1000}s when visible
+          Products with telemetry
           {listError ? <span className="ml-2 text-red-600">· {listError}</span> : null}
         </span>
         <span className="tabular-nums">Last refresh: {new Date(updatedAt).toLocaleTimeString()}</span>
