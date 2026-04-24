@@ -72,6 +72,109 @@
     xl:translate-y-10 xl:opacity-0 xl:invisible xl:absolute xl:flex
     xl:group-hover:opacity-100 xl:group-hover:visible;
   }
+
+  /* Night mode (html.dark from next-themes): remap common utilities site-wide */
+  html.dark body {
+    @apply bg-gray-7 text-gray-3;
+  }
+
+  html.dark .bg-white {
+    @apply bg-gray-7;
+  }
+
+  html.dark .bg-gray-1 {
+    @apply bg-gray-7;
+  }
+
+  html.dark .bg-gray-2 {
+    @apply bg-[#2d3748];
+  }
+
+  html.dark .bg-meta {
+    @apply bg-gray-7;
+  }
+
+  html.dark .text-dark {
+    @apply text-gray-2;
+  }
+
+  html.dark .text-dark-2 {
+    @apply text-gray-3;
+  }
+
+  html.dark .text-dark-3 {
+    @apply text-gray-4;
+  }
+
+  html.dark .text-dark-4 {
+    @apply text-gray-5;
+  }
+
+  html.dark .border-gray-3 {
+    @apply border-gray-6;
+  }
+
+  html.dark .border-gray-4 {
+    @apply border-gray-6;
+  }
+
+  html.dark .dropdown {
+    @apply border-gray-6 bg-gray-7 shadow-none;
+  }
+
+  html.dark .select-selected {
+    @apply border-gray-6 bg-gray-7 text-gray-2;
+  }
+
+  html.dark .select-items {
+    @apply border-gray-6 bg-gray-7 shadow-none;
+  }
+
+  html.dark .select-items div {
+    @apply text-gray-4;
+  }
+
+  html.dark .select-items div:hover,
+  html.dark .same-as-selected {
+    @apply bg-gray-6 text-gray-1;
+  }
+
+  html.dark .custom-select-2 .select-selected {
+    @apply border-gray-6 bg-gray-7 text-gray-4;
+  }
+
+  html.dark .custom-select-common .select-selected {
+    @apply border-gray-6 bg-gray-7 text-gray-4;
+  }
+
+  html.dark .custom-search {
+    @apply border-gray-6 bg-gray-7 text-gray-2 placeholder:text-gray-5;
+  }
+
+  html.dark .common-carousel .swiper-button-next,
+  html.dark .common-carousel .swiper-button-prev {
+    @apply border-gray-6 bg-gray-7 text-gray-2 hover:text-white;
+  }
+
+  html.dark .priceSlide .noUi-connects {
+    @apply bg-gray-6;
+  }
+
+  html.dark .priceSlide .noUi-horizontal .noUi-handle {
+    @apply border-gray-6 bg-gray-7;
+  }
+
+  html.dark .priceSlide .noUi-tooltip {
+    @apply text-gray-4;
+  }
+
+  html.dark .range-slider__thumb {
+    @apply !border-gray-5 !bg-gray-7;
+  }
+
+  html.dark .shadow {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
 }
 
 @layer utilities {

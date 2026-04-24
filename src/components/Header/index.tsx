@@ -18,6 +18,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,6 +133,7 @@ const Header = () => {
                 alt="Logo"
                 width={219}
                 height={36}
+                className="dark:brightness-0 dark:invert"
               />
             </Link>
 
@@ -185,7 +187,7 @@ const Header = () => {
                     </button>
 
                     {showSearchResults && searchQuery.trim() ? (
-                      <div className="absolute left-0 top-[calc(100%+8px)] z-[10050] w-full rounded-md border border-gray-3 bg-white p-2 shadow-lg">
+                      <div className="absolute left-0 top-[calc(100%+8px)] z-[10050] w-full rounded-md border border-gray-3 bg-white p-2 shadow-lg dark:border-gray-6 dark:bg-gray-7">
                         {searchResults.length > 0 ? (
                           <div className="flex flex-col">
                             {searchResults.map((item) => (
@@ -193,7 +195,7 @@ const Header = () => {
                                 key={item.id}
                                 type="button"
                                 onClick={() => openDetails(item)}
-                                className="flex items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-[#FFF7F0]"
+                                className="flex items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-[#FFF7F0] dark:hover:bg-gray-6/40"
                               >
                                 <span className="truncate text-sm text-dark">{item.title}</span>
                                 <span className="shrink-0 text-xs text-dark-4 capitalize">
@@ -359,6 +361,8 @@ const Header = () => {
                 )}
               </div>
 
+              <ThemeToggle />
+
                 <button
                   onClick={handleOpenCartModal}
                   className="flex shrink-0 items-center gap-2.5"
@@ -420,17 +424,17 @@ const Header = () => {
                 <span className="block relative cursor-pointer w-5.5 h-5.5">
                   <span className="du-block absolute right-0 w-full h-full">
                     <span
-                      className={`block relative top-0 left-0 bg-dark rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-[0] ${
+                      className={`block relative top-0 left-0 bg-dark dark:bg-gray-2 rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-[0] ${
                         !navigationOpen && "!w-full delay-300"
                       }`}
                     ></span>
                     <span
-                      className={`block relative top-0 left-0 bg-dark rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-150 ${
+                      className={`block relative top-0 left-0 bg-dark dark:bg-gray-2 rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-150 ${
                         !navigationOpen && "!w-full delay-400"
                       }`}
                     ></span>
                     <span
-                      className={`block relative top-0 left-0 bg-dark rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-200 ${
+                      className={`block relative top-0 left-0 bg-dark dark:bg-gray-2 rounded-sm w-0 h-0.5 my-1 ease-in-out duration-200 delay-200 ${
                         !navigationOpen && "!w-full delay-500"
                       }`}
                     ></span>
@@ -438,12 +442,12 @@ const Header = () => {
 
                   <span className="block absolute right-0 w-full h-full rotate-45">
                     <span
-                      className={`block bg-dark rounded-sm ease-in-out duration-200 delay-300 absolute left-2.5 top-0 w-0.5 h-full ${
+                      className={`block bg-dark dark:bg-gray-2 rounded-sm ease-in-out duration-200 delay-300 absolute left-2.5 top-0 w-0.5 h-full ${
                         !navigationOpen && "!h-0 delay-[0] "
                       }`}
                     ></span>
                     <span
-                      className={`block bg-dark rounded-sm ease-in-out duration-200 delay-400 absolute left-0 top-2.5 w-full h-0.5 ${
+                      className={`block bg-dark dark:bg-gray-2 rounded-sm ease-in-out duration-200 delay-400 absolute left-0 top-2.5 w-full h-0.5 ${
                         !navigationOpen && "!h-0 dealy-200"
                       }`}
                     ></span>

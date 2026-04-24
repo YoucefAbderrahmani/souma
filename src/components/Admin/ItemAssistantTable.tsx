@@ -7,6 +7,7 @@ import type {
   ProductMicroAggregateRow,
   ProductMicroDetailResponse,
   ProductMicroDetailStats,
+  ProductMicroEventNameBreakdown,
 } from "@/types/sales-micro-by-product";
 import { publicApiUrl } from "@/lib/public-api-url";
 import { salesMicroEventCategory } from "@/lib/sales-micro-event-category";
@@ -41,6 +42,10 @@ function formatTopEvents(stats: ProductMicroDetailStats) {
     .slice(0, 8)
     .map(([k, v]) => `${k} (${v})`)
     .join(" · ");
+}
+
+function sortedEventBreakdown(stats: ProductMicroDetailStats): [string, ProductMicroEventNameBreakdown][] {
+  return Object.entries(stats.byEventNameDetail).sort((a, b) => b[1].count - a[1].count);
 }
 
 type Props = {
@@ -217,30 +222,89 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
                             <p className="text-sm text-red-600">{detailError}</p>
                           ) : detail ? (
                             <div className="flex flex-col gap-4">
-                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Avg payload duration</p>
+                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Pooled payload duration</p>
                                   <p className="mt-1 text-lg font-semibold text-dark">
                                     {detail.stats.avgPayloadDurationMs != null
                                       ? fmtMs(detail.stats.avgPayloadDurationMs)
                                       : "—"}
                                   </p>
-                                  <p className="mt-1 text-[11px] text-dark-4">Across events with ms / value_ms / duration_ms in payload.</p>
+                                  <p className="mt-1 text-[11px] text-dark-4">
+                                    All event types combined (legacy). Use the per-event table for individual parameters.
+                                  </p>
                                 </div>
                                 <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Avg Δ after previous</p>
+                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Pooled Δ after previous</p>
                                   <p className="mt-1 text-lg font-semibold text-dark">
                                     {detail.stats.avgDeltaAfterPrevMs != null
                                       ? fmtMs(detail.stats.avgDeltaAfterPrevMs)
                                       : "—"}
                                   </p>
-                                  <p className="mt-1 text-[11px] text-dark-4">Within each session, time to next signal.</p>
+                                  <p className="mt-1 text-[11px] text-dark-4">All event names merged — see per-event column.</p>
                                 </div>
-                                <div className="rounded-lg border border-gray-3 bg-white p-3 sm:col-span-2 lg:col-span-2">
-                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Top event names</p>
+                                <div className="rounded-lg border border-gray-3 bg-white p-3">
+                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Shopping sequences matched</p>
+                                  <p className="mt-1 text-lg font-semibold text-dark">
+                                    {detail.stats.shoppingSequencesMatched}
+                                  </p>
+                                  <p className="mt-1 text-[11px] text-dark-4">
+                                    Funnel rows from <code className="rounded bg-gray-1 px-0.5">shopping_sequence</code> where
+                                    this product’s events fall between <code className="rounded bg-gray-1 px-0.5">started_at</code> and{" "}
+                                    <code className="rounded bg-gray-1 px-0.5">ended_at</code> (same browser session key).
+                                  </p>
+                                </div>
+                                <div className="rounded-lg border border-gray-3 bg-white p-3 sm:col-span-2 lg:col-span-3">
+                                  <p className="text-[10px] font-semibold uppercase text-dark-4">Top event names (counts)</p>
                                   <p className="mt-1 text-xs leading-relaxed text-dark">
                                     {formatTopEvents(detail.stats)}
                                   </p>
+                                </div>
+                              </div>
+
+                              <div>
+                                <p className="mb-2 text-[10px] font-semibold uppercase text-dark-4">
+                                  Per event name (individual averages, not merged)
+                                </p>
+                                <div className="max-h-[320px] overflow-auto rounded-lg border border-gray-3 bg-white">
+                                  <table className="w-full min-w-[720px] border-collapse text-left text-[11px]">
+                                    <thead className="sticky top-0 z-[1] border-b border-gray-3 bg-gray-2 text-[10px] font-semibold uppercase text-dark-4">
+                                      <tr>
+                                        <th className="px-2 py-2">Event</th>
+                                        <th className="px-2 py-2">Category</th>
+                                        <th className="px-2 py-2">Count</th>
+                                        <th className="px-2 py-2">Avg payload dur</th>
+                                        <th className="px-2 py-2">Avg Δ after prev</th>
+                                        <th className="px-2 py-2">Avg / shopping seq</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sortedEventBreakdown(detail.stats).map(([name, row]) => {
+                                        const cat = salesMicroEventCategory(name);
+                                        const avgSeq = detail.stats.avgPerShoppingSequenceByEventName[name] ?? 0;
+                                        return (
+                                          <tr key={name} className="border-b border-gray-3 last:border-0">
+                                            <td className="max-w-[200px] truncate px-2 py-1.5 font-medium" title={name}>
+                                              {name}
+                                            </td>
+                                            <td className="max-w-[120px] truncate px-2 py-1.5 text-dark-4" title={cat}>
+                                              {cat}
+                                            </td>
+                                            <td className="whitespace-nowrap px-2 py-1.5 tabular-nums">{row.count}</td>
+                                            <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-dark-4">
+                                              {fmtMs(row.avgPayloadDurationMs)}
+                                            </td>
+                                            <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-dark-4">
+                                              {fmtMs(row.avgDeltaAfterPrevMs)}
+                                            </td>
+                                            <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-dark-4">
+                                              {detail.stats.shoppingSequencesMatched > 0 ? avgSeq.toFixed(2) : "—"}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
 
@@ -309,8 +373,10 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
       </div>
 
       <p className="mt-3 text-[11px] text-dark-4">
-        Averages in the expanded panel are computed from all loaded events for that product (up to ~1.2k rows per request).
-        Use <Link href="/admin/ai-sales-analyst">AI Sales Analyst</Link> for session-level JSONL export.
+        Per-event averages use only rows of that <code className="rounded bg-gray-1 px-0.5">event_name</code>. “Avg / shopping seq” is
+        (sum of counts for that event) ÷ (number of <code className="rounded bg-gray-1 px-0.5">shopping_sequence</code> windows matched
+        for this product). Loaded events are capped per request (~1.2k). Use{" "}
+        <Link href="/admin/ai-sales-analyst">AI Sales Analyst</Link> for session-level JSONL export.
       </p>
     </div>
   );

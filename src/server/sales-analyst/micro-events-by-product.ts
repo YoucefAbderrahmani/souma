@@ -2,8 +2,15 @@ import { desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import type { SalesMicroEventAdminRow } from "@/types/sales-micro-analytics";
-import type { ProductMicroAggregateRow, ProductMicroDetailResponse, ProductMicroDetailStats } from "@/types/sales-micro-by-product";
+import type {
+  ProductMicroAggregateRow,
+  ProductMicroDetailResponse,
+  ProductMicroDetailStats,
+  ProductMicroEventNameBreakdown,
+} from "@/types/sales-micro-by-product";
 import { extractPayloadDurationMs } from "@/lib/sales-micro-payload-duration";
+import type { ShoppingSequenceRow } from "@/server/sequence/sequence-db";
+import { listSequencesForSessionKeys } from "@/server/sequence/sequence-db";
 
 function parsePayload(raw: string | null): Record<string, unknown> | null {
   if (!raw) return null;
@@ -113,21 +120,109 @@ function toAdminRowsForProduct(rows: (typeof salesMicroEventTable.$inferSelect)[
   return flat;
 }
 
-function computeStats(events: SalesMicroEventAdminRow[]): ProductMicroDetailStats {
+function meanRounded(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+}
+
+function sequencesBySessionKey(sequences: ShoppingSequenceRow[]): Map<string, ShoppingSequenceRow[]> {
+  const bySession = new Map<string, ShoppingSequenceRow[]>();
+  for (const s of sequences) {
+    const list = bySession.get(s.sessionKey) ?? [];
+    list.push(s);
+    bySession.set(s.sessionKey, list);
+  }
+  Array.from(bySession.values()).forEach((list) => {
+    list.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  });
+  return bySession;
+}
+
+/** Match a micro-event to the shopping funnel row whose [startedAt, endedAt] contains the event time. */
+function findSequenceIdForEvent(
+  ev: SalesMicroEventAdminRow,
+  bySession: Map<string, ShoppingSequenceRow[]>
+): string | null {
+  const t = new Date(ev.clientEventAt ?? ev.createdAt).getTime();
+  const list = bySession.get(ev.sessionKey);
+  if (!list?.length) return null;
+  let best: ShoppingSequenceRow | null = null;
+  for (const s of list) {
+    const st = s.startedAt.getTime();
+    if (t < st) continue;
+    const en = s.endedAt ? s.endedAt.getTime() : Number.POSITIVE_INFINITY;
+    if (t > en) continue;
+    if (!best || st > best.startedAt.getTime()) best = s;
+  }
+  return best?.id ?? null;
+}
+
+function computeStats(events: SalesMicroEventAdminRow[], sequences: ShoppingSequenceRow[]): ProductMicroDetailStats {
   const byEventName: Record<string, number> = {};
-  const durations: number[] = [];
-  const deltas: number[] = [];
+  const allDurations: number[] = [];
+  const allDeltas: number[] = [];
+  const durationsByName = new Map<string, number[]>();
+  const deltasByName = new Map<string, number[]>();
+
   for (const r of events) {
     byEventName[r.eventName] = (byEventName[r.eventName] ?? 0) + 1;
     const d = extractPayloadDurationMs(r.eventName, r.payload);
-    if (d != null) durations.push(d);
-    if (r.deltaMsSincePrevious != null) deltas.push(r.deltaMsSincePrevious);
+    if (d != null) {
+      allDurations.push(d);
+      const arr = durationsByName.get(r.eventName) ?? [];
+      arr.push(d);
+      durationsByName.set(r.eventName, arr);
+    }
+    if (r.deltaMsSincePrevious != null) {
+      allDeltas.push(r.deltaMsSincePrevious);
+      const arrD = deltasByName.get(r.eventName) ?? [];
+      arrD.push(r.deltaMsSincePrevious);
+      deltasByName.set(r.eventName, arrD);
+    }
   }
-  const avgPayloadDurationMs =
-    durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
-  const avgDeltaAfterPrevMs =
-    deltas.length > 0 ? Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length) : null;
-  return { avgPayloadDurationMs, avgDeltaAfterPrevMs, byEventName };
+
+  const bySession = sequencesBySessionKey(sequences);
+  const countBySeqByName = new Map<string, Map<string, number>>();
+  for (const ev of events) {
+    const sid = findSequenceIdForEvent(ev, bySession);
+    if (!sid) continue;
+    const m = countBySeqByName.get(sid) ?? new Map();
+    m.set(ev.eventName, (m.get(ev.eventName) ?? 0) + 1);
+    countBySeqByName.set(sid, m);
+  }
+
+  const shoppingSequencesMatched = countBySeqByName.size;
+  const names = Object.keys(byEventName);
+  const avgPerShoppingSequenceByEventName: Record<string, number> = {};
+  for (const name of names) {
+    if (shoppingSequencesMatched === 0) {
+      avgPerShoppingSequenceByEventName[name] = 0;
+      continue;
+    }
+    let sum = 0;
+    for (const m of Array.from(countBySeqByName.values())) {
+      sum += m.get(name) ?? 0;
+    }
+    avgPerShoppingSequenceByEventName[name] = sum / shoppingSequencesMatched;
+  }
+
+  const byEventNameDetail: Record<string, ProductMicroEventNameBreakdown> = {};
+  for (const name of names) {
+    byEventNameDetail[name] = {
+      count: byEventName[name]!,
+      avgPayloadDurationMs: meanRounded(durationsByName.get(name) ?? []),
+      avgDeltaAfterPrevMs: meanRounded(deltasByName.get(name) ?? []),
+    };
+  }
+
+  return {
+    avgPayloadDurationMs: meanRounded(allDurations),
+    avgDeltaAfterPrevMs: meanRounded(allDeltas),
+    byEventName,
+    byEventNameDetail,
+    avgPerShoppingSequenceByEventName,
+    shoppingSequencesMatched,
+  };
 }
 
 export async function listProductMicroAggregatesAdmin(options?: {
@@ -177,6 +272,8 @@ export async function getProductMicroDetailAdmin(
   if (rows.length === 0) return null;
 
   const events = toAdminRowsForProduct(rows);
-  const stats = computeStats(events);
+  const sessionKeys = Array.from(new Set(rows.map((r) => r.sessionKey)));
+  const sequences = await listSequencesForSessionKeys(sessionKeys);
+  const stats = computeStats(events, sequences);
   return { productLocalId: id, stats, events };
 }

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import "../css/euclid-circular-a-font.css";
 import "../css/style.css";
 import Header from "../../components/Header";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import Footer from "../../components/Footer";
 
 import { CartModalProvider } from "../context/CartSidebarModalContext";
@@ -40,34 +41,36 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body suppressHydrationWarning={true}>
-        {loading ? (
-          <PreLoader />
-        ) : (
-          <>
-            <SessionProvider>
-              <PriceModeProvider>
-                <ReduxProvider>
-                  <CartPersistence />
-                  <CartModalProvider>
-                    <PreviewSliderProvider>
-                      <Header />
-                      {children}
+        <ThemeProvider>
+          {loading ? (
+            <PreLoader />
+          ) : (
+            <>
+              <SessionProvider>
+                <PriceModeProvider>
+                  <ReduxProvider>
+                    <CartPersistence />
+                    <CartModalProvider>
+                      <PreviewSliderProvider>
+                        <Header />
+                        {children}
 
-                      <CartSidebarModal />
-                      <PreviewSliderModal />
-                      <SmartShoppingAssistant />
-                      <SequenceRouteWatcher />
-                    </PreviewSliderProvider>
-                  </CartModalProvider>
-                  <Toaster />
-                  <ScrollToTop />
-                  <FloatingAdminButton />
-                  <Footer />
-                </ReduxProvider>
-              </PriceModeProvider>
-            </SessionProvider>
-          </>
-        )}
+                        <CartSidebarModal />
+                        <PreviewSliderModal />
+                        <SmartShoppingAssistant />
+                        <SequenceRouteWatcher />
+                      </PreviewSliderProvider>
+                    </CartModalProvider>
+                    <Toaster />
+                    <ScrollToTop />
+                    <FloatingAdminButton />
+                    <Footer />
+                  </ReduxProvider>
+                </PriceModeProvider>
+              </SessionProvider>
+            </>
+          )}
+        </ThemeProvider>
       </body>
     </html>
   );

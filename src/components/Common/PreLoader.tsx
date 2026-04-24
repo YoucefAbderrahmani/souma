@@ -3,7 +3,7 @@ import React from "react";
 const PreLoader = () => {
   return (
     <div
-      className="fixed left-0 top-0 z-999999 flex h-screen w-screen items-center justify-center bg-white"
+      className="fixed left-0 top-0 z-999999 flex h-screen w-screen items-center justify-center bg-white dark:bg-gray-7"
       suppressHydrationWarning
     >
       <div

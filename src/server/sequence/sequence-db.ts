@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { db } from "@/server/db";
 import { shoppingSequenceTable, user } from "@/server/db/schema";
@@ -116,4 +116,15 @@ export async function listSequencesForAdmin(limit = 500) {
     .leftJoin(user, eq(shoppingSequenceTable.userId, user.id))
     .orderBy(desc(shoppingSequenceTable.startedAt))
     .limit(limit);
+}
+
+/** All funnel rows for the given session keys (for correlating micro-events to sequence windows). */
+export async function listSequencesForSessionKeys(sessionKeys: string[]): Promise<ShoppingSequenceRow[]> {
+  const unique = Array.from(new Set(sessionKeys)).filter((k) => k.length >= 8);
+  if (unique.length === 0) return [];
+  return db
+    .select()
+    .from(shoppingSequenceTable)
+    .where(inArray(shoppingSequenceTable.sessionKey, unique))
+    .orderBy(shoppingSequenceTable.startedAt);
 }
