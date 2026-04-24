@@ -65,37 +65,15 @@ const ItemAssistantPage = async () => {
   }
 
   return (
-    <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
-      <section className="max-w-[1200px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm text-dark-4">Admin · Item assistant</p>
-            <h1 className="text-2xl font-semibold text-dark">Store items & signals</h1>
-            <p className="mt-1 max-w-3xl text-sm text-dark-4">
-              Each row is one catalog product that has telemetry. Expand with the arrow to see averages (payload duration,
-              time between signals) and every raw micro-event from all visitors for that SKU.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/ai-sales-analyst"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              AI Sales Analyst (export)
-            </Link>
-            <Link
-              href="/admin/sales-analytics"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Session timeline
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Admin home
-            </Link>
-          </div>
+    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+      <section className="mx-auto w-full max-w-[1360px] px-4 sm:px-8 xl:px-10">
+        <div className="mb-8 rounded-xl border border-gray-3 bg-white p-5 shadow-sm sm:p-6">
+          <p className="text-sm text-dark-4">Admin · Item assistant</p>
+          <h1 className="mt-1 text-2xl font-semibold text-dark">Store items & signals</h1>
+          <p className="mt-2 max-w-3xl text-sm text-dark-4">
+            Each row is one catalog product that has telemetry. Expand with the arrow to see averages (payload duration,
+            time between signals) and every raw micro-event from all visitors for that SKU.
+          </p>
         </div>
 
         {serverError ? (

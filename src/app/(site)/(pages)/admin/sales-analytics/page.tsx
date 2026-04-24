@@ -71,34 +71,18 @@ const SalesAnalyticsAdminPage = async () => {
   }
 
   return (
-    <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
-      <section className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm text-dark-4">Admin</p>
-            <h1 className="text-2xl font-semibold text-dark">Session timeline</h1>
-            <p className="mt-1 max-w-3xl text-sm text-dark-4">
-              Each browser session (same key as shopping sequences) lists all tracked interactions in order.{" "}
-              <strong className="font-medium text-dark">Client time</strong> is when the device recorded the event;{" "}
-              <strong className="font-medium text-dark">Server time</strong> is ingest time.{" "}
-              <strong className="font-medium text-dark">Δ prev</strong> is the gap after the previous row in that session;{" "}
-              <strong className="font-medium text-dark">From start</strong> is elapsed since the first event in the session.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/item-assistant"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Item assistant
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Back to admin
-            </Link>
-          </div>
+    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+      <section className="mx-auto w-full max-w-[1360px] px-4 sm:px-8 xl:px-10">
+        <div className="mb-8 rounded-xl border border-gray-3 bg-white p-5 shadow-sm sm:p-6">
+          <p className="text-sm text-dark-4">Admin · Data tracking</p>
+          <h1 className="mt-1 text-2xl font-semibold text-dark">Session timeline</h1>
+          <p className="mt-2 max-w-3xl text-sm text-dark-4">
+            Each browser session (same key as shopping sequences) lists all tracked interactions in order.{" "}
+            <strong className="font-medium text-dark">Client time</strong> is when the device recorded the event;{" "}
+            <strong className="font-medium text-dark">Server time</strong> is ingest time.{" "}
+            <strong className="font-medium text-dark">Δ prev</strong> is the gap after the previous row in that session;{" "}
+            <strong className="font-medium text-dark">From start</strong> is elapsed since the first event in the session.
+          </p>
         </div>
 
         {serverError ? (

@@ -17,7 +17,7 @@ export default function AdminSideNav() {
   const onAdminHome = pathname === "/admin";
 
   return (
-    <aside className="hidden lg:block fixed left-0 top-40 z-40 h-[calc(100vh-10rem)] w-64 overflow-y-auto border-r border-gray-3 bg-[#fcfcfd] px-4 py-5">
+    <aside className="hidden lg:block fixed left-0 top-36 z-40 h-[calc(100vh-9rem)] w-64 overflow-y-auto border-r border-gray-3 bg-white/95 px-4 py-5 shadow-sm backdrop-blur">
       <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Admin navigation</p>
 
       <div className="mt-4 space-y-2">
