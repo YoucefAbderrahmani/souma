@@ -55,6 +55,8 @@ export default function AdminPanels({ users, products }: Props) {
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
+  const [userQuery, setUserQuery] = useState("");
+  const [productQuery, setProductQuery] = useState("");
   const [addSoumaMode, setAddSoumaMode] = useState(false);
   const [addPriceInput, setAddPriceInput] = useState("");
 
@@ -86,6 +88,22 @@ export default function AdminPanels({ users, products }: Props) {
     return products.filter((p) => p.categoryName === productCategoryTab);
   }, [products, productCategoryTab]);
 
+  const filteredUsers = useMemo(() => {
+    const q = userQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      `${u.name} ${u.lastname} ${u.email} ${u.role}`.toLowerCase().includes(q)
+    );
+  }, [users, userQuery]);
+
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return filteredProductsByCategoryTab;
+    return filteredProductsByCategoryTab.filter((p) =>
+      `${p.title} ${p.categoryName} ${p.manufacturer} ${p.slug}`.toLowerCase().includes(q)
+    );
+  }, [filteredProductsByCategoryTab, productQuery]);
+
   const addSoumaStandardPreview = useMemo(() => {
     const n = Number(addPriceInput);
     if (!addSoumaMode || Number.isNaN(n) || n <= 0) return null;
@@ -93,39 +111,44 @@ export default function AdminPanels({ users, products }: Props) {
   }, [addSoumaMode, addPriceInput]);
 
   return (
-    <div className="mt-8">
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("users")}
-          className={`rounded-md px-4 py-2 text-sm font-medium ${
-            activeTab === "users" ? "bg-blue text-white" : "border border-gray-3 text-dark hover:border-[#FB923C]"
-          }`}
-        >
-          Users Panel
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("add-product")}
-          className={`rounded-md px-4 py-2 text-sm font-medium ${
-            activeTab === "add-product"
-              ? "bg-blue text-white"
-              : "border border-gray-3 text-dark hover:border-[#FB923C]"
-          }`}
-        >
-          Add Product Panel
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("products")}
-          className={`rounded-md px-4 py-2 text-sm font-medium ${
-            activeTab === "products"
-              ? "bg-blue text-white"
-              : "border border-gray-3 text-dark hover:border-[#FB923C]"
-          }`}
-        >
-          Products Panel
-        </button>
+    <div className="mt-10">
+      <div className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
+        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Workspace</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "users"
+                ? "bg-blue text-white shadow-sm"
+                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            }`}
+          >
+            Users
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("add-product")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "add-product"
+                ? "bg-blue text-white shadow-sm"
+                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            }`}
+          >
+            Add Product
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("products")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "products"
+                ? "bg-blue text-white shadow-sm"
+                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            }`}
+          >
+            Manage Products
+          </button>
+        </div>
       </div>
 
       {activeTab === "users" && (
@@ -138,7 +161,16 @@ export default function AdminPanels({ users, products }: Props) {
           </div>
 
           <div className="mt-6 rounded-lg border border-gray-3 bg-white p-5">
-            <h2 className="text-lg font-medium text-dark">All users</h2>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-medium text-dark">All users</h2>
+              <input
+                type="search"
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="Search name, email, role"
+                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#FB923C] sm:w-[280px]"
+              />
+            </div>
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[760px] text-left">
                 <thead>
@@ -150,14 +182,22 @@ export default function AdminPanels({ users, products }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-sm text-dark-4">
+                        No users match your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((u) => (
                     <tr key={u.id} className="border-b border-gray-2 text-sm text-dark last:border-0">
                       <td className="py-3 pr-4">{u.name} {u.lastname}</td>
                       <td className="py-3 pr-4">{u.email}</td>
                       <td className="py-3 pr-4">{u.role}</td>
                       <td className="py-3">{new Date(u.createdAt).toLocaleDateString("en-US")}</td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -686,8 +726,21 @@ export default function AdminPanels({ users, products }: Props) {
           </div>
 
           <div className="mt-6 rounded-lg border border-gray-3 bg-white p-5">
-            <h2 className="text-lg font-medium text-dark">Products by category</h2>
-            <p className="mt-1 text-sm text-dark-4">Switch tabs to list products in each category. Use Edit to change details, price, stock, and image.</p>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-dark">Products by category</h2>
+                <p className="mt-1 text-sm text-dark-4">
+                  Switch tabs to list products in each category. Use Edit to change details, price, stock, and image.
+                </p>
+              </div>
+              <input
+                type="search"
+                value={productQuery}
+                onChange={(e) => setProductQuery(e.target.value)}
+                placeholder="Search title, brand, slug"
+                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#FB923C] lg:w-[300px]"
+              />
+            </div>
 
             <div className="mt-4 flex flex-wrap gap-2 border-b border-gray-3 pb-3">
               <button
@@ -731,15 +784,15 @@ export default function AdminPanels({ users, products }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProductsByCategoryTab.length === 0 ? (
+                  {filteredProducts.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-sm text-dark-4">
-                        No products in this category.
+                        No products found for this filter.
                       </td>
                     </tr>
                   ) : (
-                    filteredProductsByCategoryTab.map((p) => (
-                      <tr key={p.id} className="border-b border-gray-2 text-sm text-dark last:border-0">
+                    filteredProducts.map((p) => (
+                      <tr key={p.id} className="border-b border-gray-2 text-sm text-dark transition hover:bg-[#fffaf5] last:border-0">
                         <td className="py-3 pr-4">
                           <img src={p.mainimage} alt={p.title} className="h-10 w-10 rounded-md object-cover" />
                         </td>

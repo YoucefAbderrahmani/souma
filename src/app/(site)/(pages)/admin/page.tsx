@@ -97,63 +97,73 @@ const AdminPage = async () => {
   ]);
 
   return (
-    <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
       <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+        <div className="mb-8 rounded-xl border border-gray-3 bg-white p-5 sm:p-6">
+          <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Admin dashboard</p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-dark-4">Welcome back</p>
+              <h1 className="text-2xl font-semibold text-dark">Admin Panel</h1>
+            </div>
+            <span className="rounded-full bg-[#FFF7F0] px-3 py-1 text-xs font-medium text-[#FB923C]">
+              Role: admin
+            </span>
+          </div>
+        </div>
+
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-dark-4">Welcome back</p>
-            <h1 className="text-2xl font-semibold text-dark">Admin Panel</h1>
+            <h2 className="text-lg font-semibold text-dark">Store overview</h2>
+            <p className="text-sm text-dark-4">Quick counts and shortcuts for daily operations.</p>
           </div>
-          <span className="rounded-full bg-[#FFF7F0] px-3 py-1 text-xs font-medium text-[#FB923C]">
-            Role: admin
-          </span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-lg border border-gray-3 bg-white p-5">
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
             <p className="text-sm text-dark-4">Users</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.users ?? 0)}</p>
           </div>
-          <div className="rounded-lg border border-gray-3 bg-white p-5">
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
             <p className="text-sm text-dark-4">Products</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.products ?? 0)}</p>
           </div>
-          <div className="rounded-lg border border-gray-3 bg-white p-5">
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
             <p className="text-sm text-dark-4">Categories</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.categories ?? 0)}</p>
           </div>
         </div>
 
-        <div className="mt-8 rounded-lg border border-gray-3 bg-white p-5">
+        <div className="mt-8 rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-medium text-dark">Quick actions</h2>
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Link
               href="/my-account"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               My account
             </Link>
             <Link
               href="/sequence"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Sequences
             </Link>
             <Link
               href="/admin/item-assistant"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Item assistant
             </Link>
             <Link
               href="/admin/sales-analytics"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               Session timeline
             </Link>
             <Link
               href="/admin/ai-sales-analyst"
-              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
             >
               AI Sales Analyst (full table)
             </Link>
