@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useActionState, useMemo, useState } from "react";
-import Link from "next/link";
+import React, { useActionState, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
@@ -45,8 +45,11 @@ type Props = {
 const initialState: CreateProductState = {};
 
 export default function AdminPanels({ users, products }: Props) {
-  const [mainTab, setMainTab] = useState<"seller" | "data-tracking">("seller");
-  const [activeTab, setActiveTab] = useState<"users" | "add-product" | "products">("users");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab: "users" | "add-product" | "products" =
+    tabParam === "add-product" || tabParam === "products" ? tabParam : "users";
+  const [activeTab, setActiveTab] = useState<"users" | "add-product" | "products">(initialTab);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
@@ -112,120 +115,56 @@ export default function AdminPanels({ users, products }: Props) {
     return Math.round(Math.round(n) * 1.2);
   }, [addSoumaMode, addPriceInput]);
 
-  return (
-    <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
-      <aside className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5 lg:sticky lg:top-28">
-        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Navigation</p>
+  useEffect(() => {
+    if (tabParam === "add-product" || tabParam === "products") {
+      setActiveTab(tabParam);
+      return;
+    }
+    setActiveTab("users");
+  }, [tabParam]);
 
-        <div className="mt-4 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">Main tabs</p>
+  return (
+    <div className="mt-10">
+      <div className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
+        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Seller workspace</p>
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setMainTab("seller")}
-            className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-              mainTab === "seller"
+            onClick={() => setActiveTab("users")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "users"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             }`}
           >
-            Seller
+            Users
           </button>
           <button
             type="button"
-            onClick={() => setMainTab("data-tracking")}
-            className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-              mainTab === "data-tracking"
+            onClick={() => setActiveTab("add-product")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "add-product"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             }`}
           >
-            Data Tracking
+            Add Items
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("products")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeTab === "products"
+                ? "bg-blue text-white shadow-sm"
+                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            }`}
+          >
+            Stock & Edit Items
           </button>
         </div>
+      </div>
 
-        {mainTab === "seller" ? (
-          <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">
-              Seller sub-tabs
-            </p>
-            <button
-              type="button"
-              onClick={() => setActiveTab("users")}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-                activeTab === "users"
-                  ? "bg-blue text-white shadow-sm"
-                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-              }`}
-            >
-              Users
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("add-product")}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-                activeTab === "add-product"
-                  ? "bg-blue text-white shadow-sm"
-                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-              }`}
-            >
-              Add Items
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("products")}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-                activeTab === "products"
-                  ? "bg-blue text-white shadow-sm"
-                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-              }`}
-            >
-              Stock & Edit Items
-            </button>
-          </div>
-        ) : (
-          <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">
-              Data tracking pages
-            </p>
-            <Link
-              href="/sequence"
-              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Sequences
-            </Link>
-            <Link
-              href="/admin/item-assistant"
-              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Item Assistant Tracking
-            </Link>
-            <Link
-              href="/admin/sales-analytics"
-              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Session Timeline
-            </Link>
-            <Link
-              href="/admin/ai-sales-analyst"
-              className="block w-full rounded-lg border border-gray-3 px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              AI Sales Analyst
-            </Link>
-          </div>
-        )}
-      </aside>
-
-      <div>
-        {mainTab === "data-tracking" ? (
-          <section className="rounded-xl border border-gray-3 bg-white p-5">
-            <h2 className="text-lg font-semibold text-dark">Data Tracking</h2>
-            <p className="mt-1 text-sm text-dark-4">
-              Use the left sidebar to quickly jump to sequences, assistant tracking, and analytics pages.
-            </p>
-          </section>
-        ) : null}
-
-      {mainTab === "seller" && activeTab === "users" && (
+      {activeTab === "users" && (
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Users" value={userStats.total} />
@@ -279,7 +218,7 @@ export default function AdminPanels({ users, products }: Props) {
         </section>
       )}
 
-      {mainTab === "seller" && activeTab === "add-product" && (
+      {activeTab === "add-product" && (
         <section className="mt-6">
           <form action={createAction} encType="multipart/form-data">
             <ProductFormShell
@@ -790,7 +729,7 @@ export default function AdminPanels({ users, products }: Props) {
         </section>
       )}
 
-      {mainTab === "seller" && activeTab === "products" && (
+      {activeTab === "products" && (
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Products" value={productStats.total} />
@@ -912,7 +851,6 @@ export default function AdminPanels({ users, products }: Props) {
           ) : null}
         </section>
       )}
-      </div>
     </div>
   );
 }
