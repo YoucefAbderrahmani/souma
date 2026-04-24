@@ -134,41 +134,6 @@ const AdminPage = async () => {
           </div>
         </div>
 
-        <div className="mt-8 rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-medium text-dark">Quick actions</h2>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <Link
-              href="/my-account"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              My account
-            </Link>
-            <Link
-              href="/sequence"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Sequences
-            </Link>
-            <Link
-              href="/admin/item-assistant"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Item assistant
-            </Link>
-            <Link
-              href="/admin/sales-analytics"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              Session timeline
-            </Link>
-            <Link
-              href="/admin/ai-sales-analyst"
-              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
-            >
-              AI Sales Analyst (full table)
-            </Link>
-          </div>
-        </div>
         <AdminPanels
           users={usersData.map((u) => ({
             ...u,
