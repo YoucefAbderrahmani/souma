@@ -5,8 +5,8 @@ import type { SalesMicroEventAdminRow } from "@/types/sales-micro-analytics";
 import type {
   ProductMicroAggregateRow,
   ProductMicroDetailResponse,
-  ProductMicroDetailStats,
   ProductMicroEventNameBreakdown,
+  ProductMicroSequenceSlice,
 } from "@/types/sales-micro-by-product";
 import { extractPayloadDurationMs } from "@/lib/sales-micro-payload-duration";
 import type { ShoppingSequenceRow } from "@/server/sequence/sequence-db";
@@ -138,33 +138,60 @@ function sequencesBySessionKey(sequences: ShoppingSequenceRow[]): Map<string, Sh
   return bySession;
 }
 
-/** Match a micro-event to the shopping funnel row whose [startedAt, endedAt] contains the event time. */
-function findSequenceIdForEvent(
+/**
+ * Shopping funnel row for the product phase: after `product_visited_at`, until `ended_at`
+ * (or still active). Counters are scoped to this window; a new sequence starts fresh.
+ */
+function findProductPhaseSequence(
   ev: SalesMicroEventAdminRow,
   bySession: Map<string, ShoppingSequenceRow[]>
-): string | null {
+): ShoppingSequenceRow | null {
   const t = new Date(ev.clientEventAt ?? ev.createdAt).getTime();
   const list = bySession.get(ev.sessionKey);
   if (!list?.length) return null;
   let best: ShoppingSequenceRow | null = null;
   for (const s of list) {
+    if (!s.productVisitedAt) continue;
+    const pv = s.productVisitedAt.getTime();
+    if (t < pv) continue;
     const st = s.startedAt.getTime();
     if (t < st) continue;
     const en = s.endedAt ? s.endedAt.getTime() : Number.POSITIVE_INFINITY;
     if (t > en) continue;
-    if (!best || st > best.startedAt.getTime()) best = s;
+    if (!best || s.startedAt.getTime() > best.startedAt.getTime()) best = s;
   }
-  return best?.id ?? null;
+  return best;
 }
 
-function computeStats(events: SalesMicroEventAdminRow[], sequences: ShoppingSequenceRow[]): ProductMicroDetailStats {
+function eventTimeMs(ev: SalesMicroEventAdminRow): number {
+  return new Date(ev.clientEventAt ?? ev.createdAt).getTime();
+}
+
+/** Δ-after-previous along this slice’s own timeline (first row has no Δ). */
+function recomputeDeltasOrdered(slice: SalesMicroEventAdminRow[]): SalesMicroEventAdminRow[] {
+  const sorted = [...slice].sort((a, b) => eventTimeMs(a) - eventTimeMs(b));
+  return sorted.map((cur, i) => {
+    const t = eventTimeMs(cur);
+    const deltaMsSincePrevious =
+      i === 0 ? null : fmtMs(t - eventTimeMs(sorted[i - 1]));
+    return { ...cur, deltaMsSincePrevious };
+  });
+}
+
+function computeSliceStats(slice: SalesMicroEventAdminRow[]): {
+  eventCount: number;
+  avgPayloadDurationMs: number | null;
+  avgDeltaAfterPrevMs: number | null;
+  byEventName: Record<string, number>;
+  byEventNameDetail: Record<string, ProductMicroEventNameBreakdown>;
+} {
   const byEventName: Record<string, number> = {};
   const allDurations: number[] = [];
   const allDeltas: number[] = [];
   const durationsByName = new Map<string, number[]>();
   const deltasByName = new Map<string, number[]>();
 
-  for (const r of events) {
+  for (const r of slice) {
     byEventName[r.eventName] = (byEventName[r.eventName] ?? 0) + 1;
     const d = extractPayloadDurationMs(r.eventName, r.payload);
     if (d != null) {
@@ -181,31 +208,7 @@ function computeStats(events: SalesMicroEventAdminRow[], sequences: ShoppingSequ
     }
   }
 
-  const bySession = sequencesBySessionKey(sequences);
-  const countBySeqByName = new Map<string, Map<string, number>>();
-  for (const ev of events) {
-    const sid = findSequenceIdForEvent(ev, bySession);
-    if (!sid) continue;
-    const m = countBySeqByName.get(sid) ?? new Map();
-    m.set(ev.eventName, (m.get(ev.eventName) ?? 0) + 1);
-    countBySeqByName.set(sid, m);
-  }
-
-  const shoppingSequencesMatched = countBySeqByName.size;
   const names = Object.keys(byEventName);
-  const avgPerShoppingSequenceByEventName: Record<string, number> = {};
-  for (const name of names) {
-    if (shoppingSequencesMatched === 0) {
-      avgPerShoppingSequenceByEventName[name] = 0;
-      continue;
-    }
-    let sum = 0;
-    for (const m of Array.from(countBySeqByName.values())) {
-      sum += m.get(name) ?? 0;
-    }
-    avgPerShoppingSequenceByEventName[name] = sum / shoppingSequencesMatched;
-  }
-
   const byEventNameDetail: Record<string, ProductMicroEventNameBreakdown> = {};
   for (const name of names) {
     byEventNameDetail[name] = {
@@ -216,13 +219,42 @@ function computeStats(events: SalesMicroEventAdminRow[], sequences: ShoppingSequ
   }
 
   return {
+    eventCount: slice.length,
     avgPayloadDurationMs: meanRounded(allDurations),
     avgDeltaAfterPrevMs: meanRounded(allDeltas),
     byEventName,
     byEventNameDetail,
-    avgPerShoppingSequenceByEventName,
-    shoppingSequencesMatched,
   };
+}
+
+function buildSequenceSlices(
+  events: SalesMicroEventAdminRow[],
+  sequences: ShoppingSequenceRow[]
+): ProductMicroSequenceSlice[] {
+  const bySession = sequencesBySessionKey(sequences);
+  const eventSessionKeys = new Set(events.map((e) => e.sessionKey));
+  const productPhaseRows = sequences.filter(
+    (s) => s.productVisitedAt != null && eventSessionKeys.has(s.sessionKey)
+  );
+  productPhaseRows.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+  return productPhaseRows.map((s) => {
+    const raw = events.filter((ev) => findProductPhaseSequence(ev, bySession)?.id === s.id);
+    const sliceEvents = recomputeDeltasOrdered(raw);
+    const stats = computeSliceStats(sliceEvents);
+    return {
+      sequenceId: s.id,
+      sessionKey: s.sessionKey,
+      triggerType: s.triggerType,
+      triggerLabel: s.triggerLabel,
+      status: s.status,
+      startedAt: s.startedAt.toISOString(),
+      productVisitedAt: s.productVisitedAt ? s.productVisitedAt.toISOString() : null,
+      endedAt: s.endedAt ? s.endedAt.toISOString() : null,
+      ...stats,
+      events: sliceEvents,
+    };
+  });
 }
 
 export async function listProductMicroAggregatesAdmin(options?: {
@@ -273,7 +305,7 @@ export async function getProductMicroDetailAdmin(
 
   const events = toAdminRowsForProduct(rows);
   const sessionKeys = Array.from(new Set(rows.map((r) => r.sessionKey)));
-  const sequences = await listSequencesForSessionKeys(sessionKeys);
-  const stats = computeStats(events, sequences);
-  return { productLocalId: id, stats, events };
+  const sequenceRows = await listSequencesForSessionKeys(sessionKeys);
+  const sequences = buildSequenceSlices(events, sequenceRows);
+  return { productLocalId: id, sequences };
 }

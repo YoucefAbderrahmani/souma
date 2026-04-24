@@ -51,10 +51,13 @@ const ShopDetails = () => {
 
   const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
   const parsedContent = parseProductContent(product.description);
-  const colorOptions =
-    parsedContent.colors.length > 0
-      ? parsedContent.colors
-      : [{ name: "red" }, { name: "blue" }, { name: "orange" }, { name: "pink" }, { name: "purple" }];
+  const colorOptions = useMemo(
+    () =>
+      parsedContent.colors.length > 0
+        ? parsedContent.colors
+        : [{ name: "red" }, { name: "blue" }, { name: "orange" }, { name: "pink" }, { name: "purple" }],
+    [parsedContent.colors]
+  );
 
   const baseDetailPrice = product.detailPrice ?? 0;
   const jomlaPrice = product.jomlaPrice;
@@ -69,7 +72,7 @@ const ShopDetails = () => {
 
   useEffect(() => {
     setActiveColor(colorOptions[0]?.name ?? "blue");
-  }, [product.title]); // reset when selected product changes
+  }, [colorOptions]); // reset when selected product changes
 
   const detailPrice = useMemo(() => {
     let selectedPrice = baseDetailPrice;

@@ -14,21 +14,20 @@ const CustomSelect = ({ options }) => {
   };
 
   useEffect(() => {
+    if (!isOpen) return;
     // closing modal while clicking outside
     function handleClickOutside(event) {
       if (!event.target.closest(".dropdown-content")) {
-        toggleDropdown();
+        setIsOpen(false);
       }
     }
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isOpen]);
 
   return (
     <div className="dropdown-content custom-select relative" style={{ width: "200px" }}>

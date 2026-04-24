@@ -9,30 +9,38 @@ export type ProductMicroAggregateRow = {
   lastEventAt: string;
 };
 
-/** Per `event_name`: counts and averages computed only from rows of that name (not pooled across types). */
+/** Per `event_name` within a single shopping-sequence product-phase slice. */
 export type ProductMicroEventNameBreakdown = {
   count: number;
   avgPayloadDurationMs: number | null;
   avgDeltaAfterPrevMs: number | null;
 };
 
-export type ProductMicroDetailStats = {
-  /** Pooled across all event types (legacy / quick glance). Prefer `byEventNameDetail`. */
+/**
+ * All analytics for one `shopping_sequence` product phase (after `product_visited_at` until `ended_at`).
+ * No cross-sequence pooling.
+ */
+export type ProductMicroSequenceSlice = {
+  sequenceId: string;
+  sessionKey: string;
+  triggerType: string;
+  triggerLabel: string;
+  status: string;
+  startedAt: string;
+  productVisitedAt: string | null;
+  endedAt: string | null;
+  eventCount: number;
+  /** Pooled payload durations within this sequence slice only. */
   avgPayloadDurationMs: number | null;
+  /** Pooled Δ-after-previous within this slice (deltas recomputed along this sequence’s timeline). */
   avgDeltaAfterPrevMs: number | null;
   byEventName: Record<string, number>;
   byEventNameDetail: Record<string, ProductMicroEventNameBreakdown>;
-  /**
-   * Mean count of each event name per `shopping_sequence` row, among sequences where
-   * at least one product micro-event falls in that sequence’s time window (same `session_key`).
-   */
-  avgPerShoppingSequenceByEventName: Record<string, number>;
-  /** Distinct shopping sequences that received ≥1 matched micro-event for this product. */
-  shoppingSequencesMatched: number;
+  events: SalesMicroEventAdminRow[];
 };
 
 export type ProductMicroDetailResponse = {
   productLocalId: number;
-  stats: ProductMicroDetailStats;
-  events: SalesMicroEventAdminRow[];
+  /** One entry per shopping funnel row that has `product_visited_at` for a session that emitted events (newest first). */
+  sequences: ProductMicroSequenceSlice[];
 };
