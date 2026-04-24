@@ -2,7 +2,10 @@
  * Client-side hint for showing admin navigation. Server routes still enforce `role === "admin"`.
  * Covers cookie-cached sessions where `role` may be missing until refresh, and known operator emails.
  */
-const DEFAULT_ADMIN_EMAILS_LOWER = ["youcefyouyou201588@gmail.com"];
+const DEFAULT_ADMIN_EMAILS_LOWER = [
+  "youcefyouyou201588@gmail.com",
+  "belkacemimoumen235@gmail.com",
+];
 
 function adminEmailsLower(): string[] {
   const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.trim();

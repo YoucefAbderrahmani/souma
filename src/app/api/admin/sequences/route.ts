@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
+import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import { listSequencesForAdmin, toShoppingSequenceDTOs } from "@/server/sequence/sequence-db";
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     .where(eq(user.id, session.user.id))
     .limit(1);
 
-  if (current?.role !== "admin") {
+  if (current?.role !== "admin" && !isPrivilegedAdminEmail(session.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

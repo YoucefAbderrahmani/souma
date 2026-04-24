@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
+import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import {
@@ -18,7 +19,7 @@ async function requireAdmin(req: Request) {
     .from(user)
     .where(eq(user.id, session.user.id))
     .limit(1);
-  if (current?.role !== "admin") {
+  if (current?.role !== "admin" && !isPrivilegedAdminEmail(session.user.email)) {
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
   }
   return { ok: true as const };

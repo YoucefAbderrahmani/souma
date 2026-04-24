@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
+import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import SequencesLiveTable from "@/components/Admin/SequencesLiveTable";
@@ -30,7 +31,8 @@ const SequenceAdminPage = async () => {
     .where(eq(user.id, session.user.id))
     .limit(1);
 
-  if (currentUser[0]?.role !== "admin") {
+  const isAdmin = currentUser[0]?.role === "admin" || isPrivilegedAdminEmail(session.user.email);
+  if (!isAdmin) {
     return (
       <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
         <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
