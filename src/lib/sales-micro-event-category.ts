@@ -49,3 +49,12 @@ export function salesMicroEventCategory(eventName: string): string {
 
   return "Other";
 }
+
+/** Fixed list for admin filters / exports (order matches `salesMicroEventCategory` buckets). */
+export const SALES_MICRO_CATEGORY_OPTIONS = [
+  "Visual & content",
+  "Decision friction",
+  "Navigation & context",
+  "Technical performance",
+  "Other",
+] as const;

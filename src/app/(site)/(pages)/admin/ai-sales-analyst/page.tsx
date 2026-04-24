@@ -78,9 +78,8 @@ const AiSalesAnalystAdminPage = async () => {
             <p className="text-sm text-dark-4">Admin · AI Sales Analyst</p>
             <h1 className="text-2xl font-semibold text-dark">Micro-interaction feed</h1>
             <p className="mt-1 max-w-3xl text-sm text-dark-4">
-              One row per tracked signal, grouped by browser session. Use horizontal scroll for the full payload and timing
-              columns. Events include image dwell, zoom, tab visibility, price hover, reviews, variants, navigation timing, LCP,
-              rage clicks, and more.
+              Filter and export a model-ready dataset (JSONL / JSON / CSV) with stable field names, then scroll the grouped
+              table for timing, context, flattened payload, and raw JSON per event.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
