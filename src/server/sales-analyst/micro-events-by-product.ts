@@ -238,23 +238,25 @@ function buildSequenceSlices(
   );
   productPhaseRows.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
-  return productPhaseRows.map((s) => {
-    const raw = events.filter((ev) => findProductPhaseSequence(ev, bySession)?.id === s.id);
-    const sliceEvents = recomputeDeltasOrdered(raw);
-    const stats = computeSliceStats(sliceEvents);
-    return {
-      sequenceId: s.id,
-      sessionKey: s.sessionKey,
-      triggerType: s.triggerType,
-      triggerLabel: s.triggerLabel,
-      status: s.status,
-      startedAt: s.startedAt.toISOString(),
-      productVisitedAt: s.productVisitedAt ? s.productVisitedAt.toISOString() : null,
-      endedAt: s.endedAt ? s.endedAt.toISOString() : null,
-      ...stats,
-      events: sliceEvents,
-    };
-  });
+  return productPhaseRows
+    .map((s) => {
+      const raw = events.filter((ev) => findProductPhaseSequence(ev, bySession)?.id === s.id);
+      const sliceEvents = recomputeDeltasOrdered(raw);
+      const stats = computeSliceStats(sliceEvents);
+      return {
+        sequenceId: s.id,
+        sessionKey: s.sessionKey,
+        triggerType: s.triggerType,
+        triggerLabel: s.triggerLabel,
+        status: s.status,
+        startedAt: s.startedAt.toISOString(),
+        productVisitedAt: s.productVisitedAt ? s.productVisitedAt.toISOString() : null,
+        endedAt: s.endedAt ? s.endedAt.toISOString() : null,
+        ...stats,
+        events: sliceEvents,
+      };
+    })
+    .filter((slice) => slice.eventCount > 0);
 }
 
 export async function listProductMicroAggregatesAdmin(options?: {
