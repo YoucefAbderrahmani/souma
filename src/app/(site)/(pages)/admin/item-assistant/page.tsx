@@ -7,16 +7,16 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
-import SalesMicroEventsTable from "@/components/Admin/SalesMicroEventsTable";
-import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-events-admin";
-import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
+import ItemAssistantTable from "@/components/Admin/ItemAssistantTable";
+import { listProductMicroAggregatesAdmin } from "@/server/sales-analyst/micro-events-by-product";
+import type { ProductMicroAggregateRow } from "@/types/sales-micro-by-product";
 
 export const metadata: Metadata = {
-  title: "Session timeline | Souma Store Admin",
-  description: "Session-level product and checkout interaction telemetry",
+  title: "Item assistant | Souma Store Admin",
+  description: "Per-product micro-interaction analytics across all shoppers",
 };
 
-const SalesAnalyticsAdminPage = async () => {
+const ItemAssistantPage = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -36,20 +36,14 @@ const SalesAnalyticsAdminPage = async () => {
       <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
         <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="rounded-lg border border-gray-3 bg-white p-8 text-center">
-            <h1 className="text-2xl font-semibold text-dark">Session timeline</h1>
+            <h1 className="text-2xl font-semibold text-dark">Item assistant</h1>
             <p className="mt-3 text-dark-4">You do not have permission to access this page.</p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/my-account"
                 className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
-                Go to My Account
-              </Link>
-              <Link
-                href="/admin"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-              >
-                Admin home
+                My account
               </Link>
             </div>
           </div>
@@ -58,10 +52,10 @@ const SalesAnalyticsAdminPage = async () => {
     );
   }
 
-  let initialSessions: SalesMicroSessionAdmin[] = [];
+  let initialAggregates: ProductMicroAggregateRow[] = [];
   let serverError: string | null = null;
   try {
-    initialSessions = await listSalesMicroSessionsForAdmin({ maxSessions: 80 });
+    initialAggregates = await listProductMicroAggregatesAdmin({ limit: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     serverError =
@@ -72,31 +66,34 @@ const SalesAnalyticsAdminPage = async () => {
 
   return (
     <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
-      <section className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+      <section className="max-w-[1200px] w-full mx-auto px-4 sm:px-8 xl:px-0">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-dark-4">Admin</p>
-            <h1 className="text-2xl font-semibold text-dark">Session timeline</h1>
+            <p className="text-sm text-dark-4">Admin · Item assistant</p>
+            <h1 className="text-2xl font-semibold text-dark">Store items & signals</h1>
             <p className="mt-1 max-w-3xl text-sm text-dark-4">
-              Each browser session (same key as shopping sequences) lists all tracked interactions in order.{" "}
-              <strong className="font-medium text-dark">Client time</strong> is when the device recorded the event;{" "}
-              <strong className="font-medium text-dark">Server time</strong> is ingest time.{" "}
-              <strong className="font-medium text-dark">Δ prev</strong> is the gap after the previous row in that session;{" "}
-              <strong className="font-medium text-dark">From start</strong> is elapsed since the first event in the session.
+              Each row is one catalog product that has telemetry. Expand with the arrow to see averages (payload duration,
+              time between signals) and every raw micro-event from all visitors for that SKU.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/admin/item-assistant"
+              href="/admin/ai-sales-analyst"
               className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             >
-              Item assistant
+              AI Sales Analyst (export)
+            </Link>
+            <Link
+              href="/admin/sales-analytics"
+              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              Session timeline
             </Link>
             <Link
               href="/admin"
               className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             >
-              Back to admin
+              Admin home
             </Link>
           </div>
         </div>
@@ -104,11 +101,11 @@ const SalesAnalyticsAdminPage = async () => {
         {serverError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{serverError}</div>
         ) : (
-          <SalesMicroEventsTable initialSessions={initialSessions} />
+          <ItemAssistantTable initialAggregates={initialAggregates} />
         )}
       </section>
     </main>
   );
 };
 
-export default SalesAnalyticsAdminPage;
+export default ItemAssistantPage;

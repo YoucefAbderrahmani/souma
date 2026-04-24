@@ -458,10 +458,16 @@ const MyAccount = () => {
                       Go to Admin Panel
                     </Link>
                     <Link
+                      href="/admin/item-assistant"
+                      className="inline-flex rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+                    >
+                      Item assistant
+                    </Link>
+                    <Link
                       href="/admin/sales-analytics"
                       className="inline-flex rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
                     >
-                      Sales micro-events
+                      Session timeline
                     </Link>
                   </div>
                 )}

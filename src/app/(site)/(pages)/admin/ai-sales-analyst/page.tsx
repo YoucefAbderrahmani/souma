@@ -84,10 +84,16 @@ const AiSalesAnalystAdminPage = async () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
+              href="/admin/item-assistant"
+              className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              Item assistant
+            </Link>
+            <Link
               href="/admin/sales-analytics"
               className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             >
-              Sales micro-events (compact)
+              Session timeline
             </Link>
             <Link
               href="/admin"
