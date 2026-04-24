@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
@@ -44,6 +45,7 @@ type Props = {
 const initialState: CreateProductState = {};
 
 export default function AdminPanels({ users, products }: Props) {
+  const [mainTab, setMainTab] = useState<"seller" | "data-tracking">("seller");
   const [activeTab, setActiveTab] = useState<"users" | "add-product" | "products">("users");
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
@@ -113,45 +115,110 @@ export default function AdminPanels({ users, products }: Props) {
   return (
     <div className="mt-10">
       <div className="rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Workspace</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Main workspace</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setActiveTab("users")}
+            onClick={() => setMainTab("seller")}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "users"
+              mainTab === "seller"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             }`}
           >
-            Users
+            Seller
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("add-product")}
+            onClick={() => setMainTab("data-tracking")}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "add-product"
+              mainTab === "data-tracking"
                 ? "bg-blue text-white shadow-sm"
                 : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
             }`}
           >
-            Add Product
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("products")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "products"
-                ? "bg-blue text-white shadow-sm"
-                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            }`}
-          >
-            Manage Products
+            Data Tracking
           </button>
         </div>
       </div>
 
-      {activeTab === "users" && (
+      {mainTab === "seller" ? (
+        <div className="mt-4 rounded-xl border border-gray-3 bg-white p-4 sm:p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Seller sub-tabs</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("users")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                activeTab === "users"
+                  ? "bg-blue text-white shadow-sm"
+                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              }`}
+            >
+              Users
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("add-product")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                activeTab === "add-product"
+                  ? "bg-blue text-white shadow-sm"
+                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              }`}
+            >
+              Add Items
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("products")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                activeTab === "products"
+                  ? "bg-blue text-white shadow-sm"
+                  : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+              }`}
+            >
+              Stock & Edit Items
+            </button>
+          </div>
+        </div>
+      ) : (
+        <section className="mt-6 rounded-xl border border-gray-3 bg-white p-5">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-dark">Data Tracking sub-tabs</h2>
+            <p className="mt-1 text-sm text-dark-4">
+              Sequence flow, assistant activity, and analytics pages are grouped here.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Link
+              href="/sequence"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              Sequences
+            </Link>
+            <Link
+              href="/admin/item-assistant"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              Item Assistant Tracking
+            </Link>
+            <Link
+              href="/admin/sales-analytics"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              Session Timeline
+            </Link>
+            <Link
+              href="/admin/ai-sales-analyst"
+              className="rounded-lg border border-gray-3 px-4 py-3 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+            >
+              AI Sales Analyst
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {mainTab === "seller" && activeTab === "users" && (
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Users" value={userStats.total} />
@@ -205,7 +272,7 @@ export default function AdminPanels({ users, products }: Props) {
         </section>
       )}
 
-      {activeTab === "add-product" && (
+      {mainTab === "seller" && activeTab === "add-product" && (
         <section className="mt-6">
           <form action={createAction} encType="multipart/form-data">
             <ProductFormShell
@@ -716,7 +783,7 @@ export default function AdminPanels({ users, products }: Props) {
         </section>
       )}
 
-      {activeTab === "products" && (
+      {mainTab === "seller" && activeTab === "products" && (
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Products" value={productStats.total} />
