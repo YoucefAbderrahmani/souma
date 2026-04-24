@@ -34,6 +34,14 @@ function fmtMs(ms: number) {
   return Math.round(ms);
 }
 
+/** Drizzle `sql\`min(timestamp)\`` may return `Date` or ISO `string` depending on driver. */
+function aggregateTimestampToIso(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString();
+  return new Date(0).toISOString();
+}
+
 /** Per-session ordering, then flatten chronologically for mixed-session product timelines. */
 function toAdminRowsForProduct(rows: (typeof salesMicroEventTable.$inferSelect)[]): SalesMicroEventAdminRow[] {
   const bySession = new Map<string, typeof rows>();
@@ -147,8 +155,8 @@ export async function listProductMicroAggregatesAdmin(options?: {
     productTitle: r.productTitle?.trim() ? r.productTitle : null,
     eventCount: r.eventCount,
     sessionCount: r.sessionCount,
-    firstEventAt: r.firstEventAt.toISOString(),
-    lastEventAt: r.lastEventAt.toISOString(),
+    firstEventAt: aggregateTimestampToIso(r.firstEventAt),
+    lastEventAt: aggregateTimestampToIso(r.lastEventAt),
   }));
 }
 
