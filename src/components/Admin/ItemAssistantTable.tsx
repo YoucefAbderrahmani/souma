@@ -41,46 +41,51 @@ function formatTopEvents(byEventName: Record<string, number>) {
     .join(" · ");
 }
 
-/** Sum of per-sequence counts for each event name, divided by number of sequences. */
-function formatTopEventsAvgPerSequence(sequences: ProductMicroSequenceSlice[]) {
-  const n = sequences.length;
-  if (n === 0) return "—";
-  const totals: Record<string, number> = {};
-  for (const s of sequences) {
-    for (const [name, c] of Object.entries(s.byEventName)) {
-      totals[name] = (totals[name] ?? 0) + c;
-    }
-  }
-  const entries = Object.entries(totals)
-    .map(([k, sum]) => [k, sum / n] as const)
-    .sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) return "—";
-  return entries
-    .slice(0, 8)
-    .map(([k, avg]) => `${k} (${avg.toFixed(2)})`)
-    .join(" · ");
+type SequenceEventAverages = {
+  eventName: string;
+  count: number;
+  avgPayloadDurationMs: number | null;
+  avgDeltaAfterPrevMs: number | null;
+  avgMsSinceSequenceStart: number | null;
+};
+
+function meanRounded(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
 }
 
-/** Headline averages across every product-phase event in all listed sequence slices. */
-function pooledAcrossSlices(sequences: ProductMicroSequenceSlice[]) {
-  const all = sequences.flatMap((s) => s.events);
-  const n = sequences.length;
-  const durations: number[] = [];
-  const deltas: number[] = [];
-  for (const ev of all) {
+function buildSequenceEventAverages(events: SalesMicroEventAdminRow[]): SequenceEventAverages[] {
+  const byType = new Map<
+    string,
+    { count: number; durations: number[]; deltas: number[]; sinceStart: number[] }
+  >();
+
+  for (const ev of events) {
+    const item = byType.get(ev.eventName) ?? {
+      count: 0,
+      durations: [],
+      deltas: [],
+      sinceStart: [],
+    };
+    item.count += 1;
     const d = extractPayloadDurationMs(ev.eventName, ev.payload);
-    if (d != null) durations.push(d);
-    if (ev.deltaMsSincePrevious != null) deltas.push(ev.deltaMsSincePrevious);
+    if (d != null) item.durations.push(d);
+    if (ev.deltaMsSincePrevious != null) item.deltas.push(ev.deltaMsSincePrevious);
+    if (ev.msSinceSessionStart != null) item.sinceStart.push(ev.msSinceSessionStart);
+    byType.set(ev.eventName, item);
   }
-  const meanRounded = (nums: number[]) =>
-    nums.length === 0 ? null : Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-  return {
-    avgPayloadDurationMs: meanRounded(durations),
-    avgDeltaAfterPrevMs: meanRounded(deltas),
-    shoppingSequencesCount: n,
-    avgEventsPerSequence: n > 0 ? all.length / n : 0,
-  };
+
+  return Array.from(byType.entries())
+    .map(([eventName, v]) => ({
+      eventName,
+      count: v.count,
+      avgPayloadDurationMs: meanRounded(v.durations),
+      avgDeltaAfterPrevMs: meanRounded(v.deltas),
+      avgMsSinceSequenceStart: meanRounded(v.sinceStart),
+    }))
+    .sort((a, b) => b.count - a.count);
 }
+
 
 type Props = {
   initialAggregates: ProductMicroAggregateRow[];
@@ -246,61 +251,6 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
                                 </p>
                               ) : (
                                 <>
-                                  {(() => {
-                                    const pool = pooledAcrossSlices(detail.sequences);
-                                    return (
-                                      <div className="flex flex-col gap-3">
-                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                          <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                            <p className="text-[10px] font-semibold uppercase text-dark-4">Pooled payload duration</p>
-                                            <p className="mt-1 text-lg font-semibold text-dark">
-                                              {pool.avgPayloadDurationMs != null ? fmtMs(pool.avgPayloadDurationMs) : "—"}
-                                            </p>
-                                            <p className="mt-1 text-[11px] text-dark-4">
-                                              Mean of payload durations (ms / duration_ms / etc.) across{" "}
-                                              <strong>all</strong> product-phase events in every sequence slice shown.
-                                            </p>
-                                          </div>
-                                          <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                            <p className="text-[10px] font-semibold uppercase text-dark-4">Pooled Δ after previous</p>
-                                            <p className="mt-1 text-lg font-semibold text-dark">
-                                              {pool.avgDeltaAfterPrevMs != null ? fmtMs(pool.avgDeltaAfterPrevMs) : "—"}
-                                            </p>
-                                            <p className="mt-1 text-[11px] text-dark-4">
-                                              Mean time to the next signal, using each slice’s recomputed timeline, pooled across
-                                              every event in those slices.
-                                            </p>
-                                          </div>
-                                          <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                            <p className="text-[10px] font-semibold uppercase text-dark-4">Avg events per sequence</p>
-                                            <p className="mt-1 text-lg font-semibold text-dark">
-                                              {pool.shoppingSequencesCount > 0
-                                                ? pool.avgEventsPerSequence.toFixed(2)
-                                                : "—"}
-                                            </p>
-                                            <p className="mt-1 text-[11px] text-dark-4">
-                                              Total product-phase events ÷{" "}
-                                              <span className="font-medium text-dark">{pool.shoppingSequencesCount}</span>{" "}
-                                              <code className="rounded bg-gray-1 px-0.5">shopping_sequence</code> rows (with{" "}
-                                              <code className="rounded bg-gray-1 px-0.5">product_visited_at</code>) in this view.
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-3 bg-white p-3">
-                                          <p className="text-[10px] font-semibold uppercase text-dark-4">
-                                            Top signals (avg count per sequence)
-                                          </p>
-                                          <p className="mt-1 text-xs leading-relaxed text-dark">
-                                            {formatTopEventsAvgPerSequence(detail.sequences)}
-                                          </p>
-                                          <p className="mt-1 text-[11px] text-dark-4">
-                                            For each event name: (sum of counts across sequences) ÷ number of sequences. Sequences
-                                            with zero of that event count as 0 in the average.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
                                   {detail.sequences.map((seq: ProductMicroSequenceSlice) => (
                                   <div
                                     key={seq.sequenceId}
@@ -349,7 +299,56 @@ export default function ItemAssistantTable({ initialAggregates }: Props) {
                                     <p className="mt-1 text-xs leading-relaxed text-dark">{formatTopEvents(seq.byEventName)}</p>
 
                                     <p className="mt-3 text-[10px] font-semibold uppercase text-dark-4">
-                                      Raw events ({seq.eventCount} in this sequence slice)
+                                      Averages by data type (this sequence)
+                                    </p>
+                                    <div className="mt-1 max-h-[220px] overflow-auto rounded-md border border-gray-3">
+                                      <table className="w-full min-w-[900px] border-collapse text-left text-[11px]">
+                                        <thead className="sticky top-0 bg-gray-2 text-[10px] font-semibold uppercase text-dark-4">
+                                          <tr>
+                                            <th className="px-2 py-1.5">Data type / event</th>
+                                            <th className="px-2 py-1.5">Count (clicks/events)</th>
+                                            <th className="px-2 py-1.5">Avg duration</th>
+                                            <th className="px-2 py-1.5">Avg Δ prev</th>
+                                            <th className="px-2 py-1.5">Avg from sequence start</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {buildSequenceEventAverages(seq.events).length === 0 ? (
+                                            <tr className="border-t border-gray-3">
+                                              <td colSpan={5} className="px-2 py-3 text-center text-dark-4">
+                                                No tracked rows in this sequence.
+                                              </td>
+                                            </tr>
+                                          ) : (
+                                            buildSequenceEventAverages(seq.events).map((row) => (
+                                              <tr key={row.eventName} className="border-t border-gray-3">
+                                                <td
+                                                  className="max-w-[220px] truncate px-2 py-1 font-medium text-dark"
+                                                  title={row.eventName}
+                                                >
+                                                  {row.eventName}
+                                                </td>
+                                                <td className="whitespace-nowrap px-2 py-1 tabular-nums">
+                                                  {row.count}
+                                                </td>
+                                                <td className="whitespace-nowrap px-2 py-1 tabular-nums text-dark-4">
+                                                  {fmtMs(row.avgPayloadDurationMs)}
+                                                </td>
+                                                <td className="whitespace-nowrap px-2 py-1 tabular-nums text-dark-4">
+                                                  {fmtMs(row.avgDeltaAfterPrevMs)}
+                                                </td>
+                                                <td className="whitespace-nowrap px-2 py-1 tabular-nums text-dark-4">
+                                                  {fmtMs(row.avgMsSinceSequenceStart)}
+                                                </td>
+                                              </tr>
+                                            ))
+                                          )}
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    <p className="mt-3 text-[10px] font-semibold uppercase text-dark-4">
+                                      All tracked data ({seq.eventCount} rows in this sequence)
                                     </p>
                                     <div className="mt-1 max-h-[220px] overflow-auto rounded-md border border-gray-3">
                                       <table className="w-full min-w-[900px] border-collapse text-left text-[11px]">
