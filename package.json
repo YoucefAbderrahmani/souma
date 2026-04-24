@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ensure-sales-micro-event-table.mjs && next build",
+    "build": "next build",
+    "db:ensure-sales-micro-event": "node scripts/ensure-sales-micro-event-table.mjs",
     "start": "next start",
     "lint": "next lint",
     "report:html": "node scripts/build-souma-application-report.mjs",
