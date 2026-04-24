@@ -131,43 +131,40 @@ export default function AdminPanels({ users, products }: Props) {
 
   return (
     <div className="mt-10 space-y-6">
-      <div className="rounded-xl border border-gray-3 bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Seller workspace</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => switchTab("users")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "users"
-                ? "bg-blue text-white shadow-sm"
-                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            }`}
-          >
-            Users
-          </button>
-          <button
-            type="button"
-            onClick={() => switchTab("add-product")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "add-product"
-                ? "bg-blue text-white shadow-sm"
-                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            }`}
-          >
-            Add Items
-          </button>
-          <button
-            type="button"
-            onClick={() => switchTab("products")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === "products"
-                ? "bg-blue text-white shadow-sm"
-                : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-            }`}
-          >
-            Stock & Edit Items
-          </button>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => switchTab("users")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            activeTab === "users"
+              ? "bg-blue text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Users
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("add-product")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            activeTab === "add-product"
+              ? "bg-blue text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Add Items
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("products")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            activeTab === "products"
+              ? "bg-blue text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Stock & Edit Items
+        </button>
       </div>
 
       {activeTab === "users" && (
