@@ -37,7 +37,7 @@ export function filterSessionsForTable(
   return out;
 }
 
-export const SALES_MICRO_SCHEMA_VERSION = "souma_sales_micro_v1" as const;
+export const SALES_MICRO_SCHEMA_VERSION = "vitrina_sales_micro_v1" as const;
 
 /** One flat record per event — stable keys for LLMs / notebooks / ETL. */
 export type SalesMicroModelRow = {

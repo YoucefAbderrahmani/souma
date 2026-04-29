@@ -11,8 +11,8 @@ import { categoryTable, productsTable, user } from "@/server/db/schema";
 import AdminPanels from "./AdminPanels";
 
 export const metadata: Metadata = {
-  title: "Admin Panel | Souma Store",
-  description: "Admin dashboard for Souma Store",
+  title: "Admin Panel | Vitrina Store",
+  description: "Admin dashboard for Vitrina Store",
 };
 
 const AdminPage = async () => {

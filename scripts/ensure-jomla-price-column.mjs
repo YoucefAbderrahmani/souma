@@ -1,5 +1,5 @@
 /**
- * One-off migration: adds products.jomla_price if missing (Souma pricing).
+ * One-off migration: adds products.jomla_price if missing (Vitrina pricing).
  * Run: node scripts/ensure-jomla-price-column.mjs
  */
 import dotenv from "dotenv";

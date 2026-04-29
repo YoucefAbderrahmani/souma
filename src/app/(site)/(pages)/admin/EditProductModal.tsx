@@ -45,7 +45,7 @@ export default function EditProductModal({ product, onClose }: Props) {
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
   const [colorRows, setColorRows] = useState([{ name: "", price: "" }]);
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
-  const [editSoumaMode, setEditSoumaMode] = useState(false);
+  const [editVitrinaMode, setEditVitrinaMode] = useState(false);
   const [editPriceInput, setEditPriceInput] = useState("");
 
   useEffect(() => {
@@ -79,9 +79,9 @@ export default function EditProductModal({ product, onClose }: Props) {
     } else {
       setAdditionalRows([{ key: "", value: "" }]);
     }
-    const hasSouma = product.jomlaPrice != null;
-    setEditSoumaMode(hasSouma);
-    setEditPriceInput(hasSouma ? String(product.jomlaPrice) : String(product.price));
+    const hasVitrina = product.jomlaPrice != null;
+    setEditVitrinaMode(hasVitrina);
+    setEditPriceInput(hasVitrina ? String(product.jomlaPrice) : String(product.price));
   }, [product]);
 
   useEffect(() => {
@@ -95,11 +95,11 @@ export default function EditProductModal({ product, onClose }: Props) {
   const categoryTitles = new Set(websiteCategories.map((c) => c.title));
   const hasCustomCategory = Boolean(product.categoryName) && !categoryTitles.has(product.categoryName);
 
-  const editSoumaStandardPreview = useMemo(() => {
+  const editVitrinaStandardPreview = useMemo(() => {
     const n = Number(editPriceInput);
-    if (!editSoumaMode || Number.isNaN(n) || n <= 0) return null;
+    if (!editVitrinaMode || Number.isNaN(n) || n <= 0) return null;
     return Math.round(Math.round(n) * 1.2);
-  }, [editSoumaMode, editPriceInput]);
+  }, [editVitrinaMode, editPriceInput]);
 
   return (
     <div
@@ -196,46 +196,46 @@ export default function EditProductModal({ product, onClose }: Props) {
                   </ProductFormField>
 
                   <div className="md:col-span-2">
-                    <input type="hidden" name="soumaMode" value={editSoumaMode ? "true" : "false"} />
+                    <input type="hidden" name="vitrinaMode" value={editVitrinaMode ? "true" : "false"} />
                     <div className={`${pf.cardMuted} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
                       <div>
-                        <p className="text-sm font-semibold text-stone-800">Souma pricing mode</p>
+                        <p className="text-sm font-semibold text-stone-800">Vitrina pricing mode</p>
                         <p className="mt-0.5 text-xs text-dark-4">
-                          On: enter Souma price; standard list price is +20%. Off: single standard price.
+                          On: enter Vitrina price; standard list price is +20%. Off: single standard price.
                         </p>
                       </div>
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={editSoumaMode}
+                        aria-checked={editVitrinaMode}
                         onClick={() => {
                           const n = Number(editPriceInput);
-                          if (editSoumaMode) {
+                          if (editVitrinaMode) {
                             if (!Number.isNaN(n) && n > 0) {
                               setEditPriceInput(String(Math.round(n * 1.2)));
                             } else {
                               setEditPriceInput(String(product.price));
                             }
-                            setEditSoumaMode(false);
+                            setEditVitrinaMode(false);
                           } else {
                             if (!Number.isNaN(n) && n > 0) {
                               setEditPriceInput(String(Math.max(1, Math.round(n / 1.2))));
                             } else if (product.jomlaPrice != null) {
                               setEditPriceInput(String(product.jomlaPrice));
                             }
-                            setEditSoumaMode(true);
+                            setEditVitrinaMode(true);
                           }
                         }}
                         className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus:ring-2 focus:ring-blue/30 ${
-                          editSoumaMode ? "bg-[#FB923C]" : "bg-stone-300"
+                          editVitrinaMode ? "bg-[#FB923C]" : "bg-stone-300"
                         }`}
                       >
                         <span
                           className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition ${
-                            editSoumaMode ? "translate-x-[1.35rem]" : "translate-x-0.5"
+                            editVitrinaMode ? "translate-x-[1.35rem]" : "translate-x-0.5"
                           }`}
                         />
-                        <span className="sr-only">{editSoumaMode ? "Souma mode on" : "Souma mode off"}</span>
+                        <span className="sr-only">{editVitrinaMode ? "Vitrina mode on" : "Vitrina mode off"}</span>
                       </button>
                     </div>
                   </div>
@@ -243,17 +243,17 @@ export default function EditProductModal({ product, onClose }: Props) {
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:col-span-2">
                     <div>
                       <ProductFormField
-                        label={editSoumaMode ? "Souma price (DA)" : "Standard price (DA)"}
+                        label={editVitrinaMode ? "Vitrina price (DA)" : "Standard price (DA)"}
                         hint={
-                          editSoumaMode
+                          editVitrinaMode
                             ? "Standard (strikethrough) recalculated as +20% on save."
-                            : "Clears Souma pricing — one price on the shop."
+                            : "Clears Vitrina pricing — one price on the shop."
                         }
                       >
                         <input
                           name="price"
                           type="number"
-                          min={editSoumaMode ? 1 : 0}
+                          min={editVitrinaMode ? 1 : 0}
                           step="1"
                           required
                           value={editPriceInput}
@@ -261,10 +261,10 @@ export default function EditProductModal({ product, onClose }: Props) {
                           className={pf.input}
                         />
                       </ProductFormField>
-                      {editSoumaMode && editSoumaStandardPreview != null ? (
+                      {editVitrinaMode && editVitrinaStandardPreview != null ? (
                         <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-sm text-stone-800">
                           <span className="text-dark-4">Standard reference (+20%): </span>
-                          <span className="font-semibold tabular-nums">{editSoumaStandardPreview} DA</span>
+                          <span className="font-semibold tabular-nums">{editVitrinaStandardPreview} DA</span>
                         </div>
                       ) : null}
                     </div>

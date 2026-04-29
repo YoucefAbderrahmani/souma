@@ -14,7 +14,7 @@ const testimonialsData: Testimonial[] = [
     authorRole: "Client - Oran",
   },
   {
-    review: `Very good prices in Souma mode. The checkout was simple and the order confirmation was instant.`,
+    review: `Very good prices in Vitrina mode. The checkout was simple and the order confirmation was instant.`,
     authorName: "Amine L.",
     authorImg: "/images/users/user-03.jpg",
     authorRole: "Client - Setif",
@@ -26,7 +26,7 @@ const testimonialsData: Testimonial[] = [
     authorRole: "Client - Constantine",
   },
   {
-    review: `I compared several stores and Souma had the best value. Delivery to Tizi Ouzou was on time and communication was clear.`,
+    review: `I compared several stores and Vitrina had the best value. Delivery to Tizi Ouzou was on time and communication was clear.`,
     authorName: "Karim M.",
     authorImg: "/images/users/user-02.jpg",
     authorRole: "Client - Tizi Ouzou",

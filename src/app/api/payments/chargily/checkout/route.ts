@@ -129,9 +129,9 @@ export async function POST(req: NextRequest) {
       success_url: successUrl,
       failure_url: failureUrl,
       locale: "fr",
-      description: `Souma Store order (${items.length} item${items.length > 1 ? "s" : ""})`,
+      description: `Vitrina Store order (${items.length} item${items.length > 1 ? "s" : ""})`,
       metadata: toFlatMetadata({
-        source: "souma-store",
+        source: "vitrina-store",
         userId: session?.user?.id ?? null,
         customerName,
         customerEmail: sanitizeText(body.email, 200),

@@ -77,7 +77,7 @@ async function run() {
         jomlaPrice: product.jomlaPrice != null ? Math.round(Number(product.jomlaPrice)) : null,
         rating: toRating(product.reviews),
         description: product.description ?? product.title,
-        manufacturer: "Souma",
+        manufacturer: "Vitrina",
         instock: 50,
         categoryId,
       })

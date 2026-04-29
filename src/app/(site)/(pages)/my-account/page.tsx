@@ -3,8 +3,8 @@ import React from "react";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "My Account | Souma Store Nextjs E-commerce",
-  description: "This is My Account page for Souma Store",
+  title: "My Account | Vitrina Store Nextjs E-commerce",
+  description: "This is My Account page for Vitrina Store",
   // other metadata
 };
 

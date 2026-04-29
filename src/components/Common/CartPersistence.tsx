@@ -6,10 +6,10 @@ import { store, useAppSelector, type AppDispatch } from "@/redux/store";
 import { setCartItems, type CartItem } from "@/redux/features/cart-slice";
 import { useSession } from "@/app/context/SessionProvider";
 
-const GUEST_CART_KEY = "souma_cart_guest_v1";
+const GUEST_CART_KEY = "vitrina_cart_guest_v1";
 
 function getUserCartKey(userId: string) {
-  return `souma_cart_user_${userId}`;
+  return `vitrina_cart_user_${userId}`;
 }
 
 function isValidCartItem(value: unknown): value is Partial<CartItem> {

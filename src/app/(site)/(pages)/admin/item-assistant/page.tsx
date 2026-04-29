@@ -13,7 +13,7 @@ import { listProductMicroAggregatesAdmin } from "@/server/sales-analyst/micro-ev
 import type { ProductMicroAggregateRow } from "@/types/sales-micro-by-product";
 
 export const metadata: Metadata = {
-  title: "Item assistant | Souma Store Admin",
+  title: "Item assistant | Vitrina Store Admin",
   description: "Per-product micro-interaction analytics across all shoppers",
 };
 

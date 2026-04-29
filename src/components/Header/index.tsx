@@ -129,8 +129,8 @@ const Header = () => {
             <Link className="flex-shrink-0" href="/">
               <Image
                 src="/images/logo/logo.svg"
-                alt="Logo"
-                width={219}
+                alt="Vitrina logo"
+                width={36}
                 height={36}
                 className="dark:brightness-0 dark:invert"
               />
@@ -515,7 +515,7 @@ const Header = () => {
                     }`}
                   >
                     <span className="text-2xs uppercase tracking-wide">
-                      Souma Mode
+                      Vitrina Mode
                     </span>
                   </button>
                 </li>

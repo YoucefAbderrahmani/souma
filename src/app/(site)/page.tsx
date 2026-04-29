@@ -2,8 +2,8 @@ import Home from "@/components/Home";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Souma Store",
-  description: "Home page for Souma Store",
+  title: "Vitrina Store",
+  description: "Home page for Vitrina Store",
   // other metadata
 };
 

@@ -13,7 +13,7 @@ import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-eve
 import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
 
 export const metadata: Metadata = {
-  title: "Session timeline | Souma Store Admin",
+  title: "Session timeline | Vitrina Store Admin",
   description: "Session-level product and checkout interaction telemetry",
 };
 

@@ -58,7 +58,7 @@ const Checkout = () => {
   const [formValues, setFormValues] = useState<CheckoutFormValues>(INITIAL_FORM_VALUES);
 
   const userId = session?.user?.id?.trim() || "guest";
-  const storageKey = `souma_checkout_profile_${userId}`;
+  const storageKey = `vitrina_checkout_profile_${userId}`;
 
   const updateField = (field: keyof CheckoutFormValues, value: string) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));

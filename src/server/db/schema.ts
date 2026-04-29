@@ -89,7 +89,7 @@ export const productsTable = pgTable("products", {
   mainimage: varchar({ length: 255 }).notNull(),
   /** Shown as strikethrough “standard” when jomlaPrice is set; otherwise the sole list price */
   price: integer().notNull().default(0),
-  /** Souma (promo) price — when set, customer pays this and price is +20% reference */
+  /** Vitrina (promo) price — when set, customer pays this and price is +20% reference */
   jomlaPrice: integer("jomla_price"),
   rating: integer().notNull().default(0),
   description: varchar({ length: 255 }).notNull(),

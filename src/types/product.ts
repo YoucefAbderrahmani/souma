@@ -4,7 +4,7 @@ export type Product = {
   reviews: number;
   // detail mode (retail) price
   detailPrice: number;
-  // optional souma mode (wholesale) price
+  // optional vitrina mode (wholesale) price
   jomlaPrice?: number;
   category: string;
   id: number;

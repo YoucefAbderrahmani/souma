@@ -63,7 +63,7 @@ export default function AdminPanels({ users, products }: Props) {
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
   const [userQuery, setUserQuery] = useState("");
   const [productQuery, setProductQuery] = useState("");
-  const [addSoumaMode, setAddSoumaMode] = useState(false);
+  const [addVitrinaMode, setAddVitrinaMode] = useState(false);
   const [addPriceInput, setAddPriceInput] = useState("");
 
   const userStats = useMemo(() => {
@@ -110,11 +110,11 @@ export default function AdminPanels({ users, products }: Props) {
     );
   }, [filteredProductsByCategoryTab, productQuery]);
 
-  const addSoumaStandardPreview = useMemo(() => {
+  const addVitrinaStandardPreview = useMemo(() => {
     const n = Number(addPriceInput);
-    if (!addSoumaMode || Number.isNaN(n) || n <= 0) return null;
+    if (!addVitrinaMode || Number.isNaN(n) || n <= 0) return null;
     return Math.round(Math.round(n) * 1.2);
-  }, [addSoumaMode, addPriceInput]);
+  }, [addVitrinaMode, addPriceInput]);
 
   useEffect(() => {
     if (tabParam === "add-product" || tabParam === "products") {
@@ -249,7 +249,7 @@ export default function AdminPanels({ users, products }: Props) {
                     <input name="title" required className={pf.input} placeholder="e.g. Wireless noise-cancelling headphones" />
                   </ProductFormField>
                   <ProductFormField label="Manufacturer / brand">
-                    <input name="manufacturer" required className={pf.input} placeholder="e.g. Souma Audio" />
+                    <input name="manufacturer" required className={pf.input} placeholder="e.g. Vitrina Audio" />
                   </ProductFormField>
                   <ProductFormField label="Category">
                     <select name="categoryName" required className={pf.select}>
@@ -263,43 +263,43 @@ export default function AdminPanels({ users, products }: Props) {
                   </ProductFormField>
 
                   <div className="md:col-span-2">
-                    <input type="hidden" name="soumaMode" value={addSoumaMode ? "true" : "false"} />
+                    <input type="hidden" name="vitrinaMode" value={addVitrinaMode ? "true" : "false"} />
                     <div className={`${pf.cardMuted} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
                       <div>
-                        <p className="text-sm font-semibold text-stone-800">Souma pricing mode</p>
+                        <p className="text-sm font-semibold text-stone-800">Vitrina pricing mode</p>
                         <p className="mt-0.5 text-xs text-dark-4">
-                          On: you enter the Souma price; the standard list price is set automatically (+20%). Off: one
+                          On: you enter the Vitrina price; the standard list price is set automatically (+20%). Off: one
                           standard price only.
                         </p>
                       </div>
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={addSoumaMode}
+                        aria-checked={addVitrinaMode}
                         onClick={() => {
                           const n = Number(addPriceInput);
-                          if (addSoumaMode) {
+                          if (addVitrinaMode) {
                             if (!Number.isNaN(n) && n > 0) {
                               setAddPriceInput(String(Math.round(n * 1.2)));
                             }
-                            setAddSoumaMode(false);
+                            setAddVitrinaMode(false);
                           } else {
                             if (!Number.isNaN(n) && n > 0) {
                               setAddPriceInput(String(Math.max(1, Math.round(n / 1.2))));
                             }
-                            setAddSoumaMode(true);
+                            setAddVitrinaMode(true);
                           }
                         }}
                         className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus:ring-2 focus:ring-blue/30 ${
-                          addSoumaMode ? "bg-[#FB923C]" : "bg-stone-300"
+                          addVitrinaMode ? "bg-[#FB923C]" : "bg-stone-300"
                         }`}
                       >
                         <span
                           className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition ${
-                            addSoumaMode ? "translate-x-[1.35rem]" : "translate-x-0.5"
+                            addVitrinaMode ? "translate-x-[1.35rem]" : "translate-x-0.5"
                           }`}
                         />
-                        <span className="sr-only">{addSoumaMode ? "Souma mode on" : "Souma mode off"}</span>
+                        <span className="sr-only">{addVitrinaMode ? "Vitrina mode on" : "Vitrina mode off"}</span>
                       </button>
                     </div>
                   </div>
@@ -307,29 +307,29 @@ export default function AdminPanels({ users, products }: Props) {
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:col-span-2 md:grid-cols-2">
                     <div>
                       <ProductFormField
-                        label={addSoumaMode ? "Souma price (DA)" : "Standard price (DA)"}
+                        label={addVitrinaMode ? "Vitrina price (DA)" : "Standard price (DA)"}
                         hint={
-                          addSoumaMode
-                            ? "Customer-facing Souma price. Standard (strikethrough) will be 20% higher."
+                          addVitrinaMode
+                            ? "Customer-facing Vitrina price. Standard (strikethrough) will be 20% higher."
                             : "Single list price everywhere on the shop."
                         }
                       >
                         <input
                           name="price"
                           type="number"
-                          min={addSoumaMode ? 1 : 0}
+                          min={addVitrinaMode ? 1 : 0}
                           step="1"
                           required
                           value={addPriceInput}
                           onChange={(e) => setAddPriceInput(e.target.value)}
                           className={pf.input}
-                          placeholder={addSoumaMode ? "e.g. 1000" : "0"}
+                          placeholder={addVitrinaMode ? "e.g. 1000" : "0"}
                         />
                       </ProductFormField>
-                      {addSoumaMode && addSoumaStandardPreview != null ? (
+                      {addVitrinaMode && addVitrinaStandardPreview != null ? (
                         <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-sm text-stone-800">
                           <span className="text-dark-4">Standard reference price (+20%): </span>
-                          <span className="font-semibold tabular-nums">{addSoumaStandardPreview} DA</span>
+                          <span className="font-semibold tabular-nums">{addVitrinaStandardPreview} DA</span>
                           <span className="text-dark-4"> (stored for strikethrough display)</span>
                         </div>
                       ) : null}
@@ -820,7 +820,7 @@ export default function AdminPanels({ users, products }: Props) {
                               <span className="font-medium text-[#ea580c]">{p.jomlaPrice}</span>
                               <span className="text-dark-4"> / </span>
                               <span className="text-dark-4 line-through">{p.price}</span>
-                              <span className="ml-1 text-xs text-dark-4">Souma</span>
+                              <span className="ml-1 text-xs text-dark-4">Vitrina</span>
                             </span>
                           ) : (
                             <span className="tabular-nums">{p.price}</span>

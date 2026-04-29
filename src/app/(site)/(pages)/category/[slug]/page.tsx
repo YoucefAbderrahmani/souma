@@ -17,8 +17,8 @@ export async function generateMetadata({
 
   return {
     title: category
-      ? `${category.title} | Souma Store`
-      : "Category | Souma Store",
+      ? `${category.title} | Vitrina Store`
+      : "Category | Vitrina Store",
     description: category
       ? `Browse ${category.title} products`
       : "Browse products by category",

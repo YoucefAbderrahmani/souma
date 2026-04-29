@@ -12,7 +12,7 @@ import SequencesLiveTable from "@/components/Admin/SequencesLiveTable";
 import { listSequencesForAdmin, toShoppingSequenceDTOs } from "@/server/sequence/sequence-db";
 
 export const metadata: Metadata = {
-  title: "Sequences | Souma Store",
+  title: "Sequences | Vitrina Store",
   description: "Shopping funnel sequences (admin)",
 };
 

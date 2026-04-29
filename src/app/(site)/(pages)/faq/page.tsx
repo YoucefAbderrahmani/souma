@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 
 export const metadata: Metadata = {
-  title: "FAQ | Souma Store",
-  description: "Frequently asked questions about Souma Store.",
+  title: "FAQ | Vitrina Store",
+  description: "Frequently asked questions about Vitrina Store.",
 };
 
 const FaqPage = () => {

@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Souma Store",
-  description: "Read how Souma Store handles and protects personal data.",
+  title: "Privacy Policy | Vitrina Store",
+  description: "Read how Vitrina Store handles and protects personal data.",
 };
 
 const PrivacyPolicyPage = () => {
@@ -17,7 +17,7 @@ const PrivacyPolicyPage = () => {
             <p className="mt-4 text-dark-4">
               We only collect information required to process orders, support your account, and improve
               your experience. We do not sell your personal data. Contact us at
-              support@souma-store.dz for any privacy request.
+              support@vitrina-store.dz for any privacy request.
             </p>
           </div>
         </div>

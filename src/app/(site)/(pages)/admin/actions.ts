@@ -27,21 +27,21 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-/** Standard list price is 20% above Souma when Souma mode is on */
-const SOUMA_STANDARD_MARKUP = 0.2;
+/** Standard list price is 20% above Vitrina when Vitrina mode is on */
+const VITRINA_STANDARD_MARKUP = 0.2;
 
 function parseAdminPriceFields(formData: FormData): { price: number; jomlaPrice: number | null } | { error: string } {
-  const soumaMode = String(formData.get("soumaMode") ?? "") === "true";
+  const vitrinaMode = String(formData.get("vitrinaMode") ?? "") === "true";
   const raw = Number(formData.get("price") ?? NaN);
   if (Number.isNaN(raw) || raw < 0) {
     return { error: "Price must be a valid non-negative number." };
   }
   const entered = Math.round(raw);
-  if (soumaMode) {
+  if (vitrinaMode) {
     if (entered <= 0) {
-      return { error: "Souma price must be greater than zero." };
+      return { error: "Vitrina price must be greater than zero." };
     }
-    const standardPrice = Math.round(entered * (1 + SOUMA_STANDARD_MARKUP));
+    const standardPrice = Math.round(entered * (1 + VITRINA_STANDARD_MARKUP));
     return { price: standardPrice, jomlaPrice: entered };
   }
   return { price: entered, jomlaPrice: null };

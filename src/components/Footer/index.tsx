@@ -67,7 +67,7 @@ const Footer = () => {
               </li>
 
               <li>
-                <a href="mailto:support@souma-store.dz" className="flex items-center gap-4.5">
+                <a href="mailto:support@vitrina-store.dz" className="flex items-center gap-4.5">
                   <svg
                     width="24"
                     height="24"
@@ -82,7 +82,7 @@ const Footer = () => {
                       fill="#FB923C"
                     />
                   </svg>
-                  support@souma-store.dz
+                  support@vitrina-store.dz
                 </a>
               </li>
             </ul>
@@ -351,7 +351,7 @@ const Footer = () => {
         <div className="max-w-[1170px] mx-auto px-4 sm:px-8 xl:px-0">
           <div className="flex gap-5 flex-wrap items-center justify-between">
             <p className="text-dark font-medium">
-              &copy; {year}. All rights reserved to Souma.
+              &copy; {year}. All rights reserved to Vitrina.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">

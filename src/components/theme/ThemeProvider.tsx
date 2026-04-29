@@ -9,7 +9,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem
-      storageKey="souma-theme"
+      storageKey="vitrina-theme"
       disableTransitionOnChange
     >
       {children}

@@ -1,7 +1,7 @@
 /**
- * Builds Souma Store — Full Application Report (print-ready HTML + optional PDF).
- * Run: node scripts/build-souma-application-report.mjs
- * PDF: node scripts/build-souma-application-report.mjs --pdf  (requires playwright)
+ * Builds Vitrina Store — Full Application Report (print-ready HTML + optional PDF).
+ * Run: node scripts/build-vitrina-application-report.mjs
+ * PDF: node scripts/build-vitrina-application-report.mjs --pdf  (requires playwright)
  */
 import fs from "fs";
 import path from "path";
@@ -10,8 +10,8 @@ import { pathToFileURL } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
-const OUT_HTML = path.join(ROOT, "reports", "Souma-Store-Full-Application-Report.html");
-const OUT_PDF = path.join(ROOT, "reports", "Souma-Store-Full-Application-Report.pdf");
+const OUT_HTML = path.join(ROOT, "reports", "Vitrina-Store-Full-Application-Report.html");
+const OUT_PDF = path.join(ROOT, "reports", "Vitrina-Store-Full-Application-Report.pdf");
 
 function escapeHtml(s) {
   return String(s)
@@ -249,7 +249,7 @@ function buildDiagramSystemContext() {
     <figcaption>Figure 1 — System context (C4 Level 1)</figcaption>
     <pre class="ascii">
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              SOUMA STORE (Next.js)                           │
+│                              VITRINA STORE (Next.js)                           │
 │  ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌────────────────┐ │
 │  │ App Router  │   │ Redux client │   │ Better Auth │   │ Smart Assistant│ │
 │  │ pages + RSC │   │ cart/wishlist│   │ sessions    │   │ Gemini / OR    │ │
@@ -393,14 +393,14 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
     chapter(
       1,
       "Executive summary",
-      `<p class="lead">Souma Store is a production-grade e-commerce experience built on <strong>Next.js 15</strong> and <strong>React 19</strong>, combining a rich merchandising front end, authenticated accounts, Algerian-market checkout (wilaya/commune), <strong>Chargily</strong> payments, and an <strong>AI-assisted shopping layer</strong> with multilingual responses and telemetry for continuous improvement.</p>
+      `<p class="lead">Vitrina Store is a production-grade e-commerce experience built on <strong>Next.js 15</strong> and <strong>React 19</strong>, combining a rich merchandising front end, authenticated accounts, Algerian-market checkout (wilaya/commune), <strong>Chargily</strong> payments, and an <strong>AI-assisted shopping layer</strong> with multilingual responses and telemetry for continuous improvement.</p>
       <p>This document narrates the product from conception through architecture, data design, operational concerns, and a structured catalog of use cases suitable for stakeholders, engineers, and auditors. Diagrams use plain figures so they render reliably in PDF engines.</p>
       <ul class="tight"><li><strong>Primary runtime:</strong> Node.js serverless (Vercel-style) with Route Handlers.</li><li><strong>Persistence:</strong> PostgreSQL via Drizzle ORM.</li><li><strong>Auth:</strong> Better Auth with Google OAuth and credential flows.</li><li><strong>State:</strong> Redux Toolkit for cart, wishlist, quick view, product-details UI.</li><li><strong>Intelligence:</strong> Google Gemini and/or OpenRouter-backed flows with catalog grounding.</li></ul>`
     ) +
     chapter(
       2,
       "Vision, positioning, and conception",
-      `<p>Souma targets a modern, mobile-first storefront with editorial polish: large imagery, confident typography, and fast interaction patterns (quick view, sticky assistant, expressive product pages). Conception emphasized three pillars: <em>trust</em> (clear pricing modes, policies, reviews), <em>speed</em> (client caching patterns, optimistic UI), and <em>insight</em> (shopping sequences + assistant telemetry).</p>
+      `<p>Vitrina targets a modern, mobile-first storefront with editorial polish: large imagery, confident typography, and fast interaction patterns (quick view, sticky assistant, expressive product pages). Conception emphasized three pillars: <em>trust</em> (clear pricing modes, policies, reviews), <em>speed</em> (client caching patterns, optimistic UI), and <em>insight</em> (shopping sequences + assistant telemetry).</p>
       <p>The name and visual language evoke warmth and energy—orange accents on deep navy—while keeping commerce flows conventional so new shoppers remain oriented.</p>
       <blockquote>Design principle: progressive disclosure. Advanced modes (jomla pricing, assistant) enhance the core journey without blocking basic browse-to-buy.</blockquote>`
     ) +
@@ -456,7 +456,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
     chapter(
       11,
       "Checkout, logistics fields, and payments",
-      `<p>Checkout captures Algerian administrative geography (wilaya, commune) and optional customer notes. Payment initiation occurs server-side through Chargily’s REST API; the browser is redirected to hosted checkout, minimizing PCI scope on Souma infrastructure.</p>
+      `<p>Checkout captures Algerian administrative geography (wilaya, commune) and optional customer notes. Payment initiation occurs server-side through Chargily’s REST API; the browser is redirected to hosted checkout, minimizing PCI scope on Vitrina infrastructure.</p>
       ${buildDiagramRequestFlow()}`
     ) +
     chapter(
@@ -508,7 +508,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
     chapter(
       20,
       "Internationalization, locales, and assistant copy decks",
-      `<p>Souma’s customer-facing UI is predominantly French/Arabic/Darija-friendly in merchandising copy, while the assistant route codifies <strong>four response locales</strong>—Modern Standard Arabic, French, Algerian Darija (Latin), and English—selected by script detection, provider-reported language, and regex heuristics tuned for Maghrebi French and Darija markers.</p>
+      `<p>Vitrina’s customer-facing UI is predominantly French/Arabic/Darija-friendly in merchandising copy, while the assistant route codifies <strong>four response locales</strong>—Modern Standard Arabic, French, Algerian Darija (Latin), and English—selected by script detection, provider-reported language, and regex heuristics tuned for Maghrebi French and Darija markers.</p>
       <p>Template banks centralize operational messages (missing API keys, rate limits, empty queries, catalog-only fallback). This pattern keeps UX consistent even when the LLM narrative varies, and simplifies legal review of deterministic strings.</p>
       <p>Future i18n work could externalize UI strings into message catalogs (e.g., next-intl) while preserving assistant locale detection as a separate concern from static chrome translation.</p>`
     ) +
@@ -533,7 +533,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
     chapter(
       24,
       "Cart, persistence, and client state lifecycle",
-      `<p>Redux holds authoritative client cart state; persistence middleware writes through to storage after meaningful transitions. Hydration strategies must avoid double-counting during SSR handoff—Souma’s approach favors client reconciliation with stable keys to prevent flicker when session state and anonymous carts meet at login.</p>`
+      `<p>Redux holds authoritative client cart state; persistence middleware writes through to storage after meaningful transitions. Hydration strategies must avoid double-counting during SSR handoff—Vitrina’s approach favors client reconciliation with stable keys to prevent flicker when session state and anonymous carts meet at login.</p>`
     ) +
     chapter(
       25,
@@ -593,7 +593,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
         <dt>Better Auth</dt><dd>Library handling sessions, OAuth, and credential storage with Drizzle adapter.</dd>
         <dt>Chargily</dt><dd>Regional payment gateway integration used for hosted checkout.</dd>
         <dt>Drizzle</dt><dd>Type-safe SQL builder and migration toolkit for Postgres.</dd>
-        <dt>jomla</dt><dd>Promotional price mode per Souma business rules.</dd>
+        <dt>jomla</dt><dd>Promotional price mode per Vitrina business rules.</dd>
         <dt>Route Handler</dt><dd><code>route.ts</code> file exporting HTTP method functions in the App Router.</dd>
         <dt>shopping_sequence</dt><dd>Funnel analytics entity keyed by session with lifecycle statuses.</dd>
         <dt>telemetry</dt><dd>Assistant search and click events stored for offline evaluation.</dd>
@@ -616,7 +616,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Souma Store — Full Application Report</title>
+  <title>Vitrina Store — Full Application Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
@@ -815,13 +815,13 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
 <body>
   <header class="cover">
     <div>
-      <div class="cover-brand">Souma</div>
+      <div class="cover-brand">Vitrina</div>
       <h1>Full application report</h1>
       <p class="subtitle">From product conception to architecture, integrations, data design, assistants, and operational readiness — print edition.</p>
       <div class="cover-badge">Generated <span>${escapeHtml(generatedAt)}</span> · Confidential draft</div>
     </div>
     <div class="cover-meta">
-      <div>Repository: <strong>souma-store</strong> (Next.js App Router)</div>
+      <div>Repository: <strong>vitrina-store</strong> (Next.js App Router)</div>
       <div>Document class: technical + product narrative</div>
       <div>Estimated print length: ~65–85 pages (engine, margins, and source tree size)</div>
     </div>
@@ -830,7 +830,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
   <main class="document">
     <section class="abstract">
       <h2 style="border:none;padding:0;margin:0 0 .5rem;">Abstract</h2>
-      <p>This report consolidates the Souma Store application as implemented in source: user journeys, route map, API inventory, persistence model, AI features, and risk-aware recommendations. It is suitable as an onboarding artifact, design review appendix, or lightweight compliance pack when paired with your organization’s policies.</p>
+      <p>This report consolidates the Vitrina Store application as implemented in source: user journeys, route map, API inventory, persistence model, AI features, and risk-aware recommendations. It is suitable as an onboarding artifact, design review appendix, or lightweight compliance pack when paired with your organization’s policies.</p>
     </section>
 
     <nav class="toc">
@@ -853,7 +853,7 @@ function buildHtml({ generatedAt, schemaBlocks, envExample, sourceIndexRows }) {
     </section>
 
     <section class="colophon">
-      <p><strong>Colophon.</strong> Typography pairs DM Sans (headings, UI) with Source Serif 4 (body). Diagrams are ASCII for universal PDF fidelity. To regenerate: <code>node scripts/build-souma-application-report.mjs</code> then <code>node scripts/build-souma-application-report.mjs --pdf</code> with Playwright installed.</p>
+      <p><strong>Colophon.</strong> Typography pairs DM Sans (headings, UI) with Source Serif 4 (body). Diagrams are ASCII for universal PDF fidelity. To regenerate: <code>node scripts/build-vitrina-application-report.mjs</code> then <code>node scripts/build-vitrina-application-report.mjs --pdf</code> with Playwright installed.</p>
     </section>
   </main>
 </body>

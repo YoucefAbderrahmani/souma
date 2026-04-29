@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 
 export const metadata: Metadata = {
-  title: "Refund Policy | Souma Store",
-  description: "Read the Souma Store return and refund policy.",
+  title: "Refund Policy | Vitrina Store",
+  description: "Read the Vitrina Store return and refund policy.",
 };
 
 const RefundPolicyPage = () => {
