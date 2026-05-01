@@ -18,6 +18,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -504,6 +505,9 @@ const Header = () => {
             <div className="hidden xl:block">
               <ul className="flex items-center gap-5.5">
                 {/* Price mode switch */}
+                <li className="py-4">
+                  <ThemeToggle />
+                </li>
                 <li className="py-4">
                   <button
                     type="button"
