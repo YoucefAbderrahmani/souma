@@ -34,6 +34,9 @@ export default function AdminSideNav() {
         <Link href="/admin?tab=conception" className={linkClass(onAdminHome && tab === "conception")}>
           conception
         </Link>
+        <Link href="/admin?tab=tracking" className={linkClass(onAdminHome && tab === "tracking")}>
+          Analytics tracking
+        </Link>
       </div>
 
       <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">

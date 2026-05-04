@@ -723,6 +723,7 @@ const ShopDetails = () => {
                   productId={product.id}
                   productTitle={product.title}
                   salesTracking
+                  reviewsTabActive={activeTab === "tabThree"}
                 />
               </div>
               {/* <!-- tab content three end --> */}

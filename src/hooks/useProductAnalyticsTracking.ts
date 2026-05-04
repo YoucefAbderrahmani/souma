@@ -62,6 +62,23 @@ export function useProductAnalyticsTracking({
   const lastColor = useRef(activeColor);
   const lastTab = useRef<string | null>(null);
   const pageEnter = useRef<number>(Date.now());
+  const specsVisibleSince = useRef<number | null>(null);
+  const specsDwellProductId = useRef<number | null>(null);
+
+  const flushSpecsViewTime = useCallback((reason: "tab_change" | "unmount") => {
+    const t = specsVisibleSince.current;
+    const pid = specsDwellProductId.current;
+    specsVisibleSince.current = null;
+    specsDwellProductId.current = null;
+    if (t === null || pid === null) return;
+    const ms = Date.now() - t;
+    if (ms < 400) return;
+    trackProductAnalytics("pa_specs_view_time", {
+      product_id: pid,
+      visible_ms: ms,
+      reason,
+    });
+  }, []);
 
   useEffect(() => {
     globalSent.current = false;
@@ -69,7 +86,14 @@ export function useProductAnalyticsTracking({
     pageEnter.current = Date.now();
     imgSince.current = Date.now();
     prevImg.current = 0;
-  }, [productId]);
+    flushSpecsViewTime("unmount");
+  }, [productId, flushSpecsViewTime]);
+
+  useEffect(() => {
+    return () => {
+      flushSpecsViewTime("unmount");
+    };
+  }, [flushSpecsViewTime]);
 
   useEffect(() => {
     setProductAnalyticsProductContext({
@@ -165,6 +189,17 @@ export function useProductAnalyticsTracking({
       specs: selectedSpecs,
     });
   }, [activeColor, selectedSpecs]);
+
+  useEffect(() => {
+    if (activeTab === "tabTwo") {
+      if (specsVisibleSince.current === null) {
+        specsVisibleSince.current = Date.now();
+        specsDwellProductId.current = productId;
+      }
+    } else {
+      flushSpecsViewTime("tab_change");
+    }
+  }, [activeTab, productId, flushSpecsViewTime]);
 
   useEffect(() => {
     if (lastTab.current === null) {

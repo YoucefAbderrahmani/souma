@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
 import { publicApiUrl } from "@/lib/public-api-url";
@@ -13,7 +14,6 @@ import {
   SALES_MICRO_SCHEMA_VERSION,
   sessionsToModelRows,
 } from "@/lib/sales-micro-ai-export";
-import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 
 const POLL_MS = 5000;
 const COL_COUNT = 15;
@@ -175,7 +175,14 @@ export default function AiSalesAnalystEventsTable({ initialSessions }: Props) {
 
   return (
     <div>
-      <ProductAnalyticsTrackingPanel />
+      <div className="mb-4 rounded-lg border border-gray-3 bg-white px-4 py-3 text-sm text-dark-4 shadow-1">
+        To turn individual <code className="rounded bg-gray-2 px-1 text-dark">pa_*</code> events on or off, open{" "}
+        <strong>Admin</strong> → <strong>Analytics tracking</strong> (or{" "}
+        <Link href="/admin?tab=tracking" className="font-medium text-[#FB923C] hover:underline">
+          /admin?tab=tracking
+        </Link>
+        ).
+      </div>
       <div className="mb-4 rounded-lg border border-gray-3 bg-white p-4 shadow-1">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

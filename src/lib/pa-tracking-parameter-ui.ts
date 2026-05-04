@@ -43,7 +43,7 @@ export const PA_TRACKING_PARAMETER_GROUPS: PaParameterGroup[] = [
     items: [
       { event: "pa_review_interaction", label: "Review interaction", hint: "filters, taps" },
       { event: "pa_review_scroll", label: "Review scroll depth", hint: "scroll" },
-      { event: "pa_review_view_time", label: "Review view time", hint: "if emitted" },
+      { event: "pa_review_view_time", label: "Review view time", hint: "dwell while Reviews tab is open" },
     ],
   },
   {
@@ -51,7 +51,7 @@ export const PA_TRACKING_PARAMETER_GROUPS: PaParameterGroup[] = [
     title: "Specifications",
     items: [
       { event: "pa_specs_interaction", label: "Specs interaction" },
-      { event: "pa_specs_view_time", label: "Specs view time", hint: "if emitted" },
+      { event: "pa_specs_view_time", label: "Specs view time", hint: "dwell on Additional Information tab" },
     ],
   },
   {
@@ -78,7 +78,7 @@ export const PA_TRACKING_PARAMETER_GROUPS: PaParameterGroup[] = [
       { event: "pa_begin_checkout", label: "Begin checkout" },
       { event: "pa_checkout_step", label: "Checkout step", hint: "payment redirect, etc." },
       { event: "pa_purchase", label: "Purchase", hint: "total in payload" },
-      { event: "pa_abandon_checkout", label: "Abandon checkout", hint: "if emitted" },
+      { event: "pa_abandon_checkout", label: "Abandon checkout", hint: "pagehide only (not visibility—avoids minimize/tab-switch noise); skips payment popup + short visits" },
     ],
   },
   {

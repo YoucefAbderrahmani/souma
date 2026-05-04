@@ -82,13 +82,63 @@ const Checkout = () => {
   }, [paymentStatus]);
 
   const checkoutBeginSent = React.useRef(false);
+  const purchaseCompletedRef = React.useRef(false);
+  const abandonSentRef = React.useRef(false);
+  const checkoutEnteredAtRef = React.useRef(Date.now());
+
+  const checkoutLiveRef = React.useRef({
+    cartLen: 0,
+    totalPrice: 0,
+    isSubmitting: false,
+    paymentStatus: null as string | null,
+    showPaymentPopup: false,
+  });
+  checkoutLiveRef.current = {
+    cartLen: cartItems.length,
+    totalPrice,
+    isSubmitting,
+    paymentStatus,
+    showPaymentPopup,
+  };
+
+  const tryAbandonCheckout = React.useCallback((reason: string) => {
+    if (abandonSentRef.current || purchaseCompletedRef.current) return;
+    if (!checkoutBeginSent.current) return;
+    const s = checkoutLiveRef.current;
+    if (s.paymentStatus === "success") return;
+    if (s.isSubmitting) return;
+    if (s.showPaymentPopup) return;
+    const dwell_ms = Date.now() - checkoutEnteredAtRef.current;
+    if (dwell_ms < 3500) return;
+    abandonSentRef.current = true;
+    trackProductAnalytics("pa_abandon_checkout", {
+      reason,
+      dwell_ms,
+      cart_line_items: s.cartLen,
+      cart_total_dzd: s.totalPrice,
+    });
+    void flushProductAnalyticsNow();
+  }, []);
 
   React.useEffect(() => {
     setProductAnalyticsPageContext({
       pagePath: "/checkout",
       product: null,
     });
+    checkoutEnteredAtRef.current = Date.now();
   }, []);
+
+  // Abandon: use `pagehide` only (not `visibilitychange`—minimize / other-tab would false-positive;
+  // not `beforeunload`—often blocked and poor on mobile).
+  React.useEffect(() => {
+    const onPageHide = () => {
+      tryAbandonCheckout("pagehide");
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [tryAbandonCheckout]);
 
   React.useEffect(() => {
     if (checkoutBeginSent.current || cartItems.length === 0) return;
@@ -101,6 +151,7 @@ const Checkout = () => {
 
   React.useEffect(() => {
     if (paymentStatus === "success" && cartItems.length > 0) {
+      purchaseCompletedRef.current = true;
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
         line_items: cartItems.length,
@@ -110,6 +161,12 @@ const Checkout = () => {
       toast.success("Payment confirmed. Your cart has been cleared.");
     }
   }, [cartItems.length, dispatch, paymentStatus, totalPrice]);
+
+  React.useEffect(() => {
+    if (paymentStatus === "success") {
+      purchaseCompletedRef.current = true;
+    }
+  }, [paymentStatus]);
 
   React.useEffect(() => {
     if (isPending) return;

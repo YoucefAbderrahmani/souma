@@ -32,9 +32,11 @@ type ReviewsTabProps = {
   productTitle: string;
   /** When true, emits review_filter_applied, review_scroll_depth, etc. */
   salesTracking?: boolean;
+  /** When the Reviews tab is selected (not merely mounted hidden). */
+  reviewsTabActive?: boolean;
 };
 
-const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps) => {
+const ReviewsTab = ({ productId, productTitle, salesTracking, reviewsTabActive = false }: ReviewsTabProps) => {
   const { session, isPending } = useSession();
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,7 @@ const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps)
   const [reviewFilter, setReviewFilter] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
   const listRef = useRef<HTMLDivElement | null>(null);
   const scrollDepthTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reviewsVisibleSince = useRef<number | null>(null);
 
   const averageRating = useMemo(() => {
     if (!reviews.length) return 0;
@@ -97,6 +100,44 @@ const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps)
       if (scrollDepthTimer.current) clearTimeout(scrollDepthTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!salesTracking) return;
+    if (reviewsTabActive) {
+      if (reviewsVisibleSince.current === null) reviewsVisibleSince.current = Date.now();
+    } else {
+      const t = reviewsVisibleSince.current;
+      reviewsVisibleSince.current = null;
+      if (t !== null) {
+        const visible_ms = Date.now() - t;
+        if (visible_ms > 400) {
+          trackProductAnalytics("pa_review_view_time", {
+            product_id: productId,
+            visible_ms,
+            reason: "tab_blur",
+          });
+        }
+      }
+    }
+  }, [reviewsTabActive, salesTracking, productId]);
+
+  useEffect(() => {
+    return () => {
+      if (!salesTracking) return;
+      const t = reviewsVisibleSince.current;
+      reviewsVisibleSince.current = null;
+      if (t !== null) {
+        const visible_ms = Date.now() - t;
+        if (visible_ms > 400) {
+          trackProductAnalytics("pa_review_view_time", {
+            product_id: productId,
+            visible_ms,
+            reason: "unmount",
+          });
+        }
+      }
+    };
+  }, [salesTracking, productId]);
 
   useEffect(() => {
     if (!salesTracking || !listRef.current || filteredReviews.length === 0) return;

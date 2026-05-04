@@ -6,6 +6,7 @@ import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
 import ConceptionIntelligenceDashboard from "./ConceptionIntelligenceDashboard";
+import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import {
   pf,
   productFormSectionIds,
@@ -43,7 +44,7 @@ type Props = {
   products: AdminProduct[];
 };
 
-type AdminMainTab = "users" | "add-product" | "products" | "conception";
+type AdminMainTab = "users" | "add-product" | "products" | "conception" | "tracking";
 
 const initialState: CreateProductState = {};
 
@@ -52,7 +53,10 @@ export default function AdminPanels({ users, products }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const initialTab: AdminMainTab =
-    tabParam === "add-product" || tabParam === "products" || tabParam === "conception"
+    tabParam === "add-product" ||
+    tabParam === "products" ||
+    tabParam === "conception" ||
+    tabParam === "tracking"
       ? tabParam
       : "users";
   const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
@@ -122,7 +126,12 @@ export default function AdminPanels({ users, products }: Props) {
   }, [addVitrinaMode, addPriceInput]);
 
   useEffect(() => {
-    if (tabParam === "add-product" || tabParam === "products" || tabParam === "conception") {
+    if (
+      tabParam === "add-product" ||
+      tabParam === "products" ||
+      tabParam === "conception" ||
+      tabParam === "tracking"
+    ) {
       setActiveTab(tabParam);
       return;
     }
@@ -180,6 +189,17 @@ export default function AdminPanels({ users, products }: Props) {
           }`}
         >
           conception
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("tracking")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+            activeTab === "tracking"
+              ? "bg-orange text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Analytics tracking
         </button>
       </div>
 
@@ -872,6 +892,12 @@ export default function AdminPanels({ users, products }: Props) {
       )}
 
       {activeTab === "conception" && <ConceptionIntelligenceDashboard />}
+
+      {activeTab === "tracking" && (
+        <section className="mt-2">
+          <ProductAnalyticsTrackingPanel />
+        </section>
+      )}
     </div>
   );
 }

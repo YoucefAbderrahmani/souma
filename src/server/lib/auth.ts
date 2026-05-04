@@ -87,7 +87,19 @@ const trustedOrigins = Array.from(
   )
 );
 
+/** Public origin Google redirects back to; must match an Authorized redirect URI in Google Cloud. */
+const resolvedAuthBaseURL =
+  normalizeOrigin(process.env.BETTER_AUTH_URL) ??
+  normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
+  (process.env.VERCEL_URL?.trim()
+    ? normalizeOrigin(`https://${process.env.VERCEL_URL.trim()}`)
+    : null) ??
+  undefined;
+
 export const auth = betterAuth({
+  /** Required for correct OAuth redirect_uri in production (avoids redirect_uri_mismatch). */
+  baseURL: resolvedAuthBaseURL,
+  secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
     schema,
