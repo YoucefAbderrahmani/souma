@@ -13,6 +13,7 @@ import {
   SALES_MICRO_SCHEMA_VERSION,
   sessionsToModelRows,
 } from "@/lib/sales-micro-ai-export";
+import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 
 const POLL_MS = 5000;
 const COL_COUNT = 15;
@@ -174,6 +175,7 @@ export default function AiSalesAnalystEventsTable({ initialSessions }: Props) {
 
   return (
     <div>
+      <ProductAnalyticsTrackingPanel />
       <div className="mb-4 rounded-lg border border-gray-3 bg-white p-4 shadow-1">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -184,7 +186,7 @@ export default function AiSalesAnalystEventsTable({ initialSessions }: Props) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Session, event, product, path…"
-                className="min-w-[200px] rounded-md border border-gray-3 px-3 py-2 text-sm text-dark outline-none focus:border-[#FB923C]"
+                className="min-w-[200px] rounded-md border border-gray-3 px-3 py-2 text-sm text-dark outline-none placeholder:text-stone-500 focus:border-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs font-medium text-dark">
@@ -192,7 +194,7 @@ export default function AiSalesAnalystEventsTable({ initialSessions }: Props) {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="min-w-[180px] rounded-md border border-gray-3 bg-white px-3 py-2 text-sm text-dark outline-none focus:border-[#FB923C]"
+                className="min-w-[180px] rounded-md border border-gray-3 bg-white px-3 py-2 text-sm text-dark outline-none focus:border-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0"
               >
                 <option value="">All categories</option>
                 {SALES_MICRO_CATEGORY_OPTIONS.map((c) => (

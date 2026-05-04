@@ -14,8 +14,8 @@ import { parseProductContent } from "@/lib/product-content";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
-import { useProductPageMicroTracking } from "@/hooks/useProductPageMicroTracking";
-import { trackSalesMicroEvent } from "@/lib/sales-analyst-client";
+import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 const ShopDetails = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -94,9 +94,11 @@ const ShopDetails = () => {
     return selectedPrice;
   }, [activeColor, baseDetailPrice, colorOptions, parsedContent, selectedSpecs]);
 
-  const salesMicro = useProductPageMicroTracking({
+  const pa = useProductAnalyticsTracking({
     productId: product.id,
     productTitle: product.title,
+    category: typeof product.category === "string" ? product.category : "",
+    jomlaPrice: jomlaPrice ?? null,
     previewImg,
     activeTab,
     activeColor,
@@ -106,15 +108,18 @@ const ShopDetails = () => {
 
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
-    salesMicro.onGalleryZoom();
+    pa.onGalleryZoom();
     openPreviewModal();
   };
 
   const handlePurchaseNow = () => {
-    trackSalesMicroEvent("purchase_now_click", {
+    trackProductAnalytics("pa_add_to_cart", {
+      product_id: product.id,
+      from: "product_page",
       quantity,
       detail_price: detailPrice,
       active_color: activeColor,
+      selected_specs: selectedSpecs,
     });
     dispatch(
       addItemToCart({
@@ -133,7 +138,7 @@ const ShopDetails = () => {
         title={"Shop Details"}
         pages={["shop details"]}
         onHomeClick={() =>
-          trackSalesMicroEvent("breadcrumb_click", { target: "home", href: "/" })
+          trackProductAnalytics("pa_navigation", { kind: "breadcrumb_home", href: "/" })
         }
       />
 
@@ -182,7 +187,10 @@ const ShopDetails = () => {
                   <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
                     {product.imgs?.thumbnails.map((item, key) => (
                       <button
-                        onClick={() => setPreviewImg(key)}
+                        onClick={() => {
+                          pa.onThumbnailSelect(key);
+                          setPreviewImg(key);
+                        }}
                         key={key}
                         className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${
                           key === previewImg
@@ -205,7 +213,7 @@ const ShopDetails = () => {
                 <div className="max-w-[539px] w-full">
                   <div className="flex items-center justify-between mb-3">
                     <h2
-                      ref={salesMicro.titleRef}
+                      ref={pa.titleRef}
                       className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark"
                     >
                       {product.title}
@@ -359,7 +367,7 @@ const ShopDetails = () => {
                   </div>
 
                   <h3
-                    ref={salesMicro.priceRef}
+                    ref={pa.priceRef}
                     className="mb-4.5 flex flex-col items-start gap-0.5"
                   >
                     {typeof jomlaPrice === "number" ? (
@@ -447,7 +455,8 @@ const ShopDetails = () => {
                                   checked={activeColor === color.name}
                                   onChange={() => {
                                     if (color.inStock === false) {
-                                      trackSalesMicroEvent("out_of_stock_click", {
+                                      trackProductAnalytics("pa_select_option", {
+                                        blocked: true,
                                         axis: "color",
                                         color: color.name,
                                       });

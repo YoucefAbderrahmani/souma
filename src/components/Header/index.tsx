@@ -18,6 +18,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Header = () => {
@@ -69,11 +70,33 @@ const Header = () => {
     const q = searchQuery.trim();
     if (q) sequenceStartSearch(q);
     const first = searchResults[0];
+    const rc = searchResults.length;
+    if (q) {
+      trackProductAnalytics("pa_search", {
+        query: q.slice(0, 200),
+        matched_product_id: first?.id ?? null,
+        results_count: rc,
+        kind: "submit",
+      });
+    }
     if (first) {
       openDetails(first);
       return;
     }
     setShowSearchResults(true);
+  };
+
+  const handleSearchResultClick = (productItem: (typeof shopData)[number]) => {
+    const q = searchQuery.trim();
+    if (q) {
+      trackProductAnalytics("pa_search", {
+        query: q.slice(0, 200),
+        matched_product_id: productItem.id,
+        results_count: searchResults.length,
+        kind: "result_click",
+      });
+    }
+    openDetails(productItem);
   };
 
   // Sticky menu
@@ -194,7 +217,7 @@ const Header = () => {
                               <button
                                 key={item.id}
                                 type="button"
-                                onClick={() => openDetails(item)}
+                                onClick={() => handleSearchResultClick(item)}
                                 className="flex items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-[#FFF7F0] dark:hover:bg-gray-6/40"
                               >
                                 <span className="truncate text-sm text-dark">{item.title}</span>

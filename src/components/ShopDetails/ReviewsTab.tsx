@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
-import { trackSalesMicroEvent } from "@/lib/sales-analyst-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 type ProductReview = {
   id: string;
@@ -79,7 +79,10 @@ const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps)
       if (!salesTracking) return;
       if (scrollDepthTimer.current) clearTimeout(scrollDepthTimer.current);
       scrollDepthTimer.current = setTimeout(() => {
-        trackSalesMicroEvent("review_scroll_depth", {
+        const depth_pct =
+          reviews.length > 0 ? Math.min(100, Math.round((100 * seenCount) / reviews.length)) : 0;
+        trackProductAnalytics("pa_review_scroll", {
+          depth_pct,
           reviews_seen_count: seenCount,
           filter_rating: reviewFilter === "all" ? null : reviewFilter,
           total_loaded: reviews.length,
@@ -182,7 +185,8 @@ const ReviewsTab = ({ productId, productTitle, salesTracking }: ReviewsTabProps)
                     onClick={() => {
                       setReviewFilter(f);
                       if (f !== "all" && salesTracking) {
-                        trackSalesMicroEvent("review_filter_applied", {
+                        trackProductAnalytics("pa_review_interaction", {
+                          kind: "filter_applied",
                           rating: f,
                           one_star_seeker: f === 1,
                         });

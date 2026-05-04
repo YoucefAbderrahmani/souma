@@ -1,60 +1,52 @@
-/** Buckets aligned with AI Sales Analyst signal groups. */
+/** Buckets for AI Sales Analyst — aligned with `pa_*` product analytics events. */
 export function salesMicroEventCategory(eventName: string): string {
   const n = eventName.toLowerCase();
 
-  if (
-    n.includes("image") ||
-    n === "zoom_count" ||
-    n.includes("video_") ||
-    n === "accordion_expand_event" ||
-    n === "text_copy_event" ||
-    n.includes("time_on_image")
-  ) {
-    return "Visual & content";
+  if (n.startsWith("pa_image") || n.startsWith("pa_scroll") || n.startsWith("pa_specs_view")) {
+    return "Visual & engagement";
   }
 
   if (
-    n.includes("price") ||
-    n.includes("review") ||
-    n.includes("variant") ||
-    n === "out_of_stock_click" ||
-    n === "purchase_now_click" ||
-    n.includes("cart") ||
-    n.includes("checkout")
+    n.startsWith("pa_review") ||
+    n.startsWith("pa_price") ||
+    n.startsWith("pa_select_option") ||
+    n.startsWith("pa_add_to_cart") ||
+    n.startsWith("pa_remove_from_cart") ||
+    n.startsWith("pa_checkout") ||
+    n.startsWith("pa_purchase") ||
+    n.startsWith("pa_abandon")
   ) {
-    return "Decision friction";
+    return "Decision & checkout";
   }
 
   if (
-    n.includes("breadcrumb") ||
-    n.includes("referrer") ||
-    n.includes("search") ||
-    n === "tab_switch_event" ||
-    n.includes("product_page_enter") ||
-    n.includes("sequence")
+    n.startsWith("pa_global") ||
+    n.startsWith("pa_navigation") ||
+    n.startsWith("pa_search") ||
+    n.startsWith("pa_product_view") ||
+    n.startsWith("pa_product_ident") ||
+    n.startsWith("pa_add_to_wishlist")
   ) {
     return "Navigation & context";
   }
 
-  if (
-    n.includes("lcp") ||
-    n.includes("web_vitals") ||
-    n.includes("navigation_timing") ||
-    n.includes("rage_click") ||
-    n === "device_browser_context" ||
-    n.includes("page_navigation")
-  ) {
+  if (n.startsWith("pa_performance") || n.startsWith("pa_js_error")) {
     return "Technical performance";
+  }
+
+  if (n.startsWith("pa_")) {
+    return "Product analytics";
   }
 
   return "Other";
 }
 
-/** Fixed list for admin filters / exports (order matches `salesMicroEventCategory` buckets). */
+/** Fixed list for admin filters / exports. */
 export const SALES_MICRO_CATEGORY_OPTIONS = [
-  "Visual & content",
-  "Decision friction",
+  "Visual & engagement",
+  "Decision & checkout",
   "Navigation & context",
   "Technical performance",
+  "Product analytics",
   "Other",
 ] as const;

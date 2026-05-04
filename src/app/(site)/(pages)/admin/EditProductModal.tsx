@@ -226,7 +226,7 @@ export default function EditProductModal({ product, onClose }: Props) {
                             setEditVitrinaMode(true);
                           }
                         }}
-                        className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus:ring-2 focus:ring-blue/30 ${
+                        className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
                           editVitrinaMode ? "bg-[#FB923C]" : "bg-stone-300"
                         }`}
                       >
@@ -335,7 +335,7 @@ export default function EditProductModal({ product, onClose }: Props) {
                     <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-stone-300 text-blue focus:ring-blue"
+                        className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                         checked={colorHasPriceOverride}
                         onChange={(event) => setColorHasPriceOverride(event.target.checked)}
                       />
@@ -447,7 +447,7 @@ export default function EditProductModal({ product, onClose }: Props) {
                           <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-stone-300 text-blue focus:ring-blue"
+                              className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                               checked={row.hasPriceOverride}
                               onChange={(event) =>
                                 setSpecRows((prev) =>
@@ -648,7 +648,7 @@ export default function EditProductModal({ product, onClose }: Props) {
                 description="Replace the photo only if needed; otherwise leave the file picker unchanged."
               >
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,220px)_1fr] lg:items-start">
-                  <div className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
+                  <div className="rounded-xl border border-stone-200 bg-white p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Current</p>
                     <div className="mt-2 aspect-square overflow-hidden rounded-lg bg-stone-100">
                       <img

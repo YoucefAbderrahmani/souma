@@ -10,6 +10,7 @@ import Image from "next/image";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 const SingleGridItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,6 +34,12 @@ const SingleGridItem = ({ item }: { item: Product }) => {
 
   // add to cart
   const handleAddToCart = () => {
+    trackProductAnalytics("pa_add_to_cart", {
+      product_id: item.id,
+      from: "shop_grid",
+      quantity: 1,
+      detail_price: detailPrice,
+    });
     dispatch(
       addItemToCart({
         ...item,
@@ -44,6 +51,12 @@ const SingleGridItem = ({ item }: { item: Product }) => {
   };
 
   const handleItemToWishList = () => {
+    trackProductAnalytics("pa_add_to_wishlist", {
+      product_id: item.id,
+      category: item.category,
+      price: detailPrice,
+      from: "shop_grid",
+    });
     dispatch(
       addItemToWishlist({
         ...item,

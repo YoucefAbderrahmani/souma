@@ -1,32 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { auth } from "@/server/lib/auth";
-import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { requireAdminApi } from "@/server/lib/require-admin-api";
 import {
   listSalesMicroEventsForSession,
   listSalesMicroSessionsForAdmin,
 } from "@/server/sales-analyst/micro-events-admin";
 
-async function requireAdmin(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return { ok: false as const, status: 401 as const, error: "Unauthorized" };
-  }
-  const [current] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-  if (current?.role !== "admin" && !isPrivilegedAdminEmail(session.user.email)) {
-    return { ok: false as const, status: 403 as const, error: "Forbidden" };
-  }
-  return { ok: true as const };
-}
-
 export async function GET(req: NextRequest) {
-  const gate = await requireAdmin(req);
+  const gate = await requireAdminApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

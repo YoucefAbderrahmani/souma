@@ -3,10 +3,10 @@ import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import { sequenceEndPurchase } from "@/lib/sequence-client";
 import {
-  flushSalesMicroEventsNow,
-  setSalesMicroPageContext,
-  trackSalesMicroEvent,
-} from "@/lib/sales-analyst-client";
+  flushProductAnalyticsNow,
+  setProductAnalyticsPageContext,
+  trackProductAnalytics,
+} from "@/lib/product-analytics-client";
 import Login from "./Login";
 import Shipping from "./Shipping";
 import ShippingMethod from "./ShippingMethod";
@@ -81,19 +81,35 @@ const Checkout = () => {
     return null;
   }, [paymentStatus]);
 
+  const checkoutBeginSent = React.useRef(false);
+
   React.useEffect(() => {
-    setSalesMicroPageContext({
+    setProductAnalyticsPageContext({
       pagePath: "/checkout",
       product: null,
     });
   }, []);
 
   React.useEffect(() => {
+    if (checkoutBeginSent.current || cartItems.length === 0) return;
+    checkoutBeginSent.current = true;
+    trackProductAnalytics("pa_begin_checkout", {
+      cart_line_items: cartItems.length,
+      cart_total_dzd: totalPrice,
+    });
+  }, [cartItems.length, totalPrice]);
+
+  React.useEffect(() => {
     if (paymentStatus === "success" && cartItems.length > 0) {
+      trackProductAnalytics("pa_purchase", {
+        total_dzd: totalPrice,
+        line_items: cartItems.length,
+      });
+      void flushProductAnalyticsNow();
       dispatch(removeAllItemsFromCart());
       toast.success("Payment confirmed. Your cart has been cleared.");
     }
-  }, [cartItems.length, dispatch, paymentStatus]);
+  }, [cartItems.length, dispatch, paymentStatus, totalPrice]);
 
   React.useEffect(() => {
     if (isPending) return;
@@ -161,6 +177,7 @@ const Checkout = () => {
     }
 
     setIsSubmitting(true);
+    const perfStart = Date.now();
     try {
       const response = await fetch("/api/payments/chargily/checkout", {
         method: "POST",
@@ -195,11 +212,16 @@ const Checkout = () => {
       }
 
       sequenceEndPurchase();
-      trackSalesMicroEvent("checkout_chargily_redirect", {
+      trackProductAnalytics("pa_performance", {
+        checkout_api_ms: Date.now() - perfStart,
+        chargily_checkout: true,
+      });
+      trackProductAnalytics("pa_checkout_step", {
+        step: "payment_redirect",
         total_dzd: totalPrice,
         cart_line_items: cartItems.length,
       });
-      void flushSalesMicroEventsNow();
+      void flushProductAnalyticsNow();
       const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
       if (!paymentTab) {
         setErrorMessage("Popup blocked. Please allow popups to continue payment in a new tab.");

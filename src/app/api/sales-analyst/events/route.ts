@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/server/lib/auth";
 import { insertSalesMicroEvents } from "@/server/sales-analyst/micro-events-db";
+import { isPaEventName } from "@/lib/pa-whitelist";
+import { getDisabledPaEventNames } from "@/server/product-analytics/tracking-config";
 
 const MAX_EVENTS = 60;
 const MAX_NAME = 80;
@@ -69,11 +71,20 @@ export async function POST(req: NextRequest) {
         ? body.productTitle.trim().slice(0, 500)
         : null;
 
+    let disabledNames: Set<string> = new Set();
+    try {
+      disabledNames = await getDisabledPaEventNames();
+    } catch {
+      disabledNames = new Set();
+    }
+
     const rows: Parameters<typeof insertSalesMicroEvents>[0] = [];
     let seq = 0;
     for (const ev of rawEvents) {
       const name = typeof ev.name === "string" ? ev.name.trim() : "";
       if (!name || name.length > MAX_NAME) continue;
+      if (!isPaEventName(name)) continue;
+      if (disabledNames.has(name)) continue;
       const payload =
         ev.payload !== undefined && ev.payload !== null && typeof ev.payload === "object" && !Array.isArray(ev.payload)
           ? (ev.payload as Record<string, unknown>)

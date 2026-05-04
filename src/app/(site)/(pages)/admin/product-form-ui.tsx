@@ -5,21 +5,21 @@ import React from "react";
 /** Shared Tailwind tokens for add + edit product forms */
 export const pf = {
   input:
-    "w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark shadow-sm outline-none transition placeholder:text-dark-4/70 focus:border-blue focus:ring-2 focus:ring-blue/20",
+    "w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark outline-none transition placeholder:text-stone-400 focus:border-orange focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   select:
-    "w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark shadow-sm outline-none transition focus:border-blue focus:ring-2 focus:ring-blue/20",
+    "w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark outline-none transition focus:border-orange focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   textarea:
-    "w-full resize-y rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark shadow-sm outline-none transition placeholder:text-dark-4/70 focus:border-blue focus:ring-2 focus:ring-blue/20",
+    "w-full resize-y rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-dark outline-none transition placeholder:text-stone-400 focus:border-orange focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   label: "mb-1.5 block text-sm font-medium text-stone-800",
   hint: "mt-1 text-xs leading-relaxed text-dark-4",
   btnPrimary:
-    "inline-flex items-center justify-center rounded-lg bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex items-center justify-center rounded-lg bg-orange px-5 py-2.5 text-sm font-semibold text-white shadow-sm outline-none transition hover:bg-orange-dark focus:outline-none focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-60",
   btnSecondary:
-    "inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:border-[#FB923C] hover:text-[#ea580c]",
+    "inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm outline-none transition hover:border-[#FB923C] hover:text-[#ea580c] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   btnAccent:
-    "inline-flex items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50/80 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:border-[#FB923C] hover:bg-[#fff7ed]",
+    "inline-flex items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50/80 px-3 py-1.5 text-xs font-medium text-stone-700 outline-none transition hover:border-[#FB923C] hover:bg-[#fff7ed] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   btnDanger:
-    "inline-flex shrink-0 items-center justify-center rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700",
+    "inline-flex shrink-0 items-center justify-center rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-600 outline-none transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   card: "rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6",
   cardMuted: "rounded-xl border border-stone-200/80 bg-stone-50/50 p-4 sm:p-5",
   innerCard: "rounded-lg border border-stone-200 bg-white p-4 shadow-sm",
@@ -27,9 +27,9 @@ export const pf = {
   shellHeader:
     "border-b border-stone-100 bg-gradient-to-r from-stone-50 to-[#fff7ed]/40 px-5 py-4 sm:px-6",
   shellBody: "bg-stone-50/30 px-4 py-5 sm:px-6 sm:py-6",
-  jumpNavActive: "bg-blue text-white shadow-sm",
+  jumpNavActive: "bg-orange text-white shadow-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0",
   jumpNavIdle:
-    "border border-stone-200 bg-white text-stone-700 hover:border-[#FB923C]/60 hover:text-[#c2410c]",
+    "border border-stone-200 bg-white text-stone-700 outline-none hover:border-[#FB923C]/60 hover:text-[#c2410c] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
 } as const;
 
 const sectionIds = {
@@ -129,7 +129,7 @@ export function ProductFormSection({
       <div className={pf.card}>
         <div className="mb-4 flex flex-wrap items-start gap-3 border-b border-stone-100 pb-4">
           <div
-            className="hidden h-10 w-1 shrink-0 rounded-full bg-gradient-to-b from-blue to-[#FB923C] sm:block"
+            className="hidden h-10 w-1 shrink-0 rounded-full bg-gradient-to-b from-orange to-[#FB923C] sm:block"
             aria-hidden
           />
           <div className="min-w-0 flex-1">
@@ -186,7 +186,7 @@ export function ProductImageDropZone({
   return (
     <div className="rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/40 p-5 transition hover:border-[#FB923C]/40 hover:bg-[#fff7ed]/20">
       <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-stone-100">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-stone-100">
           <svg className="h-7 w-7 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
             <path
               strokeLinecap="round"
@@ -201,7 +201,7 @@ export function ProductImageDropZone({
           <p className="mt-0.5 text-xs text-dark-4">
             {helper ?? "JPG, PNG, WebP or GIF. Clear image on a neutral background works best."}
           </p>
-          <p className="mt-2 truncate text-xs font-medium text-blue">{fileName}</p>
+          <p className="mt-2 truncate text-xs font-medium text-orange-dark">{fileName}</p>
         </div>
         <label
           htmlFor={inputId}

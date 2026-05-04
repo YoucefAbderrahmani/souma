@@ -1,6 +1,12 @@
 "use client";
 
 import React, { useId, useState } from "react";
+import { useConceptionAdminData } from "@/hooks/useConceptionAdminData";
+import type {
+  ConceptionAlertDto,
+  ConceptionOverviewDto,
+  ConceptionRecommendationDto,
+} from "@/types/conception-admin";
 import {
   AlertTriangle,
   BarChart2,
@@ -60,12 +66,13 @@ const DEVICES = [
   { name: "Tablet", pct: 10, color: "bg-orange-800" },
 ] as const;
 
-/** Normalized heights for a 24h traffic curve (0–1). */
-const TRAFFIC_POINTS = [0.15, 0.22, 0.18, 0.35, 0.55, 0.72, 0.68, 0.58, 0.62, 0.78, 0.85, 0.92, 0.88, 0.75, 0.7, 0.82, 0.9, 0.95, 0.88, 0.72, 0.55, 0.42, 0.28, 0.2];
+/** Fallback curve when no hourly series yet. */
+const TRAFFIC_FALLBACK = [0.15, 0.22, 0.18, 0.35, 0.55, 0.72, 0.68, 0.58, 0.62, 0.78, 0.85, 0.92, 0.88, 0.75, 0.7, 0.82, 0.9, 0.95, 0.88, 0.72, 0.55, 0.42, 0.28, 0.2];
 
 const TIME_LABELS = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "23:59"];
 
-function TrafficChart() {
+function TrafficChart({ series }: { series: number[] }) {
+  const pts = series.length >= 8 ? series : TRAFFIC_FALLBACK;
   const gid = useId().replace(/:/g, "");
   const fillId = `trafficFill-${gid}`;
   const strokeId = `trafficStroke-${gid}`;
@@ -74,8 +81,8 @@ function TrafficChart() {
   const pad = { top: 12, right: 8, bottom: 28, left: 36 };
   const innerW = w - pad.left - pad.right;
   const innerH = h - pad.top - pad.bottom;
-  const n = TRAFFIC_POINTS.length;
-  const pathPoints = TRAFFIC_POINTS.map((y, i) => {
+  const n = pts.length;
+  const pathPoints = pts.map((y, i) => {
     const x = pad.left + (i / (n - 1)) * innerW;
     const py = pad.top + innerH * (1 - y);
     return { x, y: py };
@@ -547,18 +554,71 @@ function aiRecPriorityStyles(tier: (typeof AI_RECOMMENDATIONS)[number]["tier"]) 
   };
 }
 
-function AiRecommendationsContent() {
+function AiRecommendationsContent({
+  recommendations,
+  overview,
+}: {
+  recommendations: ConceptionRecommendationDto[];
+  overview: ConceptionOverviewDto | null;
+}) {
+  const recs =
+    recommendations.length > 0 ?
+      recommendations.map((r) => ({
+        key: r.id,
+        priority: r.priorityLabel,
+        tier: r.priority,
+        impact: r.impactLabel ?? "—",
+        title: r.title,
+        confidence: r.confidence,
+        analyse: r.analysis,
+        recommendation: r.recommendation,
+        revenue: r.revenueHint ?? "—",
+        implementation: r.implementationHint ?? "—",
+        roi: r.roiHint ?? "—",
+      }))
+    : AI_RECOMMENDATIONS.map((r) => ({
+        key: r.title,
+        priority: r.priority,
+        tier: r.tier,
+        impact: r.impact,
+        title: r.title,
+        confidence: r.confidence,
+        analyse: r.analyse,
+        recommendation: r.recommendation,
+        revenue: r.revenue,
+        implementation: r.implementation,
+        roi: r.roi,
+      }));
+
+  const summary =
+    recommendations.length > 0 ?
+      [
+        {
+          label: "Recommandations actives",
+          value: String(recommendations.length),
+        },
+        {
+          label: "Événements (7j)",
+          value: overview ? new Intl.NumberFormat("fr-DZ").format(overview.totalEvents7d) : "—",
+        },
+        {
+          label: "Confiance moyenne",
+          value: `${Math.round(recommendations.reduce((a, b) => a + b.confidence, 0) / recommendations.length)}%`,
+        },
+      ]
+    : AI_REC_SUMMARY;
+
   return (
     <>
       <div>
         <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Recommandations IA</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Suggestions intelligentes basées sur l&apos;analyse comportementale
+          Moteur règles + données micro-événements (complétable par LLM / ML)
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {AI_REC_SUMMARY.map((s) => (
+        {summary.map((s) => (
           <div key={s.label} className={cn(conceptionPanelCompact)}>
             <p className="text-sm text-zinc-500">{s.label}</p>
             <p className="mt-1.5 text-xl font-semibold tabular-nums text-orange-100">{s.value}</p>
@@ -567,11 +627,11 @@ function AiRecommendationsContent() {
       </div>
 
       <div className="space-y-3">
-        {AI_RECOMMENDATIONS.map((rec) => {
+        {recs.map((rec) => {
           const st = aiRecPriorityStyles(rec.tier);
           return (
             <article
-              key={rec.title}
+              key={rec.key}
               className={cn(conceptionPanel, st.border)}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -598,7 +658,7 @@ function AiRecommendationsContent() {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3">
+                <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-orange-300/90">
                   <BarChart2 className="h-4 w-4" aria-hidden />
                   Analyse
@@ -824,11 +884,80 @@ function alertIncidentCardSurface(tier: (typeof ALERT_INCIDENTS)[number]["tier"]
   return "border-l-[6px] border-l-zinc-400 border border-zinc-200 bg-zinc-50";
 }
 
-function AlertsContent() {
+function alertDtoToIncident(a: ConceptionAlertDto) {
+  const sev =
+    a.severity === "critical" ? "CRITIQUE"
+    : a.severity === "high" ? "HAUTE"
+    : a.severity === "medium" ? "MOYENNE"
+    : "BASSE";
+  return {
+    severity: sev,
+    tier: a.severity,
+    title: a.title,
+    status: "ACTIVE",
+    statusKind: "active" as const,
+    description: a.description,
+    detail: a.detail ?? "",
+    timeAgo: new Date(a.createdAt).toLocaleString("fr-FR"),
+    affected:
+      a.affectedSessionsEstimate != null ?
+        `${new Intl.NumberFormat("fr-DZ").format(a.affectedSessionsEstimate)} session(s)`
+      : "—",
+  };
+}
+
+function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+  const s = overview?.security;
+  return (
+    <div className="rounded-xl border border-orange-500/25 bg-zinc-900 p-3 sm:p-4">
+      <h3 className="text-lg font-semibold text-zinc-200">Sécurité &amp; intégrité des données</h3>
+      <p className="mt-1 text-sm text-zinc-500">
+        Heuristiques bots / scraping sur les micro-événements (fenêtre 7 jours)
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className={cn(conceptionPanelCompact)}>
+          <p className="text-sm text-zinc-500">Sessions à haute vélocité</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-orange-200">
+            {s ? new Intl.NumberFormat("fr-DZ").format(s.highVelocitySessions) : "—"}
+          </p>
+        </div>
+        <div className={cn(conceptionPanelCompact)}>
+          <p className="text-sm text-zinc-500">Sessions suspectes (agrégat)</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-rose-200">
+            {s ? new Intl.NumberFormat("fr-DZ").format(s.suspiciousSessions7d) : "—"}
+          </p>
+        </div>
+      </div>
+      <ul className="mt-4 space-y-2 text-sm text-zinc-400">
+        {(s?.notes ?? ["Chargement…"]).map((n) => (
+          <li key={n} className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+            {n}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
+  const incidents =
+    alerts.length > 0 ?
+      alerts.map((x) => ({ ...alertDtoToIncident(x), key: x.id }))
+    : ALERT_INCIDENTS.map((x, i) => ({ ...x, key: `demo-${i}` }));
+  const activeCount = alerts.length > 0 ? alerts.length : Number(ALERTS_SUMMARY[0]?.value ?? 0);
+  const summary =
+    alerts.length > 0 ?
+      ALERTS_SUMMARY.map((row, i) =>
+        i === 0 ?
+          { ...row, value: String(activeCount), sub: { text: "Données moteur Conception", className: "text-zinc-600" } }
+        : row
+      )
+    : ALERTS_SUMMARY;
+
   return (
     <div className="rounded-xl border border-zinc-200/90 bg-zinc-100 p-3 sm:p-4">
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        {ALERTS_SUMMARY.map((s) => (
+        {summary.map((s) => (
           <div
             key={s.label}
             className="flex gap-3 rounded-xl border border-zinc-200/80 bg-white p-3 sm:p-3.5"
@@ -862,11 +991,11 @@ function AlertsContent() {
         </div>
 
         <div className="mt-3 space-y-2.5">
-          {ALERT_INCIDENTS.map((a) => {
+          {incidents.map((a) => {
             const activeStatus = a.statusKind === "active";
             return (
               <article
-                key={a.title}
+                key={"key" in a ? (a as { key: string }).key : a.title}
                 className={cn(
                   "overflow-hidden rounded-r-lg rounded-l-sm p-3 sm:p-3.5",
                   alertIncidentCardSurface(a.tier)
@@ -982,17 +1111,32 @@ function AlertsContent() {
   );
 }
 
-function ConversionFunnelContent() {
+function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+  const steps =
+    overview?.funnelSteps?.length ?
+      overview.funnelSteps.map((s) => ({
+        title: s.title,
+        count: s.countLabel,
+        fromPrev: s.fromPrevLabel,
+        overall: s.overallLabel,
+        abandon: s.abandonLabel,
+        barPct: s.barPct,
+      }))
+    : FUNNEL_STEPS;
+
+  const summary = overview?.funnelSummary?.length ? overview.funnelSummary : FUNNEL_SUMMARY;
+  const friction = overview?.frictionItems?.length ? overview.frictionItems : FRICTION_ITEMS;
+
   return (
     <>
       <div className={cn(conceptionPanel)}>
         <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Tunnel de Conversion</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Analyse du parcours utilisateur et identification des points de friction
+          Données issues des micro-événements (parcours produit → panier → checkout → Chargily)
         </p>
 
         <div className="mt-3 space-y-0">
-          {FUNNEL_STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div key={step.title}>
               <div className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
@@ -1013,7 +1157,7 @@ function ConversionFunnelContent() {
                   </div>
                 </div>
               </div>
-              {i < FUNNEL_STEPS.length - 1 ? (
+              {i < steps.length - 1 ? (
                 <div className="flex justify-center py-1">
                   <div className="h-5 w-px bg-gradient-to-b from-zinc-700 to-zinc-800" aria-hidden />
                 </div>
@@ -1024,7 +1168,7 @@ function ConversionFunnelContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        {FUNNEL_SUMMARY.map((item) => (
+        {summary.map((item) => (
           <div
             key={item.label}
             className={cn(conceptionPanelCompact)}
@@ -1049,10 +1193,10 @@ function ConversionFunnelContent() {
       <div className={cn(conceptionPanel)}>
         <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Points de Friction Détectés</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Analyse IA des blocages dans le parcours utilisateur
+          Règles analytiques sur le tunnel (aligné moteur Conception / backend)
         </p>
         <div className="mt-3 space-y-2.5">
-          {FRICTION_ITEMS.map((f) => (
+          {friction.map((f) => (
             <div
               key={f.title}
               className={cn(
@@ -1079,11 +1223,36 @@ function ConversionFunnelContent() {
   );
 }
 
-function DashboardMainContent() {
+function DashboardMainContent({
+  overview,
+  loading,
+  trafficSeries,
+}: {
+  overview: ConceptionOverviewDto | null;
+  loading: boolean;
+  trafficSeries: number[];
+}) {
+  const kpis = overview?.kpis?.length ? overview.kpis : KPI;
+  const devices = overview?.devices?.length ? overview.devices : DEVICES;
+  const topPages =
+    overview?.topPages?.length ?
+      overview.topPages.map((r) => ({
+        page: r.page,
+        views: new Intl.NumberFormat("fr-DZ").format(r.views),
+        conversions: new Intl.NumberFormat("fr-DZ").format(r.conversions),
+        rate: `${r.ratePct.toFixed(2).replace(".", ",")}%`,
+      }))
+    : TOP_PAGES;
+
   return (
     <>
+      {loading ? (
+        <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-500">
+          Chargement des indicateurs…
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {KPI.map((k, i) => (
+        {kpis.map((k, i) => (
           <div
             key={k.label}
             className={cn(
@@ -1096,7 +1265,7 @@ function DashboardMainContent() {
             <p className="mt-1.5 text-xl font-semibold tabular-nums text-orange-100">{k.value}</p>
             <p className={`mt-1.5 text-xs font-medium ${k.deltaPositive ? "text-orange-300" : "text-rose-400"}`}>
               {k.delta}
-              <span className="ml-1 font-normal text-zinc-600">vs last week</span>
+              <span className="ml-1 font-normal text-zinc-600">vs période préc.</span>
             </p>
           </div>
         ))}
@@ -1107,17 +1276,17 @@ function DashboardMainContent() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="text-base font-semibold tracking-tight text-zinc-200">Trafic &amp; Ventes (24h)</h3>
-              <p className="mt-0.5 text-sm leading-snug text-zinc-500">Évolution du trafic et des conversions en temps réel</p>
+              <p className="mt-0.5 text-sm leading-snug text-zinc-500">Volume d&apos;événements collectés (normalisé)</p>
             </div>
           </div>
           <div className="mt-2 -mx-1">
-            <TrafficChart />
+            <TrafficChart series={trafficSeries} />
           </div>
         </div>
 
         <div className={cn(conceptionPanelCompact)}>
           <h3 className="text-base font-semibold tracking-tight text-zinc-200">Appareils</h3>
-          <p className="mt-0.5 text-sm leading-snug text-zinc-500">Distribution par type d&apos;appareil</p>
+          <p className="mt-0.5 text-sm leading-snug text-zinc-500">Distribution (contexte navigateur enregistré)</p>
           <div className="mt-3 flex gap-3">
             <div className="flex flex-col justify-between py-0.5 text-right text-[10px] tabular-nums text-zinc-600">
               <span>600</span>
@@ -1127,7 +1296,7 @@ function DashboardMainContent() {
               <span>0</span>
             </div>
             <div className="min-h-[130px] flex-1 space-y-3">
-              {DEVICES.map((d) => (
+              {devices.map((d) => (
                 <div key={d.name}>
                   <div className="mb-1 flex justify-between text-sm">
                     <span className="font-medium text-zinc-300">{d.name}</span>
@@ -1151,7 +1320,7 @@ function DashboardMainContent() {
 
       <div className={cn(conceptionPanelCompact)}>
         <h3 className="text-base font-semibold tracking-tight text-zinc-200">Pages les Plus Performantes</h3>
-        <p className="mt-0.5 text-sm leading-snug text-zinc-500">Classement par taux de conversion</p>
+        <p className="mt-0.5 text-sm leading-snug text-zinc-500">Vues micro-événements et clics « acheter » par chemin</p>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead>
@@ -1163,7 +1332,7 @@ function DashboardMainContent() {
               </tr>
             </thead>
             <tbody>
-              {TOP_PAGES.map((row) => (
+              {topPages.map((row) => (
                 <tr
                   key={row.page}
                   className="border-b border-zinc-800 text-zinc-400 transition-colors duration-300 last:border-0 hover:bg-orange-950/40"
@@ -1177,7 +1346,9 @@ function DashboardMainContent() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-right text-xs text-zinc-600">04:00</p>
+        <p className="mt-2 text-right text-xs text-zinc-600">
+          {overview?.computedAt ? new Date(overview.computedAt).toLocaleString("fr-FR") : "—"}
+        </p>
       </div>
     </>
   );
@@ -1185,6 +1356,20 @@ function DashboardMainContent() {
 
 export default function ConceptionIntelligenceDashboard() {
   const [activeNav, setActiveNav] = useState<(typeof NAV)[number]>("Dashboard");
+  const {
+    overview,
+    alerts,
+    recommendations,
+    loading,
+    error,
+    refresh,
+    runAnalyze,
+    analyzeBusy,
+    analyzeMessage,
+  } = useConceptionAdminData();
+  const trafficSeries = overview?.trafficHourlyNormalized?.length
+    ? overview.trafficHourlyNormalized
+    : TRAFFIC_FALLBACK;
 
   return (
     <section className="group/conception relative mt-6 overflow-hidden rounded-xl border border-orange-500/30 bg-zinc-950 text-zinc-300">
@@ -1223,14 +1408,51 @@ export default function ConceptionIntelligenceDashboard() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-80" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-300" />
               </span>
-              Live Tracking Active
+              {overview?.hasEventData ? "Données live" : "En attente de données"}
             </span>
             <div className="rounded-xl border border-orange-500/45 bg-zinc-900 px-5 py-3 text-center transition-transform duration-500 hover:scale-[1.02]">
-              <p className="text-2xl font-bold tabular-nums text-orange-50">247</p>
-              <p className="text-[11px] font-medium text-orange-200">visiteurs actifs</p>
+              <p className="text-2xl font-bold tabular-nums text-orange-50">
+                {overview ? new Intl.NumberFormat("fr-DZ").format(overview.activeVisitors15m) : "—"}
+              </p>
+              <p className="text-[11px] font-medium text-orange-200">sessions 15 min</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={loading}
+                className={cn(
+                  conceptionNoFocusRing,
+                  "rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+                )}
+              >
+                Actualiser
+              </button>
+              <button
+                type="button"
+                onClick={() => void runAnalyze()}
+                disabled={analyzeBusy}
+                className={cn(
+                  conceptionNoFocusRing,
+                  "rounded-lg border border-orange-500/50 bg-orange-950 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900 disabled:opacity-50"
+                )}
+              >
+                {analyzeBusy ? "Analyse…" : "Lancer l’analyse"}
+              </button>
             </div>
           </div>
         </div>
+
+        {error ? (
+          <p className="mt-3 rounded-lg border border-rose-500/40 bg-rose-950/50 px-3 py-2 text-sm text-rose-200">
+            {error}
+          </p>
+        ) : null}
+        {analyzeMessage ? (
+          <p className="mt-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+            {analyzeMessage}
+          </p>
+        ) : null}
 
         <nav
           className="mt-4 flex flex-wrap gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 p-1"
@@ -1262,11 +1484,16 @@ export default function ConceptionIntelligenceDashboard() {
         key={activeNav}
         className="relative z-10 space-y-3 bg-zinc-950 px-4 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both sm:space-y-4 sm:px-5 sm:py-4"
       >
-        {activeNav === "Dashboard" && <DashboardMainContent />}
-        {activeNav === "Conversion Funnel" && <ConversionFunnelContent />}
+        {activeNav === "Dashboard" && (
+          <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
+        )}
+        {activeNav === "Conversion Funnel" && <ConversionFunnelContent overview={overview} />}
         {activeNav === "User Behavior" && <UserBehaviorContent />}
-        {activeNav === "AI Recommendations" && <AiRecommendationsContent />}
-        {(activeNav === "Alerts" || activeNav === "Security") && <AlertsContent />}
+        {activeNav === "AI Recommendations" && (
+          <AiRecommendationsContent recommendations={recommendations} overview={overview} />
+        )}
+        {activeNav === "Alerts" && <AlertsContent alerts={alerts} />}
+        {activeNav === "Security" && <SecurityContent overview={overview} />}
         {activeNav !== "Dashboard" &&
           activeNav !== "Conversion Funnel" &&
           activeNav !== "User Behavior" &&

@@ -6,12 +6,19 @@ import Link from "next/link";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 const SingleItem = ({ item, removeItemFromCart }) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   const handleRemoveFromCart = () => {
+    trackProductAnalytics("pa_remove_from_cart", {
+      product_id: item.id,
+      quantity: item.quantity ?? 1,
+      line_total_dzd: (item.discountedPrice ?? item.price) * (item.quantity ?? 1),
+      from: "cart_sidebar",
+    });
     dispatch(removeItemFromCart(item.id));
   };
 

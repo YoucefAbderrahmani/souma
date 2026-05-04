@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { sequenceEndLeave, sequenceEndLeaveOnPageExit } from "@/lib/sequence-client";
-import { trackSalesMicroEvent } from "@/lib/sales-analyst-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 /**
  * Ends an active shopping sequence when the user navigates away from the product page,
@@ -17,7 +17,7 @@ export default function SequenceRouteWatcher() {
     const prev = prevPath.current;
     prevPath.current = pathname;
     if (prev === "/shop-details" && pathname !== "/shop-details") {
-      trackSalesMicroEvent("product_page_exit", { to_path: pathname });
+      trackProductAnalytics("pa_navigation", { kind: "route_change", to_path: pathname });
       sequenceEndLeave();
     }
   }, [pathname]);

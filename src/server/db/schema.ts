@@ -7,6 +7,7 @@ import {
   integer,
   uuid,
   primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 import { relations } from "drizzle-orm";
@@ -240,6 +241,54 @@ export const salesMicroEventTable = pgTable("sales_micro_event", {
   clientEventAt: timestamp("client_event_at", { mode: "date" }),
   sequenceIndex: integer("sequence_index").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+/** Conception intelligence: automated KPI alerts (conversion, traffic, fraud heuristics, etc.) */
+export const conceptionAlertTable = pgTable(
+  "conception_alert",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    alertType: varchar("alert_type", { length: 48 }).notNull(),
+    severity: varchar("severity", { length: 16 }).notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull(),
+    detail: text("detail"),
+    affectedSessionsEstimate: integer("affected_sessions_estimate"),
+    metadataJson: text("metadata_json"),
+    fingerprint: varchar("fingerprint", { length: 160 }).notNull(),
+    dismissedAt: timestamp("dismissed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("conception_alert_fingerprint_uidx").on(t.fingerprint)]
+);
+
+/** Rule-based / engine-generated recommendations surfaced in the Conception admin UI */
+export const conceptionRecommendationTable = pgTable(
+  "conception_recommendation",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    priority: varchar("priority", { length: 16 }).notNull(),
+    impactLabel: varchar("impact_label", { length: 80 }),
+    title: varchar("title", { length: 200 }).notNull(),
+    analysis: text("analysis").notNull(),
+    recommendation: text("recommendation").notNull(),
+    confidence: integer("confidence").notNull().default(70),
+    revenueHint: varchar("revenue_hint", { length: 64 }),
+    implementationHint: varchar("implementation_hint", { length: 64 }),
+    roiHint: varchar("roi_hint", { length: 32 }),
+    evidenceJson: text("evidence_json"),
+    fingerprint: varchar("fingerprint", { length: 160 }).notNull(),
+    dismissedAt: timestamp("dismissed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("conception_recommendation_fingerprint_uidx").on(t.fingerprint)]
+);
+
+/** Site-wide toggles: JSON array of disabled `pa_*` event names (e.g. ["pa_scroll"]). Empty = all enabled. */
+export const productAnalyticsTrackingConfigTable = pgTable("product_analytics_tracking_config", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  disabledEventsJson: text("disabled_events_json").notNull().default("[]"),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
 
 //Relations

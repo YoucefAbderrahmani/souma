@@ -10,6 +10,7 @@ import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,6 +34,12 @@ const ProductItem = ({ item }: { item: Product }) => {
 
   // add to cart
   const handleAddToCart = () => {
+    trackProductAnalytics("pa_add_to_cart", {
+      product_id: item.id,
+      from: "product_grid",
+      quantity: 1,
+      detail_price: detailPrice,
+    });
     dispatch(
       addItemToCart({
         ...item,
@@ -45,6 +52,12 @@ const ProductItem = ({ item }: { item: Product }) => {
   };
 
   const handleItemToWishList = () => {
+    trackProductAnalytics("pa_add_to_wishlist", {
+      product_id: item.id,
+      category: item.category,
+      price: detailPrice,
+      from: "product_grid",
+    });
     dispatch(
       addItemToWishlist({
         ...item,
