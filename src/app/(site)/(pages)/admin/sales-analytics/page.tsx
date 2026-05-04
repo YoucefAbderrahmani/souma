@@ -9,6 +9,7 @@ import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import SalesMicroEventsTable from "@/components/Admin/SalesMicroEventsTable";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-events-admin";
 import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
 
@@ -66,10 +67,7 @@ const SalesAnalyticsAdminPage = async () => {
     initialSessions = await listSalesMicroSessionsForAdmin({ maxSessions: 80 });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    serverError =
-      message.includes("sales_micro_event") || message.includes("does not exist")
-        ? 'Database is missing the "sales_micro_event" table. Run drizzle/0003_sales_micro_event.sql on Neon, then reload.'
-        : message;
+    serverError = migrationHintFromDbMessage(message) ?? message;
   }
 
   return (

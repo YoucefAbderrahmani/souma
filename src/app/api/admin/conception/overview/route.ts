@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import { buildConceptionOverview } from "@/server/conception/metrics";
 
@@ -16,10 +17,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         error: "database_error",
-        message:
-          message.includes("sales_micro_event") || message.includes("does not exist")
-            ? "Missing analytics tables. Apply drizzle migrations (sales_micro_event, conception_*)."
-            : message,
+        message: migrationHintFromDbMessage(message) ?? message,
       },
       { status: 500 }
     );

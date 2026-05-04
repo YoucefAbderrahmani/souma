@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { publicApiUrl } from "@/lib/public-api-url";
 import type { PaEventName } from "@/lib/pa-whitelist";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import {
   PA_CALCULATED_INSIGHTS_NOTE,
   PA_TRACKING_PARAMETER_GROUPS,
@@ -123,9 +124,7 @@ export default function ProductAnalyticsTrackingPanel() {
       <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-dark">Product analytics · tracking toggles</h2>
         <p className="mt-2 text-sm text-amber-900">
-          {error.includes("product_analytics_tracking_config") || error.includes("does not exist")
-            ? "The database table is missing. Apply drizzle/0008_product_analytics_tracking_config.sql on your database, then reload."
-            : error}
+          {migrationHintFromDbMessage(error) ?? error}
         </p>
       </div>
     );

@@ -9,6 +9,7 @@ import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import ItemAssistantTable from "@/components/Admin/ItemAssistantTable";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { listProductMicroAggregatesAdmin } from "@/server/sales-analyst/micro-events-by-product";
 import type { ProductMicroAggregateRow } from "@/types/sales-micro-by-product";
 
@@ -60,10 +61,7 @@ const ItemAssistantPage = async () => {
     initialAggregates = await listProductMicroAggregatesAdmin({ limit: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    serverError =
-      message.includes("sales_micro_event") || message.includes("does not exist")
-        ? 'Database is missing the "sales_micro_event" table. Run drizzle/0003_sales_micro_event.sql on Neon, then reload.'
-        : message;
+    serverError = migrationHintFromDbMessage(message) ?? message;
   }
 
   return (

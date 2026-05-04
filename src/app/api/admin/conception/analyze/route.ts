@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import { runConceptionAnalysisJob } from "@/server/conception/analyze";
 
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[conception/analyze]", e);
-    return NextResponse.json({ error: "analyze_failed", message }, { status: 500 });
+    return NextResponse.json(
+      { error: "analyze_failed", message: migrationHintFromDbMessage(message) ?? message },
+      { status: 500 }
+    );
   }
 }

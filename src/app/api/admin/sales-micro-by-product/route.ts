@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
 import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
@@ -57,10 +58,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: "database_error",
-        message:
-          message.includes("sales_micro_event") || message.includes("does not exist")
-            ? 'Missing table "sales_micro_event". Apply drizzle/0003_sales_micro_event.sql on your database.'
-            : message,
+        message: migrationHintFromDbMessage(message) ?? message,
       },
       { status: 500 }
     );

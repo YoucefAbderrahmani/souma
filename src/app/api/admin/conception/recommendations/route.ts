@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import { listConceptionRecommendationsForAdmin } from "@/server/conception/conception-db";
 
@@ -16,10 +17,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         error: "database_error",
-        message:
-          message.includes("conception_recommendation") || message.includes("does not exist")
-            ? 'Missing table "conception_recommendation". Apply drizzle/0007_conception_intel.sql.'
-            : message,
+        message: migrationHintFromDbMessage(message) ?? message,
       },
       { status: 500 }
     );
