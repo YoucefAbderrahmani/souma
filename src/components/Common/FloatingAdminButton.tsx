@@ -29,7 +29,7 @@ export default function FloatingAdminButton() {
 
   return (
     <div className="fixed bottom-5 left-4 z-[9980] flex flex-col gap-2 sm:bottom-6 sm:left-5">
-      <Link href="/admin/seller-helper" aria-label="Open Seller Helper dashboard" className={floatingLinkClass}>
+      <Link href="/seller-helper" aria-label="Open Seller Helper dashboard" className={floatingLinkClass}>
         <ShieldIcon />
         Seller Helper
       </Link>

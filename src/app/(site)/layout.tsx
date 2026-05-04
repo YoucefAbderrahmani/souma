@@ -30,7 +30,8 @@ export default function RootLayout({
 }) {
   const [loading, setLoading] = useState<boolean>(true);
   const pathname = usePathname();
-  const hideFooter = pathname.startsWith("/admin") || pathname.startsWith("/sequence");
+  const hideFooter =
+    pathname.startsWith("/admin") || pathname.startsWith("/sequence") || pathname.startsWith("/seller-helper");
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);

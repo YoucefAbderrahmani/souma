@@ -238,7 +238,7 @@ const MyAccount = () => {
                       {shouldShowAdminNav(session.user) && (
                         <>
                           <Link
-                            href="/admin/seller-helper"
+                            href="/seller-helper"
                             className="flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 bg-gray-1 text-dark-2 hover:bg-blue hover:text-white"
                           >
                             <svg
@@ -473,7 +473,7 @@ const MyAccount = () => {
                 {shouldShowAdminNav(session.user) && (
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Link
-                      href="/admin/seller-helper"
+                      href="/seller-helper"
                       className="inline-flex rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
                     >
                       Seller Helper

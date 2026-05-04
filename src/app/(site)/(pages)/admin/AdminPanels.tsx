@@ -121,7 +121,7 @@ export default function AdminPanels({ users, products }: Props) {
 
   useEffect(() => {
     if (tabParam === "conception") {
-      router.replace("/admin/seller-helper");
+      router.replace("/seller-helper");
       return;
     }
     if (tabParam === "add-product" || tabParam === "products" || tabParam === "tracking") {
