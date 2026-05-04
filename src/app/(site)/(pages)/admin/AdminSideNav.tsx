@@ -31,8 +31,8 @@ export default function AdminSideNav() {
         <Link href="/admin?tab=products" className={linkClass(onAdminHome && tab === "products")}>
           Stock & Edit Items
         </Link>
-        <Link href="/admin?tab=conception" className={linkClass(onAdminHome && tab === "conception")}>
-          conception
+        <Link href="/admin/seller-helper" className={linkClass(pathname === "/admin/seller-helper")}>
+          Seller Helper
         </Link>
         <Link href="/admin?tab=tracking" className={linkClass(onAdminHome && tab === "tracking")}>
           Analytics tracking

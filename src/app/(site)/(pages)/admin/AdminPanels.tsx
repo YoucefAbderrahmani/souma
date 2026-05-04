@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
-import ConceptionIntelligenceDashboard from "./ConceptionIntelligenceDashboard";
 import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import {
   pf,
@@ -44,7 +43,7 @@ type Props = {
   products: AdminProduct[];
 };
 
-type AdminMainTab = "users" | "add-product" | "products" | "conception" | "tracking";
+type AdminMainTab = "users" | "add-product" | "products" | "tracking";
 
 const initialState: CreateProductState = {};
 
@@ -53,12 +52,7 @@ export default function AdminPanels({ users, products }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const initialTab: AdminMainTab =
-    tabParam === "add-product" ||
-    tabParam === "products" ||
-    tabParam === "conception" ||
-    tabParam === "tracking"
-      ? tabParam
-      : "users";
+    tabParam === "add-product" || tabParam === "products" || tabParam === "tracking" ? tabParam : "users";
   const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
@@ -126,17 +120,16 @@ export default function AdminPanels({ users, products }: Props) {
   }, [addVitrinaMode, addPriceInput]);
 
   useEffect(() => {
-    if (
-      tabParam === "add-product" ||
-      tabParam === "products" ||
-      tabParam === "conception" ||
-      tabParam === "tracking"
-    ) {
+    if (tabParam === "conception") {
+      router.replace("/admin/seller-helper");
+      return;
+    }
+    if (tabParam === "add-product" || tabParam === "products" || tabParam === "tracking") {
       setActiveTab(tabParam);
       return;
     }
     setActiveTab("users");
-  }, [tabParam]);
+  }, [tabParam, router]);
 
   const switchTab = (tab: AdminMainTab) => {
     setActiveTab(tab);
@@ -178,17 +171,6 @@ export default function AdminPanels({ users, products }: Props) {
           }`}
         >
           Stock & Edit Items
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("conception")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "conception"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          conception
         </button>
         <button
           type="button"
@@ -890,8 +872,6 @@ export default function AdminPanels({ users, products }: Props) {
           ) : null}
         </section>
       )}
-
-      {activeTab === "conception" && <ConceptionIntelligenceDashboard />}
 
       {activeTab === "tracking" && (
         <section className="mt-2">
