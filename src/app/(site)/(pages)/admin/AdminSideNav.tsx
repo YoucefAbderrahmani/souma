@@ -5,8 +5,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 function linkClass(isActive: boolean): string {
   return isActive
-    ? "block w-full rounded-lg bg-blue px-3 py-2 text-sm font-medium text-white shadow-sm"
-    : "block w-full rounded-lg border border-gray-3 bg-white px-3 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]";
+    ? "block w-full rounded-lg bg-orange px-3 py-2 text-sm font-medium text-white shadow-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+    : "block w-full rounded-lg border border-gray-3 bg-white px-3 py-2 text-sm font-medium text-dark outline-none transition hover:border-[#FB923C] hover:text-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0";
 }
 
 export default function AdminSideNav() {
@@ -30,6 +30,9 @@ export default function AdminSideNav() {
         </Link>
         <Link href="/admin?tab=products" className={linkClass(onAdminHome && tab === "products")}>
           Stock & Edit Items
+        </Link>
+        <Link href="/admin?tab=conception" className={linkClass(onAdminHome && tab === "conception")}>
+          conception
         </Link>
       </div>
 

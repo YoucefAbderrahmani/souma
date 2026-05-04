@@ -280,6 +280,41 @@ const config: Config = {
   			'99999': '99999',
   			'999999': '999999'
   		},
+  		keyframes: {
+  			'conception-aurora': {
+  				'0%, 100%': { transform: 'translate(0%, 0%) scale(1)', opacity: '0.45' },
+  				'33%': { transform: 'translate(4%, -6%) scale(1.12)', opacity: '0.7' },
+  				'66%': { transform: 'translate(-3%, 4%) scale(1.05)', opacity: '0.5' },
+  			},
+  			'conception-aurora-slow': {
+  				'0%, 100%': { transform: 'translate(0%, 0%) scale(1.05)', opacity: '0.3' },
+  				'50%': { transform: 'translate(-6%, 8%) scale(1.15)', opacity: '0.55' },
+  			},
+  			'conception-shimmer': {
+  				'0%': { backgroundPosition: '0% 50%' },
+  				'100%': { backgroundPosition: '200% 50%' },
+  			},
+  			'conception-pulse-glow': {
+  				'0%, 100%': { opacity: '1', filter: 'drop-shadow(0 0 6px rgba(251, 146, 60, 0.45))' },
+  				'50%': { opacity: '0.9', filter: 'drop-shadow(0 0 14px rgba(245, 158, 11, 0.55))' },
+  			},
+  			'conception-grid': {
+  				'0%, 100%': { opacity: '0.04' },
+  				'50%': { opacity: '0.1' },
+  			},
+  			'conception-chart-line': {
+  				'0%, 100%': { opacity: '0.92' },
+  				'50%': { opacity: '1' },
+  			},
+  		},
+  		animation: {
+  			'conception-aurora': 'conception-aurora 16s ease-in-out infinite',
+  			'conception-aurora-slow': 'conception-aurora-slow 22s ease-in-out infinite',
+  			'conception-shimmer': 'conception-shimmer 5s ease-in-out infinite',
+  			'conception-pulse-glow': 'conception-pulse-glow 3.5s ease-in-out infinite',
+  			'conception-grid': 'conception-grid 10s ease-in-out infinite',
+  			'conception-chart-line': 'conception-chart-line 2.8s ease-in-out infinite',
+  		},
   		boxShadow: {
   			'1': '0px 1px 2px 0px rgba(166, 175, 195, 0.25)',
   			'2': '0px 6px 24px 0px rgba(235, 238, 251, 0.40), 0px 2px 4px 0px rgba(148, 163, 184, 0.05)',

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
+import ConceptionIntelligenceDashboard from "./ConceptionIntelligenceDashboard";
 import {
   pf,
   productFormSectionIds,
@@ -42,15 +43,19 @@ type Props = {
   products: AdminProduct[];
 };
 
+type AdminMainTab = "users" | "add-product" | "products" | "conception";
+
 const initialState: CreateProductState = {};
 
 export default function AdminPanels({ users, products }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const initialTab: "users" | "add-product" | "products" =
-    tabParam === "add-product" || tabParam === "products" ? tabParam : "users";
-  const [activeTab, setActiveTab] = useState<"users" | "add-product" | "products">(initialTab);
+  const initialTab: AdminMainTab =
+    tabParam === "add-product" || tabParam === "products" || tabParam === "conception"
+      ? tabParam
+      : "users";
+  const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
@@ -117,14 +122,14 @@ export default function AdminPanels({ users, products }: Props) {
   }, [addVitrinaMode, addPriceInput]);
 
   useEffect(() => {
-    if (tabParam === "add-product" || tabParam === "products") {
+    if (tabParam === "add-product" || tabParam === "products" || tabParam === "conception") {
       setActiveTab(tabParam);
       return;
     }
     setActiveTab("users");
   }, [tabParam]);
 
-  const switchTab = (tab: "users" | "add-product" | "products") => {
+  const switchTab = (tab: AdminMainTab) => {
     setActiveTab(tab);
     router.replace(`/admin?tab=${tab}`);
   };
@@ -135,9 +140,9 @@ export default function AdminPanels({ users, products }: Props) {
         <button
           type="button"
           onClick={() => switchTab("users")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
             activeTab === "users"
-              ? "bg-blue text-white shadow-sm"
+              ? "bg-orange text-white shadow-sm"
               : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
           }`}
         >
@@ -146,9 +151,9 @@ export default function AdminPanels({ users, products }: Props) {
         <button
           type="button"
           onClick={() => switchTab("add-product")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
             activeTab === "add-product"
-              ? "bg-blue text-white shadow-sm"
+              ? "bg-orange text-white shadow-sm"
               : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
           }`}
         >
@@ -157,13 +162,24 @@ export default function AdminPanels({ users, products }: Props) {
         <button
           type="button"
           onClick={() => switchTab("products")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
             activeTab === "products"
-              ? "bg-blue text-white shadow-sm"
+              ? "bg-orange text-white shadow-sm"
               : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
           }`}
         >
           Stock & Edit Items
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("conception")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+            activeTab === "conception"
+              ? "bg-orange text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          conception
         </button>
       </div>
 
@@ -184,7 +200,7 @@ export default function AdminPanels({ users, products }: Props) {
                 value={userQuery}
                 onChange={(e) => setUserQuery(e.target.value)}
                 placeholder="Search name, email, role"
-                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#FB923C] sm:w-[280px]"
+                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-stone-500 focus:border-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0 sm:w-[280px]"
               />
             </div>
             <div className="mt-4 overflow-x-auto">
@@ -290,7 +306,7 @@ export default function AdminPanels({ users, products }: Props) {
                             setAddVitrinaMode(true);
                           }
                         }}
-                        className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus:ring-2 focus:ring-blue/30 ${
+                        className={`relative inline-flex h-9 w-[3.25rem] shrink-0 items-center rounded-full border-2 border-transparent transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
                           addVitrinaMode ? "bg-[#FB923C]" : "bg-stone-300"
                         }`}
                       >
@@ -394,7 +410,7 @@ export default function AdminPanels({ users, products }: Props) {
                     <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-stone-300 text-blue focus:ring-blue"
+                        className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                         checked={colorHasPriceOverride}
                         onChange={(event) => setColorHasPriceOverride(event.target.checked)}
                       />
@@ -508,7 +524,7 @@ export default function AdminPanels({ users, products }: Props) {
                           <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-stone-300 text-blue focus:ring-blue"
+                              className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                               checked={row.hasPriceOverride}
                               onChange={(event) =>
                                 setSpecRows((prev) =>
@@ -754,7 +770,7 @@ export default function AdminPanels({ users, products }: Props) {
                 value={productQuery}
                 onChange={(e) => setProductQuery(e.target.value)}
                 placeholder="Search title, brand, slug"
-                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#FB923C] lg:w-[300px]"
+                className="w-full rounded-md border border-gray-3 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-stone-500 focus:border-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0 lg:w-[300px]"
               />
             </div>
 
@@ -762,9 +778,9 @@ export default function AdminPanels({ users, products }: Props) {
               <button
                 type="button"
                 onClick={() => setProductCategoryTab("__all__")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  productCategoryTab === "__all__"
-                    ? "bg-blue text-white"
+                className={`rounded-md px-3 py-1.5 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+                    productCategoryTab === "__all__"
+                    ? "bg-orange text-white"
                     : "border border-gray-3 text-dark hover:border-[#FB923C]"
                 }`}
               >
@@ -775,9 +791,9 @@ export default function AdminPanels({ users, products }: Props) {
                   key={name}
                   type="button"
                   onClick={() => setProductCategoryTab(name)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
                     productCategoryTab === name
-                      ? "bg-blue text-white"
+                      ? "bg-orange text-white"
                       : "border border-gray-3 text-dark hover:border-[#FB923C]"
                   }`}
                 >
@@ -854,6 +870,8 @@ export default function AdminPanels({ users, products }: Props) {
           ) : null}
         </section>
       )}
+
+      {activeTab === "conception" && <ConceptionIntelligenceDashboard />}
     </div>
   );
 }
