@@ -56,6 +56,10 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [formValues, setFormValues] = useState<CheckoutFormValues>(INITIAL_FORM_VALUES);
+  const itemsQtyTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
+    [cartItems]
+  );
 
   const userId = session?.user?.id?.trim() || "guest";
   const storageKey = `vitrina_checkout_profile_${userId}`;
@@ -116,6 +120,7 @@ const Checkout = () => {
       dwell_ms,
       cart_line_items: s.cartLen,
       cart_total_dzd: s.totalPrice,
+      currency: "DZD",
     });
     void flushProductAnalyticsNow();
   }, []);
@@ -146,8 +151,11 @@ const Checkout = () => {
     trackProductAnalytics("pa_begin_checkout", {
       cart_line_items: cartItems.length,
       cart_total_dzd: totalPrice,
+      items_qty_total: itemsQtyTotal,
+      currency: "DZD",
+      checkout_entry: "checkout_page",
     });
-  }, [cartItems.length, totalPrice]);
+  }, [cartItems.length, itemsQtyTotal, totalPrice]);
 
   React.useEffect(() => {
     if (paymentStatus === "success" && cartItems.length > 0) {
@@ -155,12 +163,17 @@ const Checkout = () => {
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
         line_items: cartItems.length,
+        order_value: totalPrice,
+        currency: "DZD",
+        items_qty_total: itemsQtyTotal,
+        provider: "chargily",
+        status: "success",
       });
       void flushProductAnalyticsNow();
       dispatch(removeAllItemsFromCart());
       toast.success("Payment confirmed. Your cart has been cleared.");
     }
-  }, [cartItems.length, dispatch, paymentStatus, totalPrice]);
+  }, [cartItems.length, dispatch, itemsQtyTotal, paymentStatus, totalPrice]);
 
   React.useEffect(() => {
     if (paymentStatus === "success") {
@@ -277,10 +290,23 @@ const Checkout = () => {
         step: "payment_redirect",
         total_dzd: totalPrice,
         cart_line_items: cartItems.length,
+        items_qty_total: itemsQtyTotal,
+        currency: "DZD",
+        provider: "chargily",
+        payment_method: "chargily",
+        status: "redirect_started",
       });
       void flushProductAnalyticsNow();
       const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
       if (!paymentTab) {
+        trackProductAnalytics("pa_checkout_step", {
+          step: "payment_redirect",
+          status: "popup_blocked",
+          provider: "chargily",
+          payment_method: "chargily",
+          failure_code: "popup_blocked",
+          failure_reason: "window_open_returned_null",
+        });
         setErrorMessage("Popup blocked. Please allow popups to continue payment in a new tab.");
         toast.error("Popup blocked. Please allow popups to continue payment.");
         setIsSubmitting(false);
@@ -295,6 +321,14 @@ const Checkout = () => {
         error instanceof Error
           ? error.message
           : "Unable to connect to payment provider. Please try again.";
+      trackProductAnalytics("pa_checkout_step", {
+        step: "payment_redirect",
+        status: "error",
+        provider: "chargily",
+        payment_method: "chargily",
+        failure_code: "checkout_api_error",
+        failure_reason: message.slice(0, 240),
+      });
       setErrorMessage(
         message
       );

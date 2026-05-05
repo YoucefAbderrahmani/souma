@@ -115,6 +115,12 @@ export function useProductAnalyticsTracking({
       utm,
       country: (navigator.language || "").slice(0, 32),
       page: window.location.pathname,
+      page_path: window.location.pathname,
+      page_type: "product_detail",
+      locale: navigator.language || "",
+      timezone_offset_min: new Date().getTimezoneOffset(),
+      viewport_w: window.innerWidth,
+      viewport_h: window.innerHeight,
     });
     trackProductAnalytics("pa_product_ident", {
       product_id: productId,
@@ -124,6 +130,8 @@ export function useProductAnalyticsTracking({
     });
     trackProductAnalytics("pa_product_view", {
       product_id: productId,
+      page_path: window.location.pathname,
+      page_type: "product_detail",
     });
   }, [productId, detailPrice, jomlaPrice, category]);
 
@@ -222,10 +230,17 @@ export function useProductAnalyticsTracking({
         trackProductAnalytics("pa_performance", {
           page_load_ms,
           ttfb_ms: Math.round(Math.max(0, nav.responseStart - nav.requestStart)),
+          page_path: window.location.pathname,
+          route_group: "product_detail",
         });
       }
     } catch {
-      trackProductAnalytics("pa_performance", { page_load_ms: null, unsupported: true });
+      trackProductAnalytics("pa_performance", {
+        page_load_ms: null,
+        unsupported: true,
+        page_path: window.location.pathname,
+        route_group: "product_detail",
+      });
     }
 
     let po: PerformanceObserver | null = null;
@@ -235,7 +250,11 @@ export function useProductAnalyticsTracking({
         const last = entries[entries.length - 1] as PerformanceEntry & { renderTime?: number };
         const start = (last as { startTime?: number }).startTime ?? 0;
         if (start > 0) {
-          trackProductAnalytics("pa_performance", { lcp_ms: Math.round(start) });
+          trackProductAnalytics("pa_performance", {
+            lcp_ms: Math.round(start),
+            page_path: window.location.pathname,
+            route_group: "product_detail",
+          });
           po?.disconnect();
         }
       });
@@ -249,6 +268,8 @@ export function useProductAnalyticsTracking({
         message: String(ev.message || "error").slice(0, 500),
         filename: ev.filename,
         lineno: ev.lineno,
+        page_path: window.location.pathname,
+        stack_head: String((ev as unknown as { error?: { stack?: string } })?.error?.stack || "").slice(0, 500),
       });
     };
     window.addEventListener("error", onErr);

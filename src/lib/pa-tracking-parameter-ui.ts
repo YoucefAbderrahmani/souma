@@ -1,4 +1,5 @@
 import type { PaEventName } from "@/lib/pa-whitelist";
+import { SELLER_HELPER_PARAMETER_SPECS } from "@/lib/seller-helper-parameter-spec";
 
 export type PaParameterGroup = {
   id: string;
@@ -109,3 +110,7 @@ export const PA_CALCULATED_INSIGHTS_NOTE = [
   "session_duration",
   "pages_viewed",
 ] as const;
+
+export const SELLER_HELPER_PARAMETER_SPEC_BY_EVENT = new Map(
+  SELLER_HELPER_PARAMETER_SPECS.map((s) => [s.event, s] as const)
+);

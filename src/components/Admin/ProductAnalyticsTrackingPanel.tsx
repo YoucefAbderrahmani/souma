@@ -7,6 +7,7 @@ import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import {
   PA_CALCULATED_INSIGHTS_NOTE,
   PA_TRACKING_PARAMETER_GROUPS,
+  SELLER_HELPER_PARAMETER_SPEC_BY_EVENT,
 } from "@/lib/pa-tracking-parameter-ui";
 import { refreshProductAnalyticsTrackingConfig } from "@/lib/product-analytics-client";
 
@@ -18,6 +19,16 @@ export default function ProductAnalyticsTrackingPanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedHint, setSavedHint] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<{
+    windowDays: number;
+    report: Array<{
+      event: string;
+      totalRows7d: number;
+      legacy: Array<{ key: string; present: number }>;
+      added: Array<{ key: string; present: number }>;
+      usedByDashboard: string[];
+    }>;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +50,11 @@ export default function ProductAnalyticsTrackingPanel() {
       } else {
         setError("Invalid response");
       }
+      const cov = await fetch(publicApiUrl("/api/admin/debug/seller-helper-parameter-coverage"), {
+        credentials: "include",
+        cache: "no-store",
+      }).then((x) => x.json());
+      if (cov?.report) setCoverage(cov);
     } catch {
       setError("Network error");
     } finally {
@@ -198,6 +214,14 @@ export default function ProductAnalyticsTrackingPanel() {
                       <p className="font-medium text-dark">{row.label}</p>
                       <p className="font-mono text-xs text-dark-4">{row.event}</p>
                       {row.hint ? <p className="mt-0.5 text-xs text-dark-4">{row.hint}</p> : null}
+                      {SELLER_HELPER_PARAMETER_SPEC_BY_EVENT.get(row.event) ? (
+                        <p className="mt-0.5 text-xs text-dark-4">
+                          Legacy:{" "}
+                          {SELLER_HELPER_PARAMETER_SPEC_BY_EVENT.get(row.event)?.legacyParameters.join(", ") || "—"}
+                          {" · "}New:{" "}
+                          {SELLER_HELPER_PARAMETER_SPEC_BY_EVENT.get(row.event)?.newParameters.join(", ") || "—"}
+                        </p>
+                      ) : null}
                     </div>
                     <label className="flex cursor-pointer items-center gap-2 sm:flex-shrink-0">
                       <span className="text-sm text-dark-4">{on ? "On" : "Off"}</span>
@@ -246,6 +270,35 @@ export default function ProductAnalyticsTrackingPanel() {
             ))}
           </ul>
         </section>
+
+        {coverage ? (
+          <section>
+            <h3 className="text-base font-semibold text-dark">
+              Seller Helper parameter coverage (last {coverage.windowDays} days)
+            </h3>
+            <p className="mt-1 text-sm text-dark-4">
+              Links dashboard indicators to tracked parameters and shows real payload presence counts.
+            </p>
+            <ul className="mt-3 divide-y divide-gray-3 rounded-lg border border-gray-3">
+              {coverage.report.map((r) => (
+                <li key={r.event} className="px-3 py-3">
+                  <p className="font-mono text-xs text-dark">{r.event}</p>
+                  <p className="text-xs text-dark-4">Rows: {r.totalRows7d}</p>
+                  <p className="mt-1 text-xs text-dark-4">
+                    Used by: {r.usedByDashboard.length ? r.usedByDashboard.join(" · ") : "—"}
+                  </p>
+                  <p className="mt-1 text-xs text-dark-4">
+                    Legacy:{" "}
+                    {r.legacy.map((x) => `${x.key}(${x.present})`).join(", ") || "—"}
+                  </p>
+                  <p className="text-xs text-dark-4">
+                    New: {r.added.map((x) => `${x.key}(${x.present})`).join(", ") || "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </div>
     </div>
   );
