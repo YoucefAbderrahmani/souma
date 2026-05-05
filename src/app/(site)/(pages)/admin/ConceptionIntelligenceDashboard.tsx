@@ -36,6 +36,24 @@ const conceptionPanelCompact = cn(
 const conceptionNoFocusRing =
   "outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0";
 
+function ProgressBar({
+  value,
+  className,
+}: {
+  value: number;
+  className?: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+  return (
+    <div className={cn("h-2.5 overflow-hidden rounded-full border border-zinc-800/90 bg-zinc-950", className)}>
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 transition-[width] duration-1000 ease-out"
+        style={{ width: `${clamped}%` }}
+      />
+    </div>
+  );
+}
+
 const NAV = [
   "Dashboard",
   "Conversion Funnel",
@@ -199,7 +217,7 @@ const FUNNEL_SUMMARY = [
   },
   {
     label: "Revenu Potentiel Perdu",
-    value: "€48,250",
+    value: "48,250 DA",
     sub: "960 conversions manquées",
     subTone: "rose" as const,
   },
@@ -457,7 +475,7 @@ function UserBehaviorContent() {
 }
 
 const AI_REC_SUMMARY = [
-  { label: "Revenu Potentiel Total", value: "€31,050" },
+  { label: "Revenu Potentiel Total", value: "31,050 DA" },
   { label: "Recommandations Actives", value: "5" },
   { label: "Impact Moyen", value: "+4.1%" },
 ] as const;
@@ -473,7 +491,7 @@ const AI_RECOMMENDATIONS = [
       "70% des abandons sur la page de paiement proviennent d'utilisateurs mobiles. L'analyse indique que le formulaire de saisie de l'adresse contient 12 champs, ce qui est excessif sur petit écran.",
     recommendation:
       "Activer la saisie automatique (autocomplete), réduire à 6 champs essentiels et afficher une barre de progression.",
-    revenue: "€12,400",
+    revenue: "12,400 DA",
     implementation: "2-3 jours",
     roi: "12.4x",
   },
@@ -487,7 +505,7 @@ const AI_RECOMMENDATIONS = [
       "Le taux d'abandon entre l'ajout au panier et le paiement est de 68%. L'analyse comportementale montre que 42% des utilisateurs quittent après avoir vu le formulaire d'inscription obligatoire.",
     recommendation:
       'Proposer une option "Commander en tant qu\'invité" pour réduire la friction. Collecter les informations nécessaires uniquement.',
-    revenue: "€8,750",
+    revenue: "8,750 DA",
     implementation: "3-4 jours",
     roi: "12.4x",
   },
@@ -501,7 +519,7 @@ const AI_RECOMMENDATIONS = [
       "Le temps de chargement moyen de la page produit est de 4.2 secondes. 23% des visiteurs quittent avant le chargement complet.",
     recommendation:
       "Compresser les images produit (format WebP), implémenter le lazy loading et activer la mise en cache navigateur.",
-    revenue: "€4,200",
+    revenue: "4,200 DA",
     implementation: "1-2 jours",
     roi: "12.4x",
   },
@@ -515,7 +533,7 @@ const AI_RECOMMENDATIONS = [
       "Les données de scroll montrent que seulement 34% des utilisateurs défilent jusqu'aux frais de livraison sur la page produit. Les frais affichés au moment du paiement causent 18% d'abandons.",
     recommendation:
       "Afficher les frais de livraison estimés directement sur la page produit, près du bouton \"Ajouter au panier\".",
-    revenue: "€3,600",
+    revenue: "3,600 DA",
     implementation: "1 jour",
     roi: "12.4x",
   },
@@ -529,7 +547,7 @@ const AI_RECOMMENDATIONS = [
       "Les utilisateurs qui utilisent les filtres ont un taux de conversion 2.3x supérieur. Actuellement, seulement 28% des visiteurs interagissent avec les filtres.",
     recommendation:
       "Rendre les filtres plus visibles, ajouter des filtres rapides populaires et afficher le nombre de résultats en temps réel.",
-    revenue: "€2,100",
+    revenue: "2,100 DA",
     implementation: "2-3 jours",
     roi: "12.4x",
   },
@@ -649,12 +667,7 @@ function AiRecommendationsContent({
                 <div className="shrink-0 sm:text-right">
                   <p className="text-xs font-medium uppercase tracking-wide text-zinc-600">Confiance IA</p>
                   <p className="mt-1 text-2xl font-bold tabular-nums text-orange-200">{rec.confidence}%</p>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full border border-zinc-800/90 bg-zinc-950 sm:w-28 sm:ml-auto">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 transition-all duration-1000 ease-out"
-                      style={{ width: `${rec.confidence}%` }}
-                    />
-                  </div>
+                  <ProgressBar value={rec.confidence} className="mt-2 sm:w-28 sm:ml-auto" />
                 </div>
               </div>
 
@@ -1039,7 +1052,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
                     type="button"
                     className={cn(
                       conceptionNoFocusRing,
-                      "rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+                      "rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-center text-sm font-semibold text-zinc-950 transition hover:from-orange-400 hover:to-amber-400"
                     )}
                   >
                     Analyser en détail
@@ -1048,7 +1061,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
                     type="button"
                     className={cn(
                       conceptionNoFocusRing,
-                      "rounded-lg border border-zinc-300 bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      "rounded-lg border border-orange-300 bg-white px-4 py-2 text-center text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
                     )}
                   >
                     Marquer comme résolu
@@ -1149,12 +1162,7 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
                       <span className="text-sm font-medium text-rose-400">{step.abandon}</span>
                     ) : null}
                   </div>
-                  <div className="mt-3 h-3 w-full max-w-xl overflow-hidden rounded-full border border-zinc-800/90 bg-zinc-950">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 transition-[width] duration-1000 ease-out"
-                      style={{ width: `${step.barPct}%` }}
-                    />
-                  </div>
+                  <ProgressBar value={step.barPct} className="mt-3 max-w-xl" />
                 </div>
               </div>
               {i < steps.length - 1 ? (
@@ -1302,15 +1310,7 @@ function DashboardMainContent({
                     <span className="font-medium text-zinc-300">{d.name}</span>
                     <span className="tabular-nums text-zinc-500">{d.pct}%</span>
                   </div>
-                  <div className="h-2.5 overflow-hidden rounded-full border border-zinc-800/90 bg-zinc-950">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-[width] duration-1000 ease-out",
-                        d.color
-                      )}
-                      style={{ width: `${d.pct}%` }}
-                    />
-                  </div>
+                  <ProgressBar value={d.pct} />
                 </div>
               ))}
             </div>
@@ -1423,7 +1423,7 @@ export default function ConceptionIntelligenceDashboard() {
                 disabled={loading}
                 className={cn(
                   conceptionNoFocusRing,
-                  "rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+                  "rounded-lg border border-orange-400/45 bg-orange-950/70 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900 disabled:opacity-50"
                 )}
               >
                 Actualiser
@@ -1434,7 +1434,7 @@ export default function ConceptionIntelligenceDashboard() {
                 disabled={analyzeBusy}
                 className={cn(
                   conceptionNoFocusRing,
-                  "rounded-lg border border-orange-500/50 bg-orange-950 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900 disabled:opacity-50"
+                  "rounded-lg border border-orange-500/60 bg-gradient-to-r from-orange-500/90 to-amber-500/90 px-3 py-2 text-xs font-semibold text-zinc-950 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50"
                 )}
               >
                 {analyzeBusy ? "Analyse…" : "Lancer l’analyse"}
@@ -1500,7 +1500,7 @@ export default function ConceptionIntelligenceDashboard() {
           activeNav !== "AI Recommendations" &&
           activeNav !== "Alerts" &&
           activeNav !== "Security" && (
-            <p className="rounded-lg border border-dashed border-orange-500/40 bg-zinc-900 px-4 py-3 text-center text-sm text-zinc-300">
+            <p className="rounded-lg border border-dashed border-orange-500/40 bg-orange-950/35 px-4 py-3 text-center text-sm text-orange-100">
               Aperçu : contenu &quot;{activeNav}&quot; à brancher sur vos données.
             </p>
           )}
