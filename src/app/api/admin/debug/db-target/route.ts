@@ -40,6 +40,8 @@ export async function GET(req: Request) {
   }
 
   let tableSalesMicroEvent: string | null = null;
+  let unqualifiedSalesMicroEvent: string | null = null;
+  let searchPath: string | null = null;
   let probeError: string | null = null;
   try {
     const r = await db.execute(
@@ -48,6 +50,15 @@ export async function GET(req: Request) {
     const row = r.rows[0] as { t?: unknown } | undefined;
     const t = row?.t;
     tableSalesMicroEvent = t == null || t === "" ? null : String(t);
+
+    const r2 = await db.execute(
+      sql`SELECT to_regclass('sales_micro_event')::text AS t, current_setting('search_path') AS sp`
+    );
+    const row2 = r2.rows[0] as { t?: unknown; sp?: unknown } | undefined;
+    const t2 = row2?.t;
+    const sp = row2?.sp;
+    unqualifiedSalesMicroEvent = t2 == null || t2 === "" ? null : String(t2);
+    searchPath = sp == null || sp === "" ? null : String(sp);
   } catch (e) {
     probeError = e instanceof Error ? e.message : String(e);
   }
@@ -56,6 +67,8 @@ export async function GET(req: Request) {
     resolvedFrom: source,
     ...target,
     tableSalesMicroEvent,
+    unqualifiedSalesMicroEvent,
+    searchPath,
     probeError,
     hint:
       tableSalesMicroEvent == null
