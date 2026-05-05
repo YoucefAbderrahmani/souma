@@ -44,11 +44,17 @@ function ProgressBar({
   className?: string;
 }) {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+  const fillWidth = clamped > 0 ? Math.max(clamped, 6) : 0;
   return (
-    <div className={cn("h-2.5 overflow-hidden rounded-full border border-zinc-800/90 bg-zinc-950", className)}>
+    <div
+      className={cn(
+        "h-2.5 overflow-hidden rounded-full border border-orange-500/35 bg-zinc-950 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.08)]",
+        className
+      )}
+    >
       <div
-        className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 transition-[width] duration-1000 ease-out"
-        style={{ width: `${clamped}%` }}
+        className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 shadow-[0_0_18px_rgba(251,146,60,0.45)] transition-[width] duration-1000 ease-out"
+        style={{ width: `${fillWidth}%` }}
       />
     </div>
   );
@@ -713,7 +719,7 @@ function AiRecommendationsContent({
                   type="button"
                   className={cn(
                     conceptionNoFocusRing,
-                    "rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-orange-500/50 hover:bg-zinc-700 hover:text-orange-100"
+                    "rounded-lg border border-orange-400/45 bg-zinc-800 px-4 py-2 text-sm font-medium text-orange-100 transition hover:border-orange-300 hover:bg-zinc-700 hover:text-orange-50"
                   )}
                 >
                   Plus de détails
@@ -722,7 +728,7 @@ function AiRecommendationsContent({
                   type="button"
                   className={cn(
                     conceptionNoFocusRing,
-                    "rounded-lg px-4 py-2.5 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+                    "rounded-lg px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-orange-200"
                   )}
                 >
                   Ignorer
@@ -1295,25 +1301,16 @@ function DashboardMainContent({
         <div className={cn(conceptionPanelCompact)}>
           <h3 className="text-base font-semibold tracking-tight text-zinc-200">Appareils</h3>
           <p className="mt-0.5 text-sm leading-snug text-zinc-500">Distribution (contexte navigateur enregistré)</p>
-          <div className="mt-3 flex gap-3">
-            <div className="flex flex-col justify-between py-0.5 text-right text-[10px] tabular-nums text-zinc-600">
-              <span>600</span>
-              <span>450</span>
-              <span>300</span>
-              <span>150</span>
-              <span>0</span>
-            </div>
-            <div className="min-h-[130px] flex-1 space-y-3">
-              {devices.map((d) => (
-                <div key={d.name}>
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span className="font-medium text-zinc-300">{d.name}</span>
-                    <span className="tabular-nums text-zinc-500">{d.pct}%</span>
-                  </div>
-                  <ProgressBar value={d.pct} />
+          <div className="mt-3 min-h-[130px] space-y-3">
+            {devices.map((d) => (
+              <div key={d.name}>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span className="font-medium text-zinc-300">{d.name}</span>
+                  <span className="tabular-nums text-zinc-500">{d.pct}%</span>
                 </div>
-              ))}
-            </div>
+                <ProgressBar value={d.pct} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1449,7 +1446,7 @@ export default function ConceptionIntelligenceDashboard() {
           </p>
         ) : null}
         {analyzeMessage ? (
-          <p className="mt-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+          <p className="mt-2 rounded-lg border border-orange-500/30 bg-orange-950/35 px-3 py-2 text-xs text-orange-100/85">
             {analyzeMessage}
           </p>
         ) : null}
@@ -1470,7 +1467,7 @@ export default function ConceptionIntelligenceDashboard() {
                   "rounded-md px-3 py-1.5 text-[13px] font-medium transition-all duration-300 ease-out",
                   isActive
                     ? "scale-[1.02] bg-gradient-to-r from-orange-500 to-amber-500 text-zinc-950"
-                    : "text-zinc-400 hover:bg-zinc-800 hover:text-orange-200"
+                    : "text-zinc-400 hover:bg-orange-950/50 hover:text-orange-200"
                 )}
               >
                 {item}

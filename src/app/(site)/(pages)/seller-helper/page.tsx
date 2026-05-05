@@ -59,20 +59,20 @@ export default async function SellerHelperPage() {
   }
 
   return (
-    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+    <main className="overflow-hidden bg-gradient-to-b from-[#fff8f1] via-[#fffaf5] to-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
       <section className="mx-auto w-full max-w-[1360px] px-4 sm:px-8 xl:px-10">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-3 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-orange-200/80 bg-gradient-to-r from-white via-orange-50/70 to-amber-50/70 p-5 shadow-sm sm:p-6">
           <div>
-            <p className="text-sm text-dark-4">Seller Helper</p>
+            <p className="text-sm font-medium text-orange-700">Seller Helper</p>
             <h1 className="mt-1 text-2xl font-semibold text-dark">Your store dashboard</h1>
-            <p className="mt-2 max-w-3xl text-sm text-dark-4">
+            <p className="mt-2 max-w-3xl text-sm text-zinc-600">
               Conversion funnel, traffic KPIs, security signals, alerts, and recommendations powered by your store
               analytics.
             </p>
           </div>
           <Link
             href="/admin"
-            className="shrink-0 rounded-lg border border-gray-3 bg-white px-4 py-2 text-sm font-medium text-dark transition hover:border-[#FB923C] hover:text-[#FB923C]"
+            className="shrink-0 rounded-lg border border-orange-300 bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:from-orange-400 hover:to-amber-400"
           >
             Open Admin Panel
           </Link>
