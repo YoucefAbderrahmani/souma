@@ -365,17 +365,17 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
   ]);
 
   const prevRes = await db.execute(sql`
-    WITH window AS (
+    WITH evt_window AS (
       SELECT * FROM sales_micro_event
       WHERE created_at >= ${d14} AND created_at < ${mid}
     ),
-    pe AS (SELECT DISTINCT session_key FROM window WHERE event_name = ${STORE_EVENT.productView}),
-    cart AS (SELECT DISTINCT session_key FROM window WHERE event_name = ${STORE_EVENT.addToCart}),
+    pe AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.productView}),
+    cart AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.addToCart}),
     chk_path AS (
-      SELECT DISTINCT session_key FROM window
+      SELECT DISTINCT session_key FROM evt_window
       WHERE event_name = ${STORE_EVENT.beginCheckout} OR lower(page_path) LIKE '%checkout%'
     ),
-    fin AS (SELECT DISTINCT session_key FROM window WHERE event_name = ${STORE_EVENT.purchase})
+    fin AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.purchase})
     SELECT
       (SELECT COUNT(*)::int FROM pe) AS n_product,
       (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key)) AS n_cart,
@@ -505,12 +505,12 @@ export async function buildConceptionAnalyzeSignals() {
 
   const funnel7 = await funnelCounts(d7);
   const foRes = await db.execute(sql`
-    WITH window AS (
+    WITH evt_window AS (
       SELECT * FROM sales_micro_event
       WHERE created_at >= ${new Date(now - 14 * MS_DAY)} AND created_at < ${new Date(now - 7 * MS_DAY)}
     ),
-    pe AS (SELECT DISTINCT session_key FROM window WHERE event_name = ${STORE_EVENT.productView}),
-    fin AS (SELECT DISTINCT session_key FROM window WHERE event_name = ${STORE_EVENT.purchase})
+    pe AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.productView}),
+    fin AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.purchase})
     SELECT
       (SELECT COUNT(*)::int FROM pe) AS n_product,
       (SELECT COUNT(*)::int FROM pe INNER JOIN fin USING (session_key)) AS n_final
