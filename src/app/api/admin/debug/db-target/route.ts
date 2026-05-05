@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       {
         error: "no_database_url",
         resolvedFrom: null,
-        hint: "Set DATABASE_URL, or let Vercel/Neon set POSTGRES_URL / NEON_DATABASE_URL.",
+        hint: "Set POSTGRES_URL / NEON_DATABASE_URL (preferred on Vercel), or set DATABASE_URL.",
       },
       { status: 500 }
     );
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     probeError,
     hint:
       tableSalesMicroEvent == null
-        ? "This server’s DB URL points at a database without public.sales_micro_event. Run drizzle/0003 on THIS database, or copy Neon’s connection string into DATABASE_URL (or rely on POSTGRES_URL) and redeploy."
+        ? "This server’s DB URL points at a database without public.sales_micro_event. Run drizzle/0003 on THIS database, or copy Neon’s connection string into POSTGRES_URL / NEON_DATABASE_URL (or DATABASE_URL) and redeploy."
         : "Table exists on this connection. If Seller Helper still errors, check Network tab for /api/admin/conception/overview.",
   });
 }

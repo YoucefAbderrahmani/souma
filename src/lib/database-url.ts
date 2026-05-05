@@ -6,9 +6,11 @@
  * you get “relation does not exist” on production.
  */
 export const DATABASE_CONNECTION_ENV_KEYS = [
-  "DATABASE_URL",
+  // In Vercel + Neon, these are typically injected automatically.
   "POSTGRES_URL",
   "NEON_DATABASE_URL",
+  // Explicit app-level fallback.
+  "DATABASE_URL",
   "POSTGRES_PRISMA_URL",
   "POSTGRES_URL_NON_POOLING",
 ] as const;
