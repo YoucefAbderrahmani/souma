@@ -2,19 +2,22 @@
 import React from "react";
 import Image from "next/image";
 import { Product } from "@/types/product";
-import { addItemToCart } from "@/redux/features/cart-slice";
+import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { useAppSelector } from "@/redux/store";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const cartItems = useAppSelector(selectCartItems);
+  const cartTotal = useSelector(selectTotalPrice);
 
   const detailPrice = item.detailPrice;
   const jomlaPrice = item.jomlaPrice;
@@ -34,11 +37,21 @@ const ProductItem = ({ item }: { item: Product }) => {
 
   // add to cart
   const handleAddToCart = () => {
+    const unitPrice = jomlaPrice ?? detailPrice;
+    const existing = cartItems.find((x) => x.id === item.id);
+    const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
+    const nextItemsQtyTotal = cartItems.reduce((s, x) => s + x.quantity, 0) + 1;
+    const nextCartTotal = cartTotal + unitPrice;
     trackProductAnalytics("pa_add_to_cart", {
       product_id: item.id,
       from: "product_grid",
       quantity: 1,
       detail_price: detailPrice,
+      cart_line_items: nextLineItems,
+      cart_total_dzd: nextCartTotal,
+      items_qty_total: nextItemsQtyTotal,
+      currency: "DZD",
+      page_path: typeof window !== "undefined" ? window.location.pathname : "/",
     });
     dispatch(
       addItemToCart({

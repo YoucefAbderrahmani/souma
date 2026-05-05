@@ -7,7 +7,7 @@ import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
-import { addItemToCart } from "@/redux/features/cart-slice";
+import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
 import { AppDispatch } from "@/redux/store";
 import { useRouter } from "next/navigation";
 import { parseProductContent } from "@/lib/product-content";
@@ -16,9 +16,12 @@ import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { useSelector } from "react-redux";
 
 const ShopDetails = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const cartItems = useAppSelector(selectCartItems);
+  const totalPrice = useSelector(selectTotalPrice);
   const router = useRouter();
   const [activeColor, setActiveColor] = useState("blue");
   const { openPreviewModal } = usePreviewSlider();
@@ -113,6 +116,11 @@ const ShopDetails = () => {
   };
 
   const handlePurchaseNow = () => {
+    const cartItemsQty = cartItems.reduce((s, x) => s + x.quantity, 0);
+    const existing = cartItems.find((x) => x.id === product.id);
+    const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
+    const nextItemsQtyTotal = cartItemsQty + quantity;
+    const nextCartTotal = totalPrice + (jomlaPrice ?? detailPrice) * quantity;
     trackProductAnalytics("pa_add_to_cart", {
       product_id: product.id,
       from: "product_page",
@@ -120,6 +128,11 @@ const ShopDetails = () => {
       detail_price: detailPrice,
       active_color: activeColor,
       selected_specs: selectedSpecs,
+      cart_line_items: nextLineItems,
+      cart_total_dzd: nextCartTotal,
+      items_qty_total: nextItemsQtyTotal,
+      currency: "DZD",
+      page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
     });
     dispatch(
       addItemToCart({
