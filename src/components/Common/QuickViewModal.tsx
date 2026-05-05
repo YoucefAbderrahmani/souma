@@ -3,12 +3,13 @@ import React, { useEffect, useState } from "react";
 
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { AppDispatch, useAppSelector } from "@/redux/store";
-import { addItemToCart } from "@/redux/features/cart-slice";
-import { useDispatch } from "react-redux";
+import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
+import { useDispatch, useSelector } from "react-redux";
 import Image from "next/image";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { resetQuickView } from "@/redux/features/quickView-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
+import { trackProductAnalytics } from "@/lib/product-analytics-client";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
@@ -16,6 +17,8 @@ const QuickViewModal = () => {
   const [quantity, setQuantity] = useState(1);
 
   const dispatch = useDispatch<AppDispatch>();
+  const cartItems = useAppSelector(selectCartItems);
+  const cartTotal = useSelector(selectTotalPrice);
 
   // get the product data
   const product = useAppSelector((state) => state.quickViewReducer.value);
@@ -34,6 +37,22 @@ const QuickViewModal = () => {
 
   // add to cart
   const handleAddToCart = () => {
+    const unitPrice = jomlaPrice ?? detailPrice;
+    const existing = cartItems.find((x) => x.id === product.id);
+    const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
+    const nextItemsQtyTotal = cartItems.reduce((s, x) => s + x.quantity, 0) + quantity;
+    const nextCartTotal = cartTotal + unitPrice * quantity;
+    trackProductAnalytics("pa_add_to_cart", {
+      product_id: product.id,
+      from: "quick_view",
+      quantity,
+      detail_price: detailPrice,
+      cart_line_items: nextLineItems,
+      cart_total_dzd: nextCartTotal,
+      items_qty_total: nextItemsQtyTotal,
+      currency: "DZD",
+      page_path: typeof window !== "undefined" ? window.location.pathname : "/",
+    });
     dispatch(
       addItemToCart({
         ...product,
