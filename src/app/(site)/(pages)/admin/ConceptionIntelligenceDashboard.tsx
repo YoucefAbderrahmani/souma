@@ -23,13 +23,13 @@ import { cn } from "@/lib/utils";
 
 /** Opaque panels — compact padding, warm body text */
 const conceptionPanel = cn(
-  "rounded-lg border border-zinc-700/90 bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 text-zinc-300 transition-all duration-300 ease-out",
-  "hover:border-orange-500/50 hover:-translate-y-0.5 sm:p-4"
+  "rounded-lg border border-zinc-700/90 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 p-4 text-zinc-200 transition-all duration-300 ease-out",
+  "hover:border-orange-400/60 hover:-translate-y-0.5 sm:p-4"
 );
 
 const conceptionPanelCompact = cn(
-  "rounded-lg border border-zinc-700/90 bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 text-zinc-300 transition-all duration-300",
-  "hover:border-orange-500/45 hover:-translate-y-0.5"
+  "rounded-lg border border-zinc-700/90 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 p-4 text-zinc-200 transition-all duration-300",
+  "hover:border-orange-400/55 hover:-translate-y-0.5"
 );
 
 /** Suppress default browser focus ring (often blue) on mock dashboard controls. */
@@ -48,12 +48,12 @@ function ProgressBar({
   return (
     <div
       className={cn(
-        "h-2.5 overflow-hidden rounded-full border border-zinc-300/90 bg-zinc-100 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),inset_0_-1px_1px_rgba(161,161,170,0.25)]",
+        "h-2.5 overflow-hidden rounded-full border border-zinc-300/90 bg-zinc-100",
         className
       )}
     >
       <div
-        className="h-full rounded-full bg-[#FB923C] shadow-[0_0_16px_rgba(251,146,60,0.7)] transition-[width] duration-700 ease-out"
+        className="h-full rounded-full bg-[#FB923C] transition-[width] duration-700 ease-out"
         style={{ width: `${fillWidth}%`, minWidth: clamped > 0 ? "14px" : "0px" }}
       />
     </div>
@@ -156,7 +156,7 @@ function TrafficChart({ series }: { series: number[] }) {
         strokeWidth="2.75"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="animate-conception-chart-line drop-shadow-[0_0_8px_rgba(251,146,60,0.35)]"
+        className="animate-conception-chart-line"
       />
       {TIME_LABELS.map((label, i) => (
         <text
@@ -636,12 +636,15 @@ function AiRecommendationsContent({
   return (
     <>
       <div>
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Recommandations IA</h3>
+        <h3 className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-orange-200">
+          <Lightbulb className="h-5 w-5" aria-hidden />
+          Recommandations IA
+        </h3>
         <p className="mt-1 text-sm text-zinc-500">
           Moteur règles + données micro-événements (complétable par LLM / ML)
         </p>
         {usingPlaceholderRecs ? (
-          <p className="mt-2 rounded-lg border border-amber-400/45 bg-gradient-to-r from-orange-950/50 via-amber-900/35 to-orange-950/50 px-3 py-2 text-xs text-amber-100">
+          <p className="mt-2 rounded-lg border border-amber-400/55 bg-gradient-to-r from-orange-900/65 via-amber-800/45 to-orange-900/65 px-3 py-2 text-xs font-medium text-amber-100">
             Mode démo: recommandations placeholder affichées jusqu&apos;à réception d&apos;assez de signaux réels.
           </p>
         ) : null}
@@ -649,7 +652,7 @@ function AiRecommendationsContent({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {summary.map((s) => (
-          <div key={s.label} className={cn(conceptionPanelCompact)}>
+          <div key={s.label} className={cn(conceptionPanelCompact, "border-orange-500/25")}>
             <p className="text-sm text-zinc-500">{s.label}</p>
             <p className="mt-1.5 text-xl font-semibold tabular-nums text-orange-100">{s.value}</p>
           </div>
@@ -683,17 +686,17 @@ function AiRecommendationsContent({
                 </div>
               </div>
 
-                <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3">
+              <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-950/25 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-orange-300/90">
                   <BarChart2 className="h-4 w-4" aria-hidden />
                   Analyse
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{rec.analyse}</p>
+                <p className="mt-2 text-sm leading-relaxed text-sky-100/90">{rec.analyse}</p>
               </div>
 
-              <div className="mt-3 rounded-lg border border-orange-500/25 bg-orange-950/50 p-3">
+              <div className="mt-3 rounded-lg border border-orange-500/35 bg-orange-950/45 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Recommandation</p>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-300">{rec.recommendation}</p>
+                <p className="mt-2 text-sm leading-relaxed text-orange-100/90">{rec.recommendation}</p>
               </div>
 
               <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-zinc-800 pt-3 sm:grid-cols-3">
@@ -990,7 +993,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
       )}
     >
       {usingPlaceholderAlerts ? (
-        <p className="mb-3 rounded-lg border border-orange-300/70 bg-orange-100/85 px-3 py-2 text-xs font-medium text-orange-800">
+        <p className="mb-3 rounded-lg border border-orange-300/75 bg-gradient-to-r from-orange-100 to-amber-50 px-3 py-2 text-xs font-semibold text-orange-800">
           Mode démo: alertes placeholder affichées en attendant les incidents réels.
         </p>
       ) : null}
@@ -1001,7 +1004,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
             className={cn(
               "flex gap-3 rounded-xl p-3 sm:p-3.5",
               usingPlaceholderAlerts ?
-                "border border-orange-200/80 bg-white shadow-[0_1px_0_rgba(251,146,60,0.1)]"
+                "border border-orange-200/80 bg-white"
               : "border border-zinc-200/80 bg-white"
             )}
           >
@@ -1020,13 +1023,16 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
         ))}
       </div>
 
-      <section className="mt-3 rounded-xl border border-zinc-200/90 bg-zinc-50/90 p-3 sm:mt-4 sm:p-4">
+      <section className="mt-3 rounded-xl border border-orange-200/70 bg-gradient-to-br from-white via-orange-50/45 to-amber-50/35 p-3 sm:mt-4 sm:p-4">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-700">
             <Bell className="h-4 w-4" aria-hidden />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-zinc-900 sm:text-base">Alertes Actives</h4>
+            <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 sm:text-base">
+              <Bell className="h-4 w-4" aria-hidden />
+              Alertes Actives
+            </h4>
             <p className="text-[11px] leading-snug text-zinc-600 sm:text-xs">
               Incidents en cours nécessitant une attention
             </p>
@@ -1113,8 +1119,11 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
       </section>
 
       <div className="mt-3 grid grid-cols-1 gap-2.5 sm:gap-3 xl:grid-cols-2">
-        <div className="rounded-xl border border-zinc-200/90 bg-white p-3 sm:p-4">
-          <h4 className="text-sm font-semibold text-zinc-900 sm:text-base">Alertes Résolues</h4>
+        <div className="rounded-xl border border-orange-200/55 bg-white p-3 sm:p-4">
+          <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 sm:text-base">
+            <CheckCircle2 className="h-4 w-4" aria-hidden />
+            Alertes Résolues
+          </h4>
           <p className="mt-0.5 text-xs text-zinc-600">Historique récent</p>
           <ul className="mt-2 space-y-2">
             {ALERTS_RESOLVED.map((r) => (
@@ -1134,10 +1143,13 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
           </ul>
         </div>
 
-        <div className="rounded-xl border border-zinc-200/90 bg-white p-3 sm:p-4">
+        <div className="rounded-xl border border-orange-200/55 bg-white p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-zinc-500" aria-hidden />
-            <h4 className="text-sm font-semibold text-zinc-900 sm:text-base">Règles d&apos;Alerte</h4>
+            <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 sm:text-base">
+              <Settings2 className="h-4 w-4" aria-hidden />
+              Règles d&apos;Alerte
+            </h4>
           </div>
           <p className="mt-0.5 text-xs text-zinc-600">Configuration des déclencheurs</p>
           <ul className="mt-2 divide-y divide-zinc-100">
@@ -1246,11 +1258,11 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
               <p className="text-[11px] font-bold uppercase tracking-wide opacity-90">{f.priority}</p>
               <p className="mt-2 text-base font-semibold tracking-tight text-zinc-200">{f.title}</p>
               <p className="mt-2 text-sm text-zinc-400">{f.body}</p>
-              <div className="mt-2 flex gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2">
+              <div className="mt-2 flex gap-2 rounded-lg border border-amber-500/35 bg-amber-950/25 px-3 py-2">
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recommandation</p>
-                  <p className="mt-0.5 text-sm leading-snug text-zinc-400">{f.reco}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Recommandation</p>
+                  <p className="mt-0.5 text-sm leading-snug text-amber-100/90">{f.reco}</p>
                 </div>
               </div>
             </div>
@@ -1285,7 +1297,7 @@ function DashboardMainContent({
   return (
     <>
       {loading ? (
-        <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-500">
+        <p className="rounded-lg border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm text-sky-100/85">
           Chargement des indicateurs…
         </p>
       ) : null}
@@ -1393,7 +1405,7 @@ export default function ConceptionIntelligenceDashboard() {
     : TRAFFIC_FALLBACK;
 
   return (
-    <section className="group/conception relative mt-6 overflow-hidden rounded-xl border border-orange-500/30 bg-zinc-950 text-zinc-300">
+    <section className="group/conception relative mt-6 overflow-hidden rounded-xl border border-orange-500/30 bg-zinc-950 text-zinc-200">
       {/* Ambient accents (sit above solid bg, never replace it) */}
       <div
         className="pointer-events-none absolute -left-24 -top-28 h-80 w-80 rounded-full bg-gradient-to-br from-orange-600/30 via-amber-600/12 to-transparent blur-3xl animate-conception-aurora"
@@ -1413,10 +1425,11 @@ export default function ConceptionIntelligenceDashboard() {
         aria-hidden
       />
 
-      <div className="relative z-10 border-b border-zinc-800 bg-zinc-950 px-4 py-4 sm:px-5 sm:py-4">
+      <div className="relative z-10 border-b border-zinc-800 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 px-4 py-4 sm:px-5 sm:py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
-            <p className="inline-flex rounded-full border border-orange-500/50 bg-orange-950/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-orange-200">
+            <p className="inline-flex items-center gap-2 rounded-full border border-orange-500/50 bg-orange-950/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-orange-200">
+              <BarChart2 className="h-3.5 w-3.5" aria-hidden />
               E-Commerce Intelligence
             </p>
             <h2 className="mt-2 text-xl font-semibold leading-snug tracking-tight text-zinc-300 sm:text-2xl">
@@ -1444,7 +1457,7 @@ export default function ConceptionIntelligenceDashboard() {
                 disabled={loading}
                 className={cn(
                   conceptionNoFocusRing,
-                  "rounded-lg border border-orange-400/45 bg-orange-950/70 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900 disabled:opacity-50"
+                  "rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 transition hover:border-orange-400/50 hover:bg-zinc-700 hover:text-orange-100 disabled:opacity-50"
                 )}
               >
                 Actualiser
@@ -1455,7 +1468,7 @@ export default function ConceptionIntelligenceDashboard() {
                 disabled={analyzeBusy}
                 className={cn(
                   conceptionNoFocusRing,
-                  "rounded-lg border border-orange-500/60 bg-gradient-to-r from-orange-500/90 to-amber-500/90 px-3 py-2 text-xs font-semibold text-zinc-950 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50"
+                  "rounded-lg border border-orange-500/60 bg-gradient-to-r from-orange-500/95 to-amber-500/95 px-3 py-2 text-xs font-semibold text-zinc-950 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50"
                 )}
               >
                 {analyzeBusy ? "Analyse…" : "Lancer l’analyse"}
@@ -1465,18 +1478,18 @@ export default function ConceptionIntelligenceDashboard() {
         </div>
 
         {error ? (
-          <p className="mt-3 rounded-lg border border-rose-500/40 bg-rose-950/50 px-3 py-2 text-sm text-rose-200">
+          <p className="mt-3 rounded-lg border border-red-500/45 bg-red-950/45 px-3 py-2 text-sm text-red-100">
             {error}
           </p>
         ) : null}
         {analyzeMessage ? (
-          <p className="mt-2 rounded-lg border border-orange-500/30 bg-orange-950/35 px-3 py-2 text-xs text-orange-100/85">
+          <p className="mt-2 rounded-lg border border-violet-500/30 bg-violet-950/35 px-3 py-2 text-xs text-violet-100/90">
             {analyzeMessage}
           </p>
         ) : null}
 
         <nav
-          className="mt-4 flex flex-wrap gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 p-1"
+          className="mt-4 flex flex-wrap gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/95 p-1.5"
           aria-label="Sections intelligence"
         >
           {NAV.map((item) => {
@@ -1521,7 +1534,7 @@ export default function ConceptionIntelligenceDashboard() {
           activeNav !== "AI Recommendations" &&
           activeNav !== "Alerts" &&
           activeNav !== "Security" && (
-            <p className="rounded-lg border border-dashed border-orange-500/40 bg-orange-950/35 px-4 py-3 text-center text-sm text-orange-100">
+            <p className="rounded-lg border border-dashed border-amber-500/45 bg-amber-950/35 px-4 py-3 text-center text-sm text-amber-100">
               Aperçu : contenu &quot;{activeNav}&quot; à brancher sur vos données.
             </p>
           )}
