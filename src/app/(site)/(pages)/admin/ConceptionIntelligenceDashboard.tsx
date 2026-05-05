@@ -44,17 +44,17 @@ function ProgressBar({
   className?: string;
 }) {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
-  const fillWidth = clamped > 0 ? Math.max(clamped, 6) : 0;
+  const fillWidth = clamped > 0 ? Math.max(clamped, 12) : 0;
   return (
     <div
       className={cn(
-        "h-2.5 overflow-hidden rounded-full border border-orange-500/35 bg-zinc-950 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.08)]",
+        "h-2.5 overflow-hidden rounded-full border border-zinc-300/90 bg-zinc-100 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),inset_0_-1px_1px_rgba(161,161,170,0.25)]",
         className
       )}
     >
       <div
-        className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-orange-600 shadow-[0_0_18px_rgba(251,146,60,0.45)] transition-[width] duration-1000 ease-out"
-        style={{ width: `${fillWidth}%` }}
+        className="h-full rounded-full bg-[#FB923C] shadow-[0_0_16px_rgba(251,146,60,0.7)] transition-[width] duration-700 ease-out"
+        style={{ width: `${fillWidth}%`, minWidth: clamped > 0 ? "14px" : "0px" }}
       />
     </div>
   );
@@ -585,6 +585,7 @@ function AiRecommendationsContent({
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
 }) {
+  const usingPlaceholderRecs = recommendations.length === 0;
   const recs =
     recommendations.length > 0 ?
       recommendations.map((r) => ({
@@ -639,6 +640,11 @@ function AiRecommendationsContent({
         <p className="mt-1 text-sm text-zinc-500">
           Moteur règles + données micro-événements (complétable par LLM / ML)
         </p>
+        {usingPlaceholderRecs ? (
+          <p className="mt-2 rounded-lg border border-amber-400/45 bg-gradient-to-r from-orange-950/50 via-amber-900/35 to-orange-950/50 px-3 py-2 text-xs text-amber-100">
+            Mode démo: recommandations placeholder affichées jusqu&apos;à réception d&apos;assez de signaux réels.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -959,6 +965,7 @@ function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null 
 }
 
 function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
+  const usingPlaceholderAlerts = alerts.length === 0;
   const incidents =
     alerts.length > 0 ?
       alerts.map((x) => ({ ...alertDtoToIncident(x), key: x.id }))
@@ -974,12 +981,29 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
     : ALERTS_SUMMARY;
 
   return (
-    <div className="rounded-xl border border-zinc-200/90 bg-zinc-100 p-3 sm:p-4">
+    <div
+      className={cn(
+        "rounded-xl p-3 sm:p-4",
+        usingPlaceholderAlerts ?
+          "border border-orange-300/70 bg-gradient-to-br from-orange-50 via-amber-50/80 to-white"
+        : "border border-zinc-200/90 bg-zinc-100"
+      )}
+    >
+      {usingPlaceholderAlerts ? (
+        <p className="mb-3 rounded-lg border border-orange-300/70 bg-orange-100/85 px-3 py-2 text-xs font-medium text-orange-800">
+          Mode démo: alertes placeholder affichées en attendant les incidents réels.
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {summary.map((s) => (
           <div
             key={s.label}
-            className="flex gap-3 rounded-xl border border-zinc-200/80 bg-white p-3 sm:p-3.5"
+            className={cn(
+              "flex gap-3 rounded-xl p-3 sm:p-3.5",
+              usingPlaceholderAlerts ?
+                "border border-orange-200/80 bg-white shadow-[0_1px_0_rgba(251,146,60,0.1)]"
+              : "border border-zinc-200/80 bg-white"
+            )}
           >
             <AlertSummaryIconBadge kind={s.icon} />
             <div className="min-w-0 flex-1">

@@ -59,7 +59,7 @@ export default async function SellerHelperPage() {
   }
 
   return (
-    <main className="overflow-hidden bg-gradient-to-b from-[#fff8f1] via-[#fffaf5] to-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+    <main className="overflow-hidden bg-white pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
       <section className="mx-auto w-full max-w-[1360px] px-4 sm:px-8 xl:px-10">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-orange-200/80 bg-gradient-to-r from-white via-orange-50/70 to-amber-50/70 p-5 shadow-sm sm:p-6">
           <div>
