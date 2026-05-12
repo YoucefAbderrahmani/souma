@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BarChart2, Compass, Shield, Store, Users, Zap } from "lucide-react";
+import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
 import {
   useConceptionAdminData,
   type ConceptionAdminInitialData,
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ProgressBar, TrafficChart } from "./charts";
 import { AiRecommendationsContent, AlertsContent, UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
+import { SecurityTabContent } from "./security-tab";
 import { SELLER_HELPER_NAV, SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
 import {
   sellerAccentStrip,
@@ -287,47 +288,6 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
   );
 }
 
-
-function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null }) {
-  const security = overview?.security;
-
-  return (
-    <div className={sellerHelperStack}>
-      <SectionHeading
-        title="Security & data integrity"
-        description="Bot and scraping heuristics on micro-events"
-        icon={Shield}
-      />
-      <div className={sellerHelperGrid.two}>
-        <Panel accent={sellerAccentStrip.orange}>
-          <p className="text-custom-sm text-dark-4">High-velocity sessions</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-dark">
-            {security ? new Intl.NumberFormat("en-US").format(security.highVelocitySessions) : "—"}
-          </p>
-        </Panel>
-        <Panel accent={sellerAccentStrip.orange}>
-          <p className="text-custom-sm text-dark-4">Suspicious sessions (7d)</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-dark">
-            {security ? new Intl.NumberFormat("en-US").format(security.suspiciousSessions7d) : "—"}
-          </p>
-        </Panel>
-      </div>
-      <Panel>
-        {(security?.notes ?? []).length === 0 ?
-          <div className={sellerPlaceholder}>No security notes available yet.</div>
-        : <ul className="space-y-2 text-custom-sm text-dark-3">
-            {(security?.notes ?? []).map((note) => (
-              <li key={note} className="rounded-lg border border-gray-3 bg-gray-1 px-3 py-2.5">
-                {note}
-              </li>
-            ))}
-          </ul>
-        }
-      </Panel>
-    </div>
-  );
-}
-
 type SellerHelperDashboardProps = {
   initialData?: ConceptionAdminInitialData;
   initialError?: string | null;
@@ -378,7 +338,7 @@ export default function SellerHelperDashboard({
               <span className={overview?.hasEventData ? sellerBadge.live : sellerBadge.muted}>
                 <span className="relative flex h-2 w-2">
                   {overview?.hasEventData ? (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-70" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-60" />
                   ) : null}
                   <span
                     className={cn(
@@ -389,8 +349,8 @@ export default function SellerHelperDashboard({
                 </span>
                 {overview?.hasEventData ? "Live data · auto-refresh" : "Waiting for data · auto-refresh"}
               </span>
-              <span className={sellerBadge.warning}>
-                <Zap className="h-3.5 w-3.5" aria-hidden />
+              <span className={sellerBadge.accent}>
+                <Zap className="h-3.5 w-3.5 shrink-0 text-orange" aria-hidden />
                 {overview ?
                   `${new Intl.NumberFormat("en-US").format(overview.activeVisitors15m)} sessions / 15 min`
                 : "Sessions 15 min"}
@@ -486,7 +446,7 @@ export default function SellerHelperDashboard({
             onDismissAlert={dismissAlert}
           />
         )}
-        {activeNav === "Security" && <SecurityContent overview={overview} />}
+        {activeNav === "Security" && <SecurityTabContent overview={overview} />}
       </div>
     </div>
   );

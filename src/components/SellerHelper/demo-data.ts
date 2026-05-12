@@ -337,3 +337,148 @@ export const DEMO_SECURITY_NOTES = [
   "Suspicious sessions remain below the alert threshold over the 7-day window.",
   "Checkout and cart micro-events keep a consistent signature.",
 ] as const;
+
+export const DEMO_SECURITY_KPIS = [
+  {
+    label: "Bots détectés",
+    value: "247",
+    delta: "+12% vs hier",
+    deltaPositive: false,
+  },
+  {
+    label: "IPs bloquées",
+    value: "89",
+    delta: "+5% vs hier",
+    deltaPositive: false,
+  },
+  {
+    label: "Tentatives de fraude",
+    value: "34",
+    delta: "-8% vs hier",
+    deltaPositive: true,
+  },
+  {
+    label: "Score de sécurité",
+    value: "94/100",
+    delta: "+2 vs hier",
+    deltaPositive: true,
+  },
+] as const;
+
+export const DEMO_SECURITY_THREAT_ACTIVITY = {
+  title: "Activité des menaces (24h)",
+  description: "Évolution des tentatives d'intrusion",
+  series: [8, 12, 10, 18, 24, 31, 28, 36, 42, 38, 45, 52, 48, 55, 50, 58, 54, 60, 52, 46, 40, 34, 28, 22],
+} as const;
+
+export const DEMO_SECURITY_THREAT_TYPES = {
+  title: "Types de menaces",
+  description: "Distribution (7 jours)",
+  items: [
+    { label: "Bot scraping", pct: 45 },
+    { label: "Click fraud", pct: 28 },
+    { label: "Fausses commandes", pct: 18 },
+    { label: "Autres", pct: 9 },
+  ],
+} as const;
+
+export const DEMO_SECURITY_INCIDENTS = [
+  {
+    id: "inc-1",
+    status: "BLOQUÉ",
+    statusTone: "risk" as const,
+    category: "Bot scraping",
+    riskScore: 97,
+    title: "Visite de 847 pages produits en 4 minutes",
+    detail: "Temps de séjour identique de 0,3 s par page, aucun mouvement de souris",
+    ip: "192.168.1.45",
+    location: "Inconnu",
+    timeAgo: "Il y a 8 minutes",
+  },
+  {
+    id: "inc-2",
+    status: "SURVEILLANCE",
+    statusTone: "attention" as const,
+    category: "Click fraud",
+    riskScore: 85,
+    title: "Clics massifs sur publicités depuis IP suspecte",
+    detail: "234 clics en 5 minutes, pattern répétitif détecté",
+    ip: "203.0.113.78",
+    location: "Vietnam",
+    timeAgo: "Il y a 23 minutes",
+  },
+  {
+    id: "inc-3",
+    status: "SIGNALÉ",
+    statusTone: "guidance" as const,
+    category: "Fausse commande",
+    riskScore: 78,
+    title: "Commande avec email jetable et données invalides",
+    detail: "Email temporaire, combinaison adresse/code postal invalide",
+    ip: "198.51.100.42",
+    location: "Russie",
+    timeAgo: "Il y a 1 heure",
+  },
+  {
+    id: "inc-4",
+    status: "BLOQUÉ",
+    statusTone: "risk" as const,
+    category: "DDoS",
+    riskScore: 92,
+    title: "Rafale de requêtes sur la page d'accueil",
+    detail: "45 123 requêtes en 2 heures depuis un petit pool d'adresses",
+    ip: "192.0.2.123",
+    location: "États-Unis",
+    timeAgo: "Il y a 2 heures",
+  },
+  {
+    id: "inc-5",
+    status: "SURVEILLANCE",
+    statusTone: "attention" as const,
+    category: "Credential stuffing",
+    riskScore: 81,
+    title: "Tentatives de connexion répétées",
+    detail: "67 essais sur 14 comptes en 12 minutes, rotation d'IP détectée",
+    ip: "185.220.101.12",
+    location: "Allemagne",
+    timeAgo: "Il y a 3 heures",
+  },
+] as const;
+
+export const DEMO_SECURITY_BLOCKED_IPS = [
+  {
+    id: "ip-1",
+    ip: "192.168.1.45",
+    reason: "Bot scraping",
+    blockedRequests: 10234,
+    blockedAgo: "Il y a 8 min",
+  },
+  {
+    id: "ip-2",
+    ip: "203.0.113.78",
+    reason: "Click fraud",
+    blockedRequests: 8456,
+    blockedAgo: "Il y a 23 min",
+  },
+  {
+    id: "ip-3",
+    ip: "198.51.100.42",
+    reason: "Spam",
+    blockedRequests: 5678,
+    blockedAgo: "Il y a 1 h",
+  },
+  {
+    id: "ip-4",
+    ip: "192.0.2.123",
+    reason: "DDoS",
+    blockedRequests: 45123,
+    blockedAgo: "Il y a 2 h",
+  },
+  {
+    id: "ip-5",
+    ip: "185.220.101.12",
+    reason: "Credential stuffing",
+    blockedRequests: 3210,
+    blockedAgo: "Il y a 3 h",
+  },
+] as const;

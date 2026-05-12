@@ -1,5 +1,6 @@
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
+import { getActiveBlockedSessionKeys } from "@/server/conception/apply-security-quick-fixes";
 
 export type SalesMicroEventRowInput = {
   sessionKey: string;
@@ -22,8 +23,13 @@ function safePath(path: string, max = 500) {
 
 export async function insertSalesMicroEvents(rows: SalesMicroEventRowInput[]) {
   if (rows.length === 0) return;
+
+  const blockedKeys = await getActiveBlockedSessionKeys(rows.map((row) => row.sessionKey));
+  const allowedRows = rows.filter((row) => !blockedKeys.has(row.sessionKey.slice(0, 64)));
+  if (allowedRows.length === 0) return;
+
   await db.insert(salesMicroEventTable).values(
-    rows.map((r) => ({
+    allowedRows.map((r) => ({
       sessionKey: r.sessionKey.slice(0, 64),
       userId: r.userId,
       productLocalId: r.productLocalId ?? null,

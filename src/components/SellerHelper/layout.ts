@@ -76,12 +76,13 @@ export const sellerNavButton = (active: boolean) =>
     active ? "text-orange before:w-full" : "text-dark before:w-0 hover:text-orange hover:before:w-full"
   );
 
+const sellerBadgeBase =
+  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-custom-sm font-medium";
+
 export const sellerBadge = {
-  live: "inline-flex items-center gap-1.5 rounded-full border border-orange/25 bg-orange/10 px-2.5 py-0.5 text-[11px] font-semibold text-orange-dark",
-  muted:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-3 bg-gray-1 px-2.5 py-0.5 text-[11px] font-semibold text-dark-4",
-  warning:
-    "inline-flex items-center gap-1.5 rounded-full border border-yellow-light-1 bg-yellow-light-2 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-dark-2",
+  live: cn(sellerBadgeBase, "border-gray-3 bg-white text-dark-3 shadow-sm"),
+  muted: cn(sellerBadgeBase, "border-gray-3 bg-gray-1 text-dark-4"),
+  accent: cn(sellerBadgeBase, "border-gray-3 bg-white text-dark shadow-sm"),
 } as const;
 
 export const sellerPlaceholder = cn(

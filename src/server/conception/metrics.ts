@@ -2,6 +2,7 @@ import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import { CONCEPTION_ALERT_RULES } from "@/server/conception/alert-rules";
+import { buildConceptionSecurityBrief } from "@/server/conception/security-intel";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
   ConceptionDeviceSlice,
@@ -223,39 +224,8 @@ async function deviceSlices(since: Date): Promise<ConceptionDeviceSlice[]> {
 }
 
 async function securityBrief(since: Date): Promise<ConceptionSecurityBrief> {
-  const hv = await db.execute(sql`
-    SELECT COUNT(*)::int AS n
-    FROM (
-      SELECT session_key
-      FROM sales_micro_event
-      WHERE created_at >= ${since}
-      GROUP BY session_key
-      HAVING COUNT(*) >= 50
-        AND EXTRACT(EPOCH FROM (MAX(created_at) - MIN(created_at))) <= 360
-    ) s
-  `);
-  const hvRow = hv.rows[0] as { n: unknown } | undefined;
-  const highVelocity = Number(hvRow?.n ?? 0);
-
-  const suspicious = highVelocity;
-
-  const notes: string[] = [];
-  if (highVelocity > 0) {
-    notes.push(
-      `${fmtInt(highVelocity)} session(s) with very high event density in under 6 minutes (bot/scraping-style heuristic).`
-    );
-  } else {
-    notes.push("No high-velocity sessions detected in the current window.");
-  }
-  notes.push(
-    "For stronger detection (mouse, repeated patterns), extend the client script (cb_* events in the Conception contract)."
-  );
-
-  return {
-    suspiciousSessions7d: suspicious,
-    highVelocitySessions: highVelocity,
-    notes,
-  };
+  void since;
+  return buildConceptionSecurityBrief(7);
 }
 
 function buildFunnelSteps(f: {

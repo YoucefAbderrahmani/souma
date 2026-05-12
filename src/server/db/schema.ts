@@ -228,6 +228,15 @@ export const assistantSearchTelemetryTable = pgTable("assistant_search_telemetry
  * Micro-interaction events for AI sales / funnel analysis (product page, checkout context).
  * Payload is JSON; event names are lowercase snake_case (e.g. image_index_viewed, price_hover).
  */
+/** Active security blocks keyed by storefront session id. */
+export const conceptionSecurityBlockTable = pgTable("conception_security_block", {
+  sessionKey: varchar("session_key", { length: 64 }).primaryKey(),
+  reason: text("reason").notNull(),
+  blockedAt: timestamp("blocked_at", { mode: "date" }).notNull().defaultNow(),
+  liftedAt: timestamp("lifted_at", { mode: "date" }),
+  source: varchar("source", { length: 32 }).notNull().default("manual"),
+});
+
 export const salesMicroEventTable = pgTable("sales_micro_event", {
   id: uuid().primaryKey().defaultRandom(),
   sessionKey: varchar("session_key", { length: 64 }).notNull(),

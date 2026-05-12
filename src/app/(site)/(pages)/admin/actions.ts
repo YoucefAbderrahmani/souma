@@ -8,6 +8,10 @@ import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import {
+  applySecurityQuickFixes,
+  parseSubmittedSecurityQuickFixes,
+} from "@/server/conception/apply-security-quick-fixes";
+import {
   applyVitrinaQuickFixes,
   parseSubmittedVitrinaQuickFixes,
   resolveVitrinaQuickFixes,
@@ -278,6 +282,53 @@ export type ApplyVitrinaQuickFixesState = {
   message?: string;
   applied?: string[];
 };
+
+export type ApplySecurityQuickFixesState = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  applied?: string[];
+};
+
+export async function applySecurityQuickFixesAction(
+  _prevState: ApplySecurityQuickFixesState,
+  formData: FormData
+): Promise<ApplySecurityQuickFixesState> {
+  try {
+    const sessionKey = String(formData.get("sessionKey") ?? "").trim();
+    const reason = String(formData.get("reason") ?? "").trim();
+    const rawFixes = String(formData.get("fixes") ?? "[]");
+    const rawFixIds = String(formData.get("fixIds") ?? "[]");
+
+    if (!sessionKey) {
+      return { error: "Session manquante." };
+    }
+
+    let requestedFixes;
+    try {
+      requestedFixes = parseSubmittedSecurityQuickFixes(rawFixes, rawFixIds);
+    } catch {
+      return { error: "Sélection d'action invalide." };
+    }
+
+    const result = await applySecurityQuickFixes(sessionKey, reason, requestedFixes);
+    if (result.error) {
+      return { error: result.error };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/seller-helper");
+    return {
+      success: true,
+      applied: result.applied,
+      message: `Action appliquée sur ${result.applied.length} élément${result.applied.length === 1 ? "" : "s"}.`,
+    };
+  } catch (error) {
+    console.error("[applySecurityQuickFixesAction]", error);
+    const message = error instanceof Error ? error.message : "Impossible d'appliquer l'action de sécurité.";
+    return { error: message };
+  }
+}
 
 export async function applyVitrinaQuickFixesAction(
   _prevState: ApplyVitrinaQuickFixesState,

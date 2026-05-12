@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ensure-sales-micro-event-table.mjs && node scripts/ensure-products-description-text.mjs && next build",
+    "build": "node scripts/ensure-sales-micro-event-table.mjs && node scripts/ensure-products-description-text.mjs && node scripts/ensure-conception-security-block.mjs && next build",
     "db:ensure-sales-micro-event": "node scripts/ensure-sales-micro-event-table.mjs",
     "db:ensure-products-description-text": "node scripts/ensure-products-description-text.mjs",
+    "db:ensure-conception-security-block": "node scripts/ensure-conception-security-block.mjs",
     "db:seed-products": "tsx scripts/seed-premade-products.ts",
     "db:trigger-security-alerts": "tsx scripts/trigger-security-alerts.ts",
     "start": "next start",

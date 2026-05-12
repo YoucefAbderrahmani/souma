@@ -43,10 +43,69 @@ export type ConceptionDeviceSlice = {
   color: string;
 };
 
+export type ConceptionSecurityKpi = {
+  label: string;
+  value: string;
+  delta: string;
+  deltaPositive: boolean;
+};
+
+export type ConceptionSecurityThreatSlice = {
+  label: string;
+  count: number;
+  pct: number;
+};
+
+export type ConceptionSecurityQuickFixId = "block_session" | "unblock_session";
+
+export type ConceptionSecurityQuickFixOption = {
+  id: ConceptionSecurityQuickFixId;
+  label: string;
+  summary: string;
+};
+
+export type ConceptionSecurityIncident = {
+  id: string;
+  sessionKey: string;
+  displayIdentity: string;
+  status: "blocked" | "monitoring" | "flagged";
+  statusLabel: string;
+  statusTone: "risk" | "attention" | "guidance";
+  category: string;
+  riskScore: number;
+  title: string;
+  detail: string;
+  location: string;
+  detectedAt: string;
+  timeAgoLabel: string;
+  quickFixes: ConceptionSecurityQuickFixOption[];
+};
+
+export type ConceptionSecurityBlockedIdentity = {
+  id: string;
+  sessionKey: string;
+  displayIdentity: string;
+  reason: string;
+  blockedRequests: number;
+  blockedAt: string;
+  blockedAgoLabel: string;
+  quickFixes: ConceptionSecurityQuickFixOption[];
+};
+
 export type ConceptionSecurityBrief = {
   suspiciousSessions7d: number;
   highVelocitySessions: number;
   notes: string[];
+  score: number;
+  scoreMax: number;
+  scoreFormula: string;
+  scoreDeltaVsPreviousPeriod: number;
+  kpis: ConceptionSecurityKpi[];
+  threatActivity24h: number[];
+  threatTypes7d: ConceptionSecurityThreatSlice[];
+  incidents: ConceptionSecurityIncident[];
+  blockedIdentities: ConceptionSecurityBlockedIdentity[];
+  computedAt: string;
 };
 
 export type ConceptionUserJourney = {

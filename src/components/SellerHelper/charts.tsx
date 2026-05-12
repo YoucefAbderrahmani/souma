@@ -103,3 +103,91 @@ export function TrafficChart({ series }: { series: number[] }) {
     </svg>
   );
 }
+
+const THREAT_TIME_LABELS = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "23:59"];
+
+export function ThreatActivityChart({ series }: { series: number[] }) {
+  const pts = series.length > 0 ? series : Array.from({ length: 24 }, () => 0);
+  const maxValue = Math.max(...pts, 1);
+  const yLabels = [1, 0.75, 0.5, 0.25, 0].map((ratio) => Math.round(maxValue * ratio));
+  const gid = useId().replace(/:/g, "");
+  const fillId = `sellerThreatFill-${gid}`;
+  const strokeId = `sellerThreatStroke-${gid}`;
+  const w = 560;
+  const h = 200;
+  const pad = { top: 12, right: 8, bottom: 28, left: 40 };
+  const innerW = w - pad.left - pad.right;
+  const innerH = h - pad.top - pad.bottom;
+  const n = pts.length;
+  const pathPoints = pts.map((value, index) => {
+    const x = pad.left + (index / (n - 1)) * innerW;
+    const y = pad.top + innerH * (1 - value / maxValue);
+    return { x, y };
+  });
+  const baseY = pad.top + innerH;
+  const firstX = pad.left;
+  const lastX = pad.left + innerW;
+  const lineD = pathPoints.map((point, index) => (index === 0 ? `M ${point.x} ${point.y}` : `L ${point.x} ${point.y}`)).join(" ");
+  const areaD = `${lineD} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
+  const polyPts = pathPoints.map((point) => `${point.x},${point.y}`).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-40 w-full max-w-full" preserveAspectRatio="xMidYMid meet" aria-hidden>
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F27430" stopOpacity="0.28" />
+          <stop offset="55%" stopColor="#FBBF24" stopOpacity="0.14" />
+          <stop offset="100%" stopColor="#FEECE6" stopOpacity="0.05" />
+        </linearGradient>
+        <linearGradient id={strokeId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#F9B38B" />
+          <stop offset="50%" stopColor="#F27430" />
+          <stop offset="100%" stopColor="#E1580E" />
+        </linearGradient>
+      </defs>
+      {yLabels.map((label) => {
+        const t = label / maxValue;
+        return (
+          <g key={label}>
+            <line
+              x1={pad.left}
+              y1={pad.top + innerH * (1 - t)}
+              x2={w - pad.right}
+              y2={pad.top + innerH * (1 - t)}
+              stroke="#E5E7EB"
+              strokeWidth="1"
+            />
+            <text
+              x={pad.left - 6}
+              y={pad.top + innerH * (1 - t) + 3}
+              textAnchor="end"
+              className="fill-dark-4 text-[9px]"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      <path d={areaD} fill={`url(#${fillId})`} />
+      <polyline
+        points={polyPts}
+        fill="none"
+        stroke={`url(#${strokeId})`}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {THREAT_TIME_LABELS.map((label, index) => (
+        <text
+          key={label}
+          x={pad.left + (index / (THREAT_TIME_LABELS.length - 1)) * innerW}
+          y={h - 6}
+          textAnchor="middle"
+          className="fill-dark-4 text-[9px]"
+        >
+          {label}
+        </text>
+      ))}
+    </svg>
+  );
+}
