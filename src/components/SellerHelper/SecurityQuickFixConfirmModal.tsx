@@ -62,7 +62,7 @@ export default function SecurityQuickFixConfirmModal({ target, onClose }: Props)
         </div>
 
         <p className="mt-3 text-custom-sm text-dark-4">
-          Vérifiez l'action ci-dessous. Elle est enregistrée immédiatement après confirmation.
+          Vérifiez l&apos;action ci-dessous. Elle est enregistrée immédiatement après confirmation.
         </p>
 
         {fixes.length === 0 ?

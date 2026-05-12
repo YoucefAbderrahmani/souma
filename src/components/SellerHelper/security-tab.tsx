@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { AlertTriangle, Ban, Shield } from "lucide-react";
 import type { ConceptionOverviewDto } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
@@ -81,15 +81,10 @@ export function SecurityTabContent({ overview }: { overview: ConceptionOverviewD
   const [quickFixTarget, setQuickFixTarget] = useState<QuickFixTarget | null>(null);
 
   const kpis = security?.kpis ?? [];
-  const threatActivity24h = security?.threatActivity24h ?? [];
   const threatTypes7d = security?.threatTypes7d ?? [];
   const incidents = security?.incidents ?? [];
   const blockedIdentities = security?.blockedIdentities ?? [];
-
-  const hasThreatActivity = useMemo(
-    () => threatActivity24h.some((value) => value > 0),
-    [threatActivity24h]
-  );
+  const hasThreatActivity = (security?.threatActivity24h ?? []).some((value) => value > 0);
 
   return (
     <>
@@ -144,7 +139,7 @@ export function SecurityTabContent({ overview }: { overview: ConceptionOverviewD
             />
             {hasThreatActivity ?
               <div className="mt-4 -mx-1">
-                <ThreatActivityChart series={threatActivity24h} />
+                <ThreatActivityChart series={security?.threatActivity24h ?? []} />
               </div>
             : <div className={cn(sellerPlaceholder, "mt-4")}>
                 Aucune activité de menace enregistrée sur les dernières 24 heures.
