@@ -9,6 +9,7 @@ import shopData from "@/components/Shop/shopData";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 import { parseProductContent } from "@/lib/product-content";
 
 type ProductPageAssistantProps = {
@@ -186,7 +187,7 @@ const ProductPageAssistant = ({ product, availabilityLabel }: ProductPageAssista
     }
     dispatch(updateproductDetails(nextProduct));
     sequenceStartProduct(nextProduct.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(nextProduct.id));
   };
 
   const handleAsk = async () => {

@@ -69,11 +69,27 @@ const NAV = [
   "Security",
 ] as const;
 
+type NavItem = (typeof NAV)[number];
+
+function resolveNavSection(title: string, recommendation: string): NavItem {
+  const text = `${title} ${recommendation}`.toLowerCase();
+  if (/cart|checkout|payment|conversion|funnel|panier|paiement|tunnel|formulaire/.test(text)) {
+    return "Conversion Funnel";
+  }
+  if (/behavior|scroll|session|user|heatmap|journey|comportement|utilisateur|parcours/.test(text)) {
+    return "User Behavior";
+  }
+  if (/alert|incident|security|fraud|bot|alerte|sécurité|securité|fraude/.test(text)) {
+    return "Alerts";
+  }
+  return "Dashboard";
+}
+
 const KPI = [
-  { label: "Taux de Conversion", value: "2.4%", delta: "+0.3%", deltaPositive: true },
-  { label: "Visiteurs Uniques", value: "12,847", delta: "+12.5%", deltaPositive: true },
-  { label: "Paniers Abandonnés", value: "68%", delta: "-5.2%", deltaPositive: false },
-  { label: "Pages Vues", value: "48,392", delta: "+8.1%", deltaPositive: true },
+  { label: "Conversion Rate", value: "2.4%", delta: "+0.3%", deltaPositive: true },
+  { label: "Unique Visitors", value: "12,847", delta: "+12.5%", deltaPositive: true },
+  { label: "Abandoned Carts", value: "68%", delta: "-5.2%", deltaPositive: false },
+  { label: "Page Views", value: "48,392", delta: "+8.1%", deltaPositive: true },
 ] as const;
 
 const TOP_PAGES = [
@@ -175,105 +191,105 @@ function TrafficChart({ series }: { series: number[] }) {
 
 const FUNNEL_STEPS = [
   {
-    title: "Page Produit",
+    title: "Product Page",
     count: "1,000",
-    fromPrev: "100.0% du précédent",
+    fromPrev: "100.0% of previous",
     overall: "100.0%",
     abandon: null as string | null,
     barPct: 100,
   },
   {
-    title: "Ajout au Panier",
+    title: "Add to Cart",
     count: "320",
-    fromPrev: "32.0% du précédent",
+    fromPrev: "32.0% of previous",
     overall: "32.0%",
-    abandon: "68.0% d'abandon",
+    abandon: "68.0% abandonment",
     barPct: 32,
   },
   {
-    title: "Initiation Paiement",
+    title: "Checkout Started",
     count: "85",
-    fromPrev: "26.6% du précédent",
+    fromPrev: "26.6% of previous",
     overall: "8.5%",
-    abandon: "73.4% d'abandon",
+    abandon: "73.4% abandonment",
     barPct: 8.5,
   },
   {
-    title: "Commande Finalisée",
+    title: "Order Completed",
     count: "40",
-    fromPrev: "47.1% du précédent",
+    fromPrev: "47.1% of previous",
     overall: "4.0%",
-    abandon: "52.9% d'abandon",
+    abandon: "52.9% abandonment",
     barPct: 4,
   },
 ] as const;
 
 const FUNNEL_SUMMARY = [
   {
-    label: "Taux de Conversion Global",
+    label: "Overall Conversion Rate",
     value: "4.0%",
-    sub: "+0.3% vs semaine dernière",
+    sub: "+0.3% vs last week",
     subTone: "emerald" as const,
   },
   {
-    label: "Perte Moyenne par Étape",
+    label: "Average Drop-off per Step",
     value: "64.7%",
-    sub: "3 étapes critiques détectées",
+    sub: "3 critical steps detected",
     subTone: "amber" as const,
   },
   {
-    label: "Revenu Potentiel Perdu",
+    label: "Potential Revenue Lost",
     value: "48,250 DA",
-    sub: "960 conversions manquées",
+    sub: "960 missed conversions",
     subTone: "rose" as const,
   },
 ] as const;
 
 const FRICTION_ITEMS = [
   {
-    priority: "PRIORITÉ HAUTE",
+    priority: "HIGH PRIORITY",
     priorityClass: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-    title: "Ajout au Panier → Paiement",
-    body: "68% d'abandon — Point de blocage principal identifié",
-    reco: "Réduire le nombre d'étapes du processus de paiement",
+    title: "Add to Cart → Payment",
+    body: "68% abandonment — main blocker identified",
+    reco: "Reduce the number of checkout steps",
   },
   {
-    priority: "PRIORITÉ MOYENNE",
+    priority: "MEDIUM PRIORITY",
     priorityClass: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-    title: "Paiement → Finalisation",
-    body: "53% d'abandon — 70% des abandons proviennent d'utilisateurs mobiles",
-    reco: "Optimiser le formulaire pour mobile - activer autocomplete",
+    title: "Payment → Completion",
+    body: "53% abandonment — 70% of drop-offs come from mobile users",
+    reco: "Optimize the form for mobile — enable autocomplete",
   },
 ] as const;
 
 const USER_JOURNEYS = [
   {
-    status: "ABANDONNÉ" as const,
-    users: "342 utilisateurs",
+    status: "ABANDONED" as const,
+    users: "342 users",
     duration: "4m 23s",
     rate: "0%",
-    path: "Homepage → Catalogue → Produit → Panier → Abandon",
+    path: "Homepage → Catalog → Product → Cart → Abandon",
   },
   {
-    status: "CONVERTI" as const,
-    users: "127 utilisateurs",
+    status: "CONVERTED" as const,
+    users: "127 users",
     duration: "6m 12s",
     rate: "100%",
-    path: "Homepage → Produit → Panier → Paiement → Succès",
+    path: "Homepage → Product → Cart → Payment → Success",
   },
   {
-    status: "ABANDONNÉ" as const,
-    users: "289 utilisateurs",
+    status: "ABANDONED" as const,
+    users: "289 users",
     duration: "2m 08s",
     rate: "0%",
-    path: "Recherche → Produit → Abandon",
+    path: "Search → Product → Abandon",
   },
   {
-    status: "CONVERTI" as const,
-    users: "93 utilisateurs",
+    status: "CONVERTED" as const,
+    users: "93 users",
     duration: "8m 45s",
     rate: "100%",
-    path: "Homepage → Catalogue → Filtres → Produit → Panier → Succès",
+    path: "Homepage → Catalog → Filters → Product → Cart → Success",
   },
 ] as const;
 
@@ -285,11 +301,11 @@ const HEATMAP_DEPTH_BANDS = [
 ] as const;
 
 const SCROLL_CLICK_ITEMS = [
-  { label: 'Bouton "Ajouter au panier"', clicks: "8,234 clics" },
-  { label: "Images produit", clicks: "6,891 clics" },
-  { label: "Sélection de taille", clicks: "5,432 clics" },
-  { label: "Onglet description", clicks: "3,876 clics" },
-  { label: "Avis clients", clicks: "2,654 clics" },
+  { label: '"Add to cart" button', clicks: "8,234 clicks" },
+  { label: "Product images", clicks: "6,891 clicks" },
+  { label: "Size selection", clicks: "5,432 clicks" },
+  { label: "Description tab", clicks: "3,876 clicks" },
+  { label: "Customer reviews", clicks: "2,654 clicks" },
 ] as const;
 
 const SESSION_REPLAYS = [
@@ -326,8 +342,8 @@ function HeatmapMock() {
               </div>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs text-zinc-600">Visualisation interactive de la heatmap</p>
-          <p className="mt-1 text-center text-sm font-medium text-zinc-400">Page produit - Vue mobile</p>
+          <p className="mt-2 text-center text-xs text-zinc-600">Interactive heatmap visualization</p>
+          <p className="mt-1 text-center text-sm font-medium text-zinc-400">Product page — mobile view</p>
           <div className="mt-3 flex justify-between px-1 text-[10px] tabular-nums text-zinc-600 sm:text-xs">
             {axis.map((t) => (
               <span key={t}>{t}</span>
@@ -343,18 +359,18 @@ function UserBehaviorContent() {
   return (
     <>
       <div>
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Analyse Comportementale</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Behavioral Analysis</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Suivi en temps réel des interactions et parcours utilisateurs
+          Real-time tracking of interactions and user journeys
         </p>
       </div>
 
       <div className={cn(conceptionPanel)}>
-        <h4 className="text-base font-semibold tracking-tight text-zinc-200">Parcours Utilisateurs Principaux</h4>
-        <p className="mt-1 text-sm text-zinc-500">Séquences de navigation les plus fréquentes</p>
+        <h4 className="text-base font-semibold tracking-tight text-zinc-200">Top User Journeys</h4>
+        <p className="mt-1 text-sm text-zinc-500">Most frequent navigation sequences</p>
         <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {USER_JOURNEYS.map((j) => {
-            const converted = j.status === "CONVERTI";
+            const converted = j.status === "CONVERTED";
             return (
               <div
                 key={j.path}
@@ -389,14 +405,14 @@ function UserBehaviorContent() {
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <div className={cn(conceptionPanel)}>
-          <h4 className="text-base font-semibold tracking-tight text-zinc-200">Heatmap de Clics</h4>
-          <p className="mt-1 text-sm text-zinc-500">Zones les plus interactives</p>
+          <h4 className="text-base font-semibold tracking-tight text-zinc-200">Click Heatmap</h4>
+          <p className="mt-1 text-sm text-zinc-500">Most interactive areas</p>
           <HeatmapMock />
         </div>
 
         <div className={cn(conceptionPanel)}>
-          <h4 className="text-base font-semibold tracking-tight text-zinc-200">Profondeur de Défilement</h4>
-          <p className="mt-1 text-sm text-zinc-500">Analyse du scroll utilisateur</p>
+          <h4 className="text-base font-semibold tracking-tight text-zinc-200">Scroll Depth</h4>
+          <p className="mt-1 text-sm text-zinc-500">User scroll analysis</p>
           <ul className="mt-3 divide-y divide-zinc-800">
             {SCROLL_CLICK_ITEMS.map((item, i) => (
               <li key={item.label} className="py-2.5 first:pt-0">
@@ -409,11 +425,10 @@ function UserBehaviorContent() {
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">
-                        Point d&apos;attention
+                        Attention point
                       </p>
                       <p className="mt-1 text-sm text-zinc-400">
-                        Seulement 18% des utilisateurs atteignent le bas de la page produit où se trouvent les avis
-                        clients.
+                        Only 18% of users reach the bottom of the product page where customer reviews are located.
                       </p>
                     </div>
                   </div>
@@ -422,9 +437,9 @@ function UserBehaviorContent() {
                   <div className="mt-3 flex gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5">
                     <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recommandation</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recommendation</p>
                       <p className="mt-1 text-sm text-zinc-300">
-                        Déplacer les avis clients plus haut sur la page, avant la section description détaillée.
+                        Move customer reviews higher on the page, before the detailed description section.
                       </p>
                     </div>
                   </div>
@@ -436,8 +451,8 @@ function UserBehaviorContent() {
       </div>
 
       <div className={cn(conceptionPanel)}>
-        <h4 className="text-base font-semibold tracking-tight text-zinc-200">Enregistrements de Sessions</h4>
-        <p className="mt-1 text-sm text-zinc-500">Replay des sessions utilisateurs avec abandon de panier</p>
+        <h4 className="text-base font-semibold tracking-tight text-zinc-200">Session Recordings</h4>
+        <p className="mt-1 text-sm text-zinc-500">Replay user sessions with cart abandonment</p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {SESSION_REPLAYS.map((s) => (
             <div
@@ -450,7 +465,7 @@ function UserBehaviorContent() {
               <p className="text-sm font-semibold text-zinc-200">Session #{s.id}</p>
               <dl className="mt-4 space-y-2 text-sm">
                 <div>
-                  <dt className="text-xs text-zinc-600">Durée</dt>
+                  <dt className="text-xs text-zinc-600">Duration</dt>
                   <dd className="font-medium tabular-nums text-zinc-300">4m 23s</dd>
                 </div>
                 <div>
@@ -458,8 +473,8 @@ function UserBehaviorContent() {
                   <dd className="font-medium text-zinc-300">iPhone 13</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-zinc-600">Statut</dt>
-                  <dd className="font-medium text-rose-300">Abandon panier</dd>
+                  <dt className="text-xs text-zinc-600">Status</dt>
+                  <dd className="font-medium text-rose-300">Cart abandonment</dd>
                 </div>
               </dl>
               <button
@@ -470,7 +485,7 @@ function UserBehaviorContent() {
                 )}
               >
                 <Play className="h-4 w-4 shrink-0 text-orange-300" aria-hidden />
-                Voir le replay
+                Watch replay
               </button>
             </div>
           ))}
@@ -481,85 +496,91 @@ function UserBehaviorContent() {
 }
 
 const AI_REC_SUMMARY = [
-  { label: "Revenu Potentiel Total", value: "31,050 DA" },
-  { label: "Recommandations Actives", value: "5" },
-  { label: "Impact Moyen", value: "+4.1%" },
+  { label: "Total Potential Revenue", value: "31,050 DA" },
+  { label: "Active Recommendations", value: "5" },
+  { label: "Average Impact", value: "+4.1%" },
 ] as const;
 
 const AI_RECOMMENDATIONS = [
   {
-    priority: "PRIORITÉ HAUTE",
+    priority: "HIGH PRIORITY",
     tier: "high" as const,
-    impact: "+8% de conversion",
-    title: "Optimiser le formulaire de paiement mobile",
+    impact: "+8% conversion",
+    title: "Optimize the mobile checkout form",
     confidence: 94,
     analyse:
-      "70% des abandons sur la page de paiement proviennent d'utilisateurs mobiles. L'analyse indique que le formulaire de saisie de l'adresse contient 12 champs, ce qui est excessif sur petit écran.",
+      "70% of drop-offs on the checkout page come from mobile users. Analysis shows the address form has 12 fields, which is excessive on a small screen.",
     recommendation:
-      "Activer la saisie automatique (autocomplete), réduire à 6 champs essentiels et afficher une barre de progression.",
+      "Enable autocomplete, reduce to 6 essential fields, and show a progress bar.",
     revenue: "12,400 DA",
-    implementation: "2-3 jours",
+    implementation: "2-3 days",
     roi: "12.4x",
   },
   {
-    priority: "PRIORITÉ HAUTE",
+    priority: "HIGH PRIORITY",
     tier: "high" as const,
-    impact: "+5.2% de conversion",
-    title: "Ajouter le paiement invité",
+    impact: "+5.2% conversion",
+    title: "Add guest checkout",
     confidence: 89,
     analyse:
-      "Le taux d'abandon entre l'ajout au panier et le paiement est de 68%. L'analyse comportementale montre que 42% des utilisateurs quittent après avoir vu le formulaire d'inscription obligatoire.",
+      "The abandonment rate between add to cart and checkout is 68%. Behavioral analysis shows 42% of users leave after seeing the mandatory sign-up form.",
     recommendation:
-      'Proposer une option "Commander en tant qu\'invité" pour réduire la friction. Collecter les informations nécessaires uniquement.',
+      'Offer a "Checkout as guest" option to reduce friction. Collect only the information you need.',
     revenue: "8,750 DA",
-    implementation: "3-4 jours",
+    implementation: "3-4 days",
     roi: "12.4x",
   },
   {
-    priority: "PRIORITÉ MOYENNE",
+    priority: "MEDIUM PRIORITY",
     tier: "medium" as const,
-    impact: "+3.1% de conversion",
-    title: "Optimiser le temps de chargement",
+    impact: "+3.1% conversion",
+    title: "Improve load time",
     confidence: 82,
     analyse:
-      "Le temps de chargement moyen de la page produit est de 4.2 secondes. 23% des visiteurs quittent avant le chargement complet.",
+      "Average product page load time is 4.2 seconds. 23% of visitors leave before the page finishes loading.",
     recommendation:
-      "Compresser les images produit (format WebP), implémenter le lazy loading et activer la mise en cache navigateur.",
+      "Compress product images (WebP), implement lazy loading, and enable browser caching.",
     revenue: "4,200 DA",
-    implementation: "1-2 jours",
+    implementation: "1-2 days",
     roi: "12.4x",
   },
   {
-    priority: "PRIORITÉ MOYENNE",
+    priority: "MEDIUM PRIORITY",
     tier: "medium" as const,
-    impact: "+2.8% de conversion",
-    title: "Afficher les frais de livraison plus tôt",
+    impact: "+2.8% conversion",
+    title: "Show shipping fees earlier",
     confidence: 76,
     analyse:
-      "Les données de scroll montrent que seulement 34% des utilisateurs défilent jusqu'aux frais de livraison sur la page produit. Les frais affichés au moment du paiement causent 18% d'abandons.",
+      "Scroll data shows only 34% of users scroll to shipping fees on the product page. Fees shown at checkout cause 18% of abandonments.",
     recommendation:
-      "Afficher les frais de livraison estimés directement sur la page produit, près du bouton \"Ajouter au panier\".",
+      'Show estimated shipping fees directly on the product page, near the "Add to cart" button.',
     revenue: "3,600 DA",
-    implementation: "1 jour",
+    implementation: "1 day",
     roi: "12.4x",
   },
   {
-    priority: "PRIORITÉ BASSE",
+    priority: "LOW PRIORITY",
     tier: "low" as const,
-    impact: "+1.5% de conversion",
-    title: "Améliorer les filtres de recherche",
+    impact: "+1.5% conversion",
+    title: "Improve search filters",
     confidence: 71,
     analyse:
-      "Les utilisateurs qui utilisent les filtres ont un taux de conversion 2.3x supérieur. Actuellement, seulement 28% des visiteurs interagissent avec les filtres.",
+      "Users who use filters convert 2.3x more often. Currently, only 28% of visitors interact with filters.",
     recommendation:
-      "Rendre les filtres plus visibles, ajouter des filtres rapides populaires et afficher le nombre de résultats en temps réel.",
+      "Make filters more visible, add popular quick filters, and show the result count in real time.",
     revenue: "2,100 DA",
-    implementation: "2-3 jours",
+    implementation: "2-3 days",
     roi: "12.4x",
   },
 ] as const;
 
-function aiRecPriorityStyles(tier: (typeof AI_RECOMMENDATIONS)[number]["tier"]) {
+function aiRecPriorityStyles(tier: ConceptionRecommendationDto["priority"]) {
+  if (tier === "critical") {
+    return {
+      badge: "bg-rose-600 text-white ring-1 ring-rose-400/60",
+      border: "border-rose-500/40",
+    };
+  }
   if (tier === "high") {
     return {
       badge: "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/35",
@@ -581,10 +602,16 @@ function aiRecPriorityStyles(tier: (typeof AI_RECOMMENDATIONS)[number]["tier"]) 
 function AiRecommendationsContent({
   recommendations,
   overview,
+  onDismissRecommendation,
+  onNavigateSection,
 }: {
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
+  onDismissRecommendation?: (id: string) => Promise<boolean>;
+  onNavigateSection?: (section: NavItem) => void;
 }) {
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const usingPlaceholderRecs = recommendations.length === 0;
   const recs =
     recommendations.length > 0 ?
@@ -619,15 +646,15 @@ function AiRecommendationsContent({
     recommendations.length > 0 ?
       [
         {
-          label: "Recommandations actives",
+          label: "Active recommendations",
           value: String(recommendations.length),
         },
         {
-          label: "Événements (7j)",
-          value: overview ? new Intl.NumberFormat("fr-DZ").format(overview.totalEvents7d) : "—",
+          label: "Events (7d)",
+          value: overview ? new Intl.NumberFormat("en-US").format(overview.totalEvents7d) : "—",
         },
         {
-          label: "Confiance moyenne",
+          label: "Average confidence",
           value: `${Math.round(recommendations.reduce((a, b) => a + b.confidence, 0) / recommendations.length)}%`,
         },
       ]
@@ -638,14 +665,14 @@ function AiRecommendationsContent({
       <div>
         <h3 className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-orange-200">
           <Lightbulb className="h-5 w-5" aria-hidden />
-          Recommandations IA
+          AI Recommendations
         </h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Moteur règles + données micro-événements (complétable par LLM / ML)
+          Rules engine + micro-event data (extensible with LLM / ML)
         </p>
         {usingPlaceholderRecs ? (
           <p className="mt-2 rounded-lg border border-amber-400/55 bg-gradient-to-r from-orange-900/65 via-amber-800/45 to-orange-900/65 px-3 py-2 text-xs font-medium text-amber-100">
-            Mode démo: recommandations placeholder affichées jusqu&apos;à réception d&apos;assez de signaux réels.
+            Demo mode: placeholder recommendations shown until enough real signals are received.
           </p>
         ) : null}
       </div>
@@ -672,7 +699,7 @@ function AiRecommendationsContent({
                   {rec.priority}
                 </span>
                 <p className="text-sm text-zinc-400">
-                  <span className="text-zinc-600">Impact estimé : </span>
+                  <span className="text-zinc-600">Estimated impact: </span>
                   <span className="font-semibold text-orange-300">{rec.impact}</span>
                 </p>
               </div>
@@ -680,7 +707,7 @@ function AiRecommendationsContent({
               <div className="mt-3 flex flex-col gap-3 border-t border-zinc-800 pt-3 sm:flex-row sm:items-start sm:justify-between">
                 <h4 className="text-base font-semibold leading-snug text-zinc-200 sm:max-w-[65%]">{rec.title}</h4>
                 <div className="shrink-0 sm:text-right">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-600">Confiance IA</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-600">AI confidence</p>
                   <p className="mt-1 text-2xl font-bold tabular-nums text-orange-200">{rec.confidence}%</p>
                   <ProgressBar value={rec.confidence} className="mt-2 sm:w-28 sm:ml-auto" />
                 </div>
@@ -689,58 +716,76 @@ function AiRecommendationsContent({
               <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-950/25 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-orange-300/90">
                   <BarChart2 className="h-4 w-4" aria-hidden />
-                  Analyse
+                  Analysis
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-sky-100/90">{rec.analyse}</p>
               </div>
 
               <div className="mt-3 rounded-lg border border-orange-500/35 bg-orange-950/45 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Recommandation</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-300">Recommendation</p>
                 <p className="mt-2 text-sm leading-relaxed text-orange-100/90">{rec.recommendation}</p>
               </div>
 
               <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-zinc-800 pt-3 sm:grid-cols-3">
                 <div>
-                  <dt className="text-xs text-zinc-600">Revenu estimé</dt>
+                  <dt className="text-xs text-zinc-600">Estimated revenue</dt>
                   <dd className="mt-1 text-lg font-semibold tabular-nums text-orange-100">{rec.revenue}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-zinc-600">Temps d&apos;implémentation</dt>
+                  <dt className="text-xs text-zinc-600">Implementation time</dt>
                   <dd className="mt-1 text-lg font-semibold text-zinc-300">{rec.implementation}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-zinc-600">ROI estimé</dt>
+                  <dt className="text-xs text-zinc-600">Estimated ROI</dt>
                   <dd className="mt-1 text-lg font-semibold text-orange-300">{rec.roi}</dd>
                 </div>
               </dl>
 
+              {expandedKey === rec.key ?
+                <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Full details</p>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-300">{rec.analyse}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-300">{rec.recommendation}</p>
+                </div>
+              : null}
+
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
+                  disabled={usingPlaceholderRecs || busyKey === rec.key}
+                  onClick={() => onNavigateSection?.(resolveNavSection(rec.title, rec.recommendation))}
                   className={cn(
                     conceptionNoFocusRing,
-                    "rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:scale-[1.02] hover:from-orange-400 hover:to-amber-400 active:scale-[0.99]"
+                    "rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:scale-[1.02] hover:from-orange-400 hover:to-amber-400 active:scale-[0.99] disabled:opacity-50"
                   )}
                 >
-                  Implémenter cette recommandation
+                  Implement this recommendation
                 </button>
                 <button
                   type="button"
+                  disabled={usingPlaceholderRecs}
+                  onClick={() => setExpandedKey((current) => (current === rec.key ? null : rec.key))}
                   className={cn(
                     conceptionNoFocusRing,
-                    "rounded-lg border border-orange-400/45 bg-zinc-800 px-4 py-2 text-sm font-medium text-orange-100 transition hover:border-orange-300 hover:bg-zinc-700 hover:text-orange-50"
+                    "rounded-lg border border-orange-400/45 bg-zinc-800 px-4 py-2 text-sm font-medium text-orange-100 transition hover:border-orange-300 hover:bg-zinc-700 hover:text-orange-50 disabled:opacity-50"
                   )}
                 >
-                  Plus de détails
+                  {expandedKey === rec.key ? "Hide details" : "More details"}
                 </button>
                 <button
                   type="button"
+                  disabled={usingPlaceholderRecs || busyKey === rec.key}
+                  onClick={() => {
+                    if (usingPlaceholderRecs) return;
+                    setBusyKey(rec.key);
+                    void onDismissRecommendation?.(rec.key).finally(() => setBusyKey(null));
+                  }}
                   className={cn(
                     conceptionNoFocusRing,
-                    "rounded-lg px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-orange-200"
+                    "rounded-lg px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-orange-200 disabled:opacity-50"
                   )}
                 >
-                  Ignorer
+                  Dismiss
                 </button>
               </div>
             </article>
@@ -763,32 +808,32 @@ type AlertSummaryRow = {
 
 const ALERTS_SUMMARY: AlertSummaryRow[] = [
   {
-    label: "Alertes Actives",
+    label: "Active Alerts",
     value: "4",
     icon: "alert",
-    sub: { text: "2 critiques", className: "font-medium text-red-600" },
+    sub: { text: "2 critical", className: "font-medium text-red-600" },
     tag: null,
   },
   {
-    label: "En Investigation",
+    label: "Under Investigation",
     value: "2",
     icon: "clock",
-    sub: { text: "Temps moyen: 45min", className: "text-zinc-600" },
+    sub: { text: "Average time: 45min", className: "text-zinc-600" },
     tag: null,
   },
   {
-    label: "Résolues (24h)",
+    label: "Resolved (24h)",
     value: "12",
     icon: "check",
-    sub: { text: "-25% vs hier", className: "font-medium text-emerald-600" },
+    sub: { text: "-25% vs yesterday", className: "font-medium text-emerald-600" },
     tag: null,
   },
   {
-    label: "Temps de Réponse",
+    label: "Response Time",
     value: "8min",
     icon: "zap",
     sub: null,
-    tag: "Moyenne",
+    tag: "Average",
   },
 ];
 
@@ -824,72 +869,72 @@ function AlertSummaryIconBadge({ kind }: { kind: AlertSummaryIcon }) {
 
 const ALERT_INCIDENTS = [
   {
-    severity: "CRITIQUE",
+    severity: "CRITICAL",
     tier: "critical" as const,
-    title: "Chute de conversion",
+    title: "Conversion drop",
     status: "ACTIVE",
     statusKind: "active" as const,
-    description: "Taux de conversion inférieur de 28% à la moyenne des 7 derniers jours",
-    detail: "Détecté à 14:23. Taux actuel: 1.7% (moyenne: 2.4%)",
-    timeAgo: "Il y a 12 minutes",
-    affected: "847 utilisateurs affectés",
+    description: "Conversion rate is 28% below the 7-day average",
+    detail: "Detected at 2:23 PM. Current rate: 1.7% (average: 2.4%)",
+    timeAgo: "12 minutes ago",
+    affected: "847 users affected",
   },
   {
-    severity: "HAUTE",
+    severity: "HIGH",
     tier: "high" as const,
-    title: "Erreur technique",
+    title: "Technical error",
     status: "ACTIVE",
     statusKind: "active" as const,
-    description: "Erreurs JavaScript détectées sur la page de paiement",
-    detail: '8.3% des sessions rencontrent l\'erreur "Cannot read property cartTotal"',
-    timeAgo: "Il y a 34 minutes",
-    affected: "234 utilisateurs affectés",
+    description: "JavaScript errors detected on the checkout page",
+    detail: '8.3% of sessions hit the error "Cannot read property cartTotal"',
+    timeAgo: "34 minutes ago",
+    affected: "234 users affected",
   },
   {
-    severity: "MOYENNE",
+    severity: "MEDIUM",
     tier: "medium" as const,
-    title: "Abandon panier massif",
-    status: "EN INVESTIGATION",
+    title: "Mass cart abandonment",
+    status: "UNDER INVESTIGATION",
     statusKind: "investigation" as const,
-    description: "Taux d'abandon panier > 85% sur les 2 dernières heures",
-    detail: "Concentration anormale d'abandons sur utilisateurs iOS",
-    timeAgo: "Il y a 1 heure",
-    affected: "456 utilisateurs affectés",
+    description: "Cart abandonment rate > 85% over the last 2 hours",
+    detail: "Unusual concentration of drop-offs among iOS users",
+    timeAgo: "1 hour ago",
+    affected: "456 users affected",
   },
   {
-    severity: "BASSE",
+    severity: "LOW",
     tier: "low" as const,
-    title: "Problème de performance",
-    status: "EN INVESTIGATION",
+    title: "Performance issue",
+    status: "UNDER INVESTIGATION",
     statusKind: "investigation" as const,
-    description: "Temps de chargement moyen de la page catalogue > 4 secondes",
-    detail: "Pics de latence détectés entre 13:00 et 15:00",
-    timeAgo: "Il y a 2 heures",
-    affected: "1234 utilisateurs affectés",
+    description: "Average catalog page load time > 4 seconds",
+    detail: "Latency spikes detected between 1:00 PM and 3:00 PM",
+    timeAgo: "2 hours ago",
+    affected: "1,234 users affected",
   },
 ] as const;
 
 const ALERTS_RESOLVED = [
   {
-    title: "Augmentation soudaine du trafic (+350%) résolu",
-    category: "Chute de conversion",
-    time: "Il y a 3 heures",
-    duration: "Durée: 45 minutes",
-    detail: "Taux < moyenne -20%",
+    title: "Sudden traffic spike (+350%) resolved",
+    category: "Conversion drop",
+    time: "3 hours ago",
+    duration: "Duration: 45 minutes",
+    detail: "Rate < average -20%",
   },
   {
-    title: "Erreur de connexion base de données résolue",
-    category: "Erreurs JavaScript",
-    time: "Il y a 5 heures",
-    duration: "Durée: 12 minutes",
-    detail: "Erreurs > 5% des sessions",
+    title: "Database connection error resolved",
+    category: "JavaScript errors",
+    time: "5 hours ago",
+    duration: "Duration: 12 minutes",
+    detail: "Errors > 5% of sessions",
   },
 ] as const;
 
 const ALERT_RULES = [
-  { name: "Trafic anormal", condition: "Augmentation > 300% en 15min" },
-  { name: "Temps de chargement", condition: "Temps moyen > 4 secondes" },
-  { name: "Abandon panier", condition: "Taux > 80% sur 2h" },
+  { name: "Abnormal traffic", condition: "Increase > 300% in 15min" },
+  { name: "Load time", condition: "Average time > 4 seconds" },
+  { name: "Cart abandonment", condition: "Rate > 80% over 2h" },
 ] as const;
 
 function alertSeverityPill(tier: (typeof ALERT_INCIDENTS)[number]["tier"]) {
@@ -914,10 +959,10 @@ function alertIncidentCardSurface(tier: (typeof ALERT_INCIDENTS)[number]["tier"]
 
 function alertDtoToIncident(a: ConceptionAlertDto) {
   const sev =
-    a.severity === "critical" ? "CRITIQUE"
-    : a.severity === "high" ? "HAUTE"
-    : a.severity === "medium" ? "MOYENNE"
-    : "BASSE";
+    a.severity === "critical" ? "CRITICAL"
+    : a.severity === "high" ? "HIGH"
+    : a.severity === "medium" ? "MEDIUM"
+    : "LOW";
   return {
     severity: sev,
     tier: a.severity,
@@ -926,10 +971,10 @@ function alertDtoToIncident(a: ConceptionAlertDto) {
     statusKind: "active" as const,
     description: a.description,
     detail: a.detail ?? "",
-    timeAgo: new Date(a.createdAt).toLocaleString("fr-FR"),
+    timeAgo: new Date(a.createdAt).toLocaleString("en-US"),
     affected:
       a.affectedSessionsEstimate != null ?
-        `${new Intl.NumberFormat("fr-DZ").format(a.affectedSessionsEstimate)} session(s)`
+        `${new Intl.NumberFormat("en-US").format(a.affectedSessionsEstimate)} session(s)`
       : "—",
   };
 }
@@ -938,26 +983,26 @@ function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null 
   const s = overview?.security;
   return (
     <div className="rounded-xl border border-orange-500/25 bg-zinc-900 p-3 sm:p-4">
-      <h3 className="text-lg font-semibold text-zinc-200">Sécurité &amp; intégrité des données</h3>
+      <h3 className="text-lg font-semibold text-zinc-200">Security &amp; data integrity</h3>
       <p className="mt-1 text-sm text-zinc-500">
-        Heuristiques bots / scraping sur les micro-événements (fenêtre 7 jours)
+        Bot / scraping heuristics on micro-events (7-day window)
       </p>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className={cn(conceptionPanelCompact)}>
-          <p className="text-sm text-zinc-500">Sessions à haute vélocité</p>
+          <p className="text-sm text-zinc-500">High-velocity sessions</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-orange-200">
-            {s ? new Intl.NumberFormat("fr-DZ").format(s.highVelocitySessions) : "—"}
+            {s ? new Intl.NumberFormat("en-US").format(s.highVelocitySessions) : "—"}
           </p>
         </div>
         <div className={cn(conceptionPanelCompact)}>
-          <p className="text-sm text-zinc-500">Sessions suspectes (agrégat)</p>
+          <p className="text-sm text-zinc-500">Suspicious sessions (aggregate)</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-rose-200">
-            {s ? new Intl.NumberFormat("fr-DZ").format(s.suspiciousSessions7d) : "—"}
+            {s ? new Intl.NumberFormat("en-US").format(s.suspiciousSessions7d) : "—"}
           </p>
         </div>
       </div>
       <ul className="mt-4 space-y-2 text-sm text-zinc-400">
-        {(s?.notes ?? ["Chargement…"]).map((n) => (
+        {(s?.notes ?? ["Loading…"]).map((n) => (
           <li key={n} className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
             {n}
           </li>
@@ -967,7 +1012,16 @@ function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null 
   );
 }
 
-function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
+function AlertsContent({
+  alerts,
+  onDismissAlert,
+  onNavigateSection,
+}: {
+  alerts: ConceptionAlertDto[];
+  onDismissAlert?: (id: string, disposition: "resolved" | "ignored") => Promise<boolean>;
+  onNavigateSection?: (section: NavItem) => void;
+}) {
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const usingPlaceholderAlerts = alerts.length === 0;
   const incidents =
     alerts.length > 0 ?
@@ -978,7 +1032,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
     alerts.length > 0 ?
       ALERTS_SUMMARY.map((row, i) =>
         i === 0 ?
-          { ...row, value: String(activeCount), sub: { text: "Données moteur Conception", className: "text-zinc-600" } }
+          { ...row, value: String(activeCount), sub: { text: "Conception engine data", className: "text-zinc-600" } }
         : row
       )
     : ALERTS_SUMMARY;
@@ -994,7 +1048,7 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
     >
       {usingPlaceholderAlerts ? (
         <p className="mb-3 rounded-lg border border-orange-300/75 bg-gradient-to-r from-orange-100 to-amber-50 px-3 py-2 text-xs font-semibold text-orange-800">
-          Mode démo: alertes placeholder affichées en attendant les incidents réels.
+          Demo mode: placeholder alerts shown while waiting for real incidents.
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
@@ -1031,10 +1085,10 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
           <div>
             <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 sm:text-base">
               <Bell className="h-4 w-4" aria-hidden />
-              Alertes Actives
+              Active Alerts
             </h4>
             <p className="text-[11px] leading-snug text-zinc-600 sm:text-xs">
-              Incidents en cours nécessitant une attention
+              Ongoing incidents that need attention
             </p>
           </div>
         </div>
@@ -1086,30 +1140,44 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"
+                    disabled={usingPlaceholderAlerts}
+                    onClick={() => onNavigateSection?.("Conversion Funnel")}
                     className={cn(
                       conceptionNoFocusRing,
-                      "rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-center text-sm font-semibold text-zinc-950 transition hover:from-orange-400 hover:to-amber-400"
+                      "rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-center text-sm font-semibold text-zinc-950 transition hover:from-orange-400 hover:to-amber-400 disabled:opacity-50"
                     )}
                   >
-                    Analyser en détail
+                    Review in detail
                   </button>
                   <button
                     type="button"
+                    disabled={usingPlaceholderAlerts || busyKey === ("key" in a ? a.key : a.title)}
+                    onClick={() => {
+                      const alertId = "key" in a ? a.key : a.title;
+                      setBusyKey(alertId);
+                      void onDismissAlert?.(alertId, "resolved").finally(() => setBusyKey(null));
+                    }}
                     className={cn(
                       conceptionNoFocusRing,
-                      "rounded-lg border border-orange-300 bg-white px-4 py-2 text-center text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
+                      "rounded-lg border border-orange-300 bg-white px-4 py-2 text-center text-sm font-semibold text-orange-700 transition hover:bg-orange-50 disabled:opacity-50"
                     )}
                   >
-                    Marquer comme résolu
+                    Mark as resolved
                   </button>
                   <button
                     type="button"
+                    disabled={usingPlaceholderAlerts || busyKey === ("key" in a ? a.key : a.title)}
+                    onClick={() => {
+                      const alertId = "key" in a ? a.key : a.title;
+                      setBusyKey(alertId);
+                      void onDismissAlert?.(alertId, "ignored").finally(() => setBusyKey(null));
+                    }}
                     className={cn(
                       conceptionNoFocusRing,
-                      "px-2 py-2 text-left text-sm font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline sm:text-center"
+                      "px-2 py-2 text-left text-sm font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline sm:text-center disabled:opacity-50"
                     )}
                   >
-                    Ignorer temporairement
+                    Snooze
                   </button>
                 </div>
               </article>
@@ -1122,9 +1190,9 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
         <div className="rounded-xl border border-orange-200/55 bg-white p-3 sm:p-4">
           <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 sm:text-base">
             <CheckCircle2 className="h-4 w-4" aria-hidden />
-            Alertes Résolues
+            Resolved Alerts
           </h4>
-          <p className="mt-0.5 text-xs text-zinc-600">Historique récent</p>
+          <p className="mt-0.5 text-xs text-zinc-600">Recent history</p>
           <ul className="mt-2 space-y-2">
             {ALERTS_RESOLVED.map((r) => (
               <li key={r.title} className="border-b border-zinc-100 pb-2 last:border-0 last:pb-0">
@@ -1148,10 +1216,10 @@ function AlertsContent({ alerts }: { alerts: ConceptionAlertDto[] }) {
             <Settings2 className="h-4 w-4 text-zinc-500" aria-hidden />
             <h4 className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 sm:text-base">
               <Settings2 className="h-4 w-4" aria-hidden />
-              Règles d&apos;Alerte
+              Alert Rules
             </h4>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-600">Configuration des déclencheurs</p>
+          <p className="mt-0.5 text-xs text-zinc-600">Trigger configuration</p>
           <ul className="mt-2 divide-y divide-zinc-100">
             {ALERT_RULES.map((rule) => (
               <li key={rule.name} className="flex flex-col gap-0.5 py-2 first:pt-0">
@@ -1185,9 +1253,9 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
   return (
     <>
       <div className={cn(conceptionPanel)}>
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Tunnel de Conversion</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Conversion Funnel</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Données issues des micro-événements (parcours produit → panier → checkout → Chargily)
+          Data from micro-events (product → cart → checkout → Chargily journey)
         </p>
 
         <div className="mt-3 space-y-0">
@@ -1241,9 +1309,9 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
       </div>
 
       <div className={cn(conceptionPanel)}>
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Points de Friction Détectés</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-zinc-200">Detected Friction Points</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Règles analytiques sur le tunnel (aligné moteur Conception / backend)
+          Funnel analytics rules (aligned with Conception engine / backend)
         </p>
         <div className="mt-3 space-y-2.5">
           {friction.map((f) => (
@@ -1261,7 +1329,7 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
               <div className="mt-2 flex gap-2 rounded-lg border border-amber-500/35 bg-amber-950/25 px-3 py-2">
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Recommandation</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Recommendation</p>
                   <p className="mt-0.5 text-sm leading-snug text-amber-100/90">{f.reco}</p>
                 </div>
               </div>
@@ -1288,9 +1356,9 @@ function DashboardMainContent({
     overview?.topPages?.length ?
       overview.topPages.map((r) => ({
         page: r.page,
-        views: new Intl.NumberFormat("fr-DZ").format(r.views),
-        conversions: new Intl.NumberFormat("fr-DZ").format(r.conversions),
-        rate: `${r.ratePct.toFixed(2).replace(".", ",")}%`,
+        views: new Intl.NumberFormat("en-US").format(r.views),
+        conversions: new Intl.NumberFormat("en-US").format(r.conversions),
+        rate: `${r.ratePct.toFixed(2)}%`,
       }))
     : TOP_PAGES;
 
@@ -1298,7 +1366,7 @@ function DashboardMainContent({
     <>
       {loading ? (
         <p className="rounded-lg border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm text-sky-100/85">
-          Chargement des indicateurs…
+          Loading metrics…
         </p>
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1315,7 +1383,7 @@ function DashboardMainContent({
             <p className="mt-1.5 text-xl font-semibold tabular-nums text-orange-100">{k.value}</p>
             <p className={`mt-1.5 text-xs font-medium ${k.deltaPositive ? "text-orange-300" : "text-rose-400"}`}>
               {k.delta}
-              <span className="ml-1 font-normal text-zinc-600">vs période préc.</span>
+              <span className="ml-1 font-normal text-zinc-600">vs prior period</span>
             </p>
           </div>
         ))}
@@ -1325,8 +1393,8 @@ function DashboardMainContent({
         <div className={cn(conceptionPanelCompact)}>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-base font-semibold tracking-tight text-zinc-200">Trafic &amp; Ventes (24h)</h3>
-              <p className="mt-0.5 text-sm leading-snug text-zinc-500">Volume d&apos;événements collectés (normalisé)</p>
+              <h3 className="text-base font-semibold tracking-tight text-zinc-200">Traffic &amp; Sales (24h)</h3>
+              <p className="mt-0.5 text-sm leading-snug text-zinc-500">Collected event volume (normalized)</p>
             </div>
           </div>
           <div className="mt-2 -mx-1">
@@ -1335,8 +1403,8 @@ function DashboardMainContent({
         </div>
 
         <div className={cn(conceptionPanelCompact)}>
-          <h3 className="text-base font-semibold tracking-tight text-zinc-200">Appareils</h3>
-          <p className="mt-0.5 text-sm leading-snug text-zinc-500">Distribution (contexte navigateur enregistré)</p>
+          <h3 className="text-base font-semibold tracking-tight text-zinc-200">Devices</h3>
+          <p className="mt-0.5 text-sm leading-snug text-zinc-500">Distribution (recorded browser context)</p>
           <div className="mt-3 min-h-[130px] space-y-3">
             {devices.map((d) => (
               <div key={d.name}>
@@ -1352,16 +1420,16 @@ function DashboardMainContent({
       </div>
 
       <div className={cn(conceptionPanelCompact)}>
-        <h3 className="text-base font-semibold tracking-tight text-zinc-200">Pages les Plus Performantes</h3>
-        <p className="mt-0.5 text-sm leading-snug text-zinc-500">Vues micro-événements et clics « acheter » par chemin</p>
+        <h3 className="text-base font-semibold tracking-tight text-zinc-200">Top Performing Pages</h3>
+        <p className="mt-0.5 text-sm leading-snug text-zinc-500">Micro-event views and buy clicks by path</p>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-700 text-xs uppercase tracking-wide text-zinc-600">
                 <th className="pb-2 pr-3 font-medium">Page</th>
-                <th className="pb-2 pr-3 font-medium">Vues</th>
+                <th className="pb-2 pr-3 font-medium">Views</th>
                 <th className="pb-2 pr-3 font-medium">Conversions</th>
-                <th className="pb-2 font-medium">Taux</th>
+                <th className="pb-2 font-medium">Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -1380,7 +1448,7 @@ function DashboardMainContent({
           </table>
         </div>
         <p className="mt-2 text-right text-xs text-zinc-600">
-          {overview?.computedAt ? new Date(overview.computedAt).toLocaleString("fr-FR") : "—"}
+          {overview?.computedAt ? new Date(overview.computedAt).toLocaleString("en-US") : "—"}
         </p>
       </div>
     </>
@@ -1399,6 +1467,9 @@ export default function ConceptionIntelligenceDashboard() {
     runAnalyze,
     analyzeBusy,
     analyzeMessage,
+    actionMessage,
+    dismissAlert,
+    dismissRecommendation,
   } = useConceptionAdminData();
   const trafficSeries = overview?.trafficHourlyNormalized?.length
     ? overview.trafficHourlyNormalized
@@ -1433,7 +1504,7 @@ export default function ConceptionIntelligenceDashboard() {
               E-Commerce Intelligence
             </p>
             <h2 className="mt-2 text-xl font-semibold leading-snug tracking-tight text-zinc-300 sm:text-2xl">
-              Système d&apos;Analyse et de Recommandation
+              Analysis &amp; Recommendation System
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -1442,13 +1513,13 @@ export default function ConceptionIntelligenceDashboard() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-80" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-300" />
               </span>
-              {overview?.hasEventData ? "Données live" : "En attente de données"}
+              {overview?.hasEventData ? "Live data · auto-refresh" : "Waiting for data · auto-refresh"}
             </span>
             <div className="rounded-xl border border-orange-500/45 bg-zinc-900 px-5 py-3 text-center transition-transform duration-500 hover:scale-[1.02]">
               <p className="text-2xl font-bold tabular-nums text-orange-50">
-                {overview ? new Intl.NumberFormat("fr-DZ").format(overview.activeVisitors15m) : "—"}
+                {overview ? new Intl.NumberFormat("en-US").format(overview.activeVisitors15m) : "—"}
               </p>
-              <p className="text-[11px] font-medium text-orange-200">sessions 15 min</p>
+              <p className="text-[11px] font-medium text-orange-200">sessions (15 min)</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -1460,7 +1531,7 @@ export default function ConceptionIntelligenceDashboard() {
                   "rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 transition hover:border-orange-400/50 hover:bg-zinc-700 hover:text-orange-100 disabled:opacity-50"
                 )}
               >
-                Actualiser
+                Refresh
               </button>
               <button
                 type="button"
@@ -1471,7 +1542,7 @@ export default function ConceptionIntelligenceDashboard() {
                   "rounded-lg border border-orange-500/60 bg-gradient-to-r from-orange-500/95 to-amber-500/95 px-3 py-2 text-xs font-semibold text-zinc-950 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50"
                 )}
               >
-                {analyzeBusy ? "Analyse…" : "Lancer l’analyse"}
+                {analyzeBusy ? "Analyzing…" : "Run analysis"}
               </button>
             </div>
           </div>
@@ -1483,14 +1554,19 @@ export default function ConceptionIntelligenceDashboard() {
           </p>
         ) : null}
         {analyzeMessage ? (
-          <p className="mt-2 rounded-lg border border-violet-500/30 bg-violet-950/35 px-3 py-2 text-xs text-violet-100/90">
+          <p className="mt-2 rounded-lg border border-green-500/45 bg-green-950/45 px-3 py-2 text-xs text-green-100">
             {analyzeMessage}
+          </p>
+        ) : null}
+        {actionMessage ? (
+          <p className="mt-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-300">
+            {actionMessage}
           </p>
         ) : null}
 
         <nav
           className="mt-4 flex flex-wrap gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/95 p-1.5"
-          aria-label="Sections intelligence"
+          aria-label="Intelligence sections"
         >
           {NAV.map((item) => {
             const isActive = activeNav === item;
@@ -1524,9 +1600,20 @@ export default function ConceptionIntelligenceDashboard() {
         {activeNav === "Conversion Funnel" && <ConversionFunnelContent overview={overview} />}
         {activeNav === "User Behavior" && <UserBehaviorContent />}
         {activeNav === "AI Recommendations" && (
-          <AiRecommendationsContent recommendations={recommendations} overview={overview} />
+          <AiRecommendationsContent
+            recommendations={recommendations}
+            overview={overview}
+            onDismissRecommendation={dismissRecommendation}
+            onNavigateSection={setActiveNav}
+          />
         )}
-        {activeNav === "Alerts" && <AlertsContent alerts={alerts} />}
+        {activeNav === "Alerts" && (
+          <AlertsContent
+            alerts={alerts}
+            onDismissAlert={dismissAlert}
+            onNavigateSection={setActiveNav}
+          />
+        )}
         {activeNav === "Security" && <SecurityContent overview={overview} />}
         {activeNav !== "Dashboard" &&
           activeNav !== "Conversion Funnel" &&
@@ -1535,7 +1622,7 @@ export default function ConceptionIntelligenceDashboard() {
           activeNav !== "Alerts" &&
           activeNav !== "Security" && (
             <p className="rounded-lg border border-dashed border-amber-500/45 bg-amber-950/35 px-4 py-3 text-center text-sm text-amber-100">
-              Aperçu : contenu &quot;{activeNav}&quot; à brancher sur vos données.
+              Preview: &quot;{activeNav}&quot; content to wire up to your data.
             </p>
           )}
       </div>

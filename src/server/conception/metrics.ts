@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
+import { CONCEPTION_ALERT_RULES } from "@/server/conception/alert-rules";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
   ConceptionDeviceSlice,
@@ -11,17 +12,18 @@ import type {
   ConceptionOverviewDto,
   ConceptionSecurityBrief,
   ConceptionTopPage,
+  ConceptionUserBehaviorBrief,
 } from "@/types/conception-admin";
 
 const MS_DAY = 86_400_000;
 
 function fmtInt(n: number): string {
-  return new Intl.NumberFormat("fr-DZ").format(Math.round(n));
+  return new Intl.NumberFormat("en-US").format(Math.round(n));
 }
 
 function fmtPct(p: number, digits = 1): string {
   if (!Number.isFinite(p)) return "0%";
-  return `${p.toFixed(digits).replace(".", ",")}%`;
+  return `${p.toFixed(digits)}%`;
 }
 
 function clamp01(x: number): number {
@@ -132,9 +134,17 @@ async function trafficHourlyNormalized(since: Date): Promise<number[]> {
     .groupBy(sql`date_trunc('hour', ${salesMicroEventTable.createdAt})`)
     .orderBy(sql`date_trunc('hour', ${salesMicroEventTable.createdAt})`);
 
+  if (rows.length === 0) {
+    return Array.from({ length: 24 }, () => 0);
+  }
+
   const counts = rows.map((r) => r.cnt);
   const max = Math.max(1, ...counts);
-  return rows.map((r) => clamp01(r.cnt / max));
+  const normalized = rows.map((r) => clamp01(r.cnt / max));
+  if (normalized.length >= 24) {
+    return normalized.slice(-24);
+  }
+  return [...Array.from({ length: 24 - normalized.length }, () => 0), ...normalized];
 }
 
 async function topPagesByVolume(since: Date, limit: number): Promise<ConceptionTopPage[]> {
@@ -194,9 +204,9 @@ async function deviceSlices(since: Date): Promise<ConceptionDeviceSlice[]> {
   const tot = row?.total ?? 0;
   if (tot === 0) {
     return [
-      { name: "Mobile", pct: 0, color: "bg-orange-500" },
-      { name: "Desktop", pct: 0, color: "bg-amber-500" },
-      { name: "Tablet", pct: 0, color: "bg-orange-800" },
+      { name: "Mobile", pct: 0, color: "bg-blue" },
+      { name: "Desktop", pct: 0, color: "bg-blue" },
+      { name: "Tablet", pct: 0, color: "bg-blue" },
     ];
   }
   const mobile = row?.mobile ?? 0;
@@ -206,9 +216,9 @@ async function deviceSlices(since: Date): Promise<ConceptionDeviceSlice[]> {
   const pT = (100 * tablet) / tot;
   const pD = Math.max(0, 100 - pM - pT);
   return [
-    { name: "Mobile", pct: Math.round(pM), color: "bg-orange-500" },
-    { name: "Desktop", pct: Math.round(pD), color: "bg-amber-500" },
-    { name: "Tablet", pct: Math.round(pT), color: "bg-orange-800" },
+    { name: "Mobile", pct: Math.round(pM), color: "bg-blue" },
+    { name: "Desktop", pct: Math.round(pD), color: "bg-blue" },
+    { name: "Tablet", pct: Math.round(pT), color: "bg-blue" },
   ];
 }
 
@@ -232,13 +242,13 @@ async function securityBrief(since: Date): Promise<ConceptionSecurityBrief> {
   const notes: string[] = [];
   if (highVelocity > 0) {
     notes.push(
-      `${fmtInt(highVelocity)} session(s) avec très forte densité d'événements en moins de 6 minutes (heuristique type bot / scraping).`
+      `${fmtInt(highVelocity)} session(s) with very high event density in under 6 minutes (bot/scraping-style heuristic).`
     );
   } else {
-    notes.push("Aucune session à haute vélocité détectée sur la fenêtre courante.");
+    notes.push("No high-velocity sessions detected in the current window.");
   }
   notes.push(
-    "Pour une détection renforcée (souris, patterns répétés), étendez le script client (événements cb_* du contrat Conception)."
+    "For stronger detection (mouse, repeated patterns), extend the client script (cb_* events in the Conception contract)."
   );
 
   return {
@@ -256,10 +266,10 @@ function buildFunnelSteps(f: {
 }): ConceptionFunnelStep[] {
   const base = Math.max(1, f.nProduct);
   const steps: { title: string; n: number }[] = [
-    { title: "Page produit", n: f.nProduct },
-    { title: "Ajout au panier", n: f.nCart },
-    { title: "Initiation paiement", n: f.nCheckoutPath },
-    { title: "Commande finalisée", n: f.nFinal },
+    { title: "Product page", n: f.nProduct },
+    { title: "Add to cart", n: f.nCart },
+    { title: "Checkout started", n: f.nCheckoutPath },
+    { title: "Order completed", n: f.nFinal },
   ];
 
   return steps.map((s, i) => {
@@ -271,9 +281,9 @@ function buildFunnelSteps(f: {
       title: s.title,
       count: s.n,
       countLabel: fmtInt(s.n),
-      fromPrevLabel: i === 0 ? "100,0% du précédent" : `${fmtPct(fromPrev)} du précédent`,
+      fromPrevLabel: i === 0 ? "100.0% of previous" : `${fmtPct(fromPrev)} of previous`,
       overallLabel: `${fmtPct(overall)}`,
-      abandonLabel: abandon === null ? null : `${fmtPct(abandon)} d'abandon`,
+      abandonLabel: abandon === null ? null : `${fmtPct(abandon)} abandonment`,
       barPct: Math.min(100, overall),
     };
   });
@@ -290,11 +300,11 @@ function buildFriction(f: {
     const drop = 100 * (1 - f.nCart / f.nProduct);
     if (drop >= 15) {
       items.push({
-        priority: "PRIORITÉ HAUTE",
+        priority: "HIGH PRIORITY",
         priorityClass: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-        title: "Page produit → Panier",
-        body: `${fmtPct(drop)} d'abandon entre la vue produit et l'intention d'achat.`,
-        reco: "Renforcer la preuve sociale, clarifier la disponibilité et le prix, réduire la friction sur le CTA principal.",
+        title: "Product page → Cart",
+        body: `${fmtPct(drop)} abandonment between product view and purchase intent.`,
+        reco: "Strengthen social proof, clarify availability and price, and reduce friction on the primary CTA.",
       });
     }
   }
@@ -302,11 +312,11 @@ function buildFriction(f: {
     const drop = 100 * (1 - f.nCheckoutPath / f.nCart);
     if (drop >= 20) {
       items.push({
-        priority: "PRIORITÉ HAUTE",
+        priority: "HIGH PRIORITY",
         priorityClass: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-        title: "Panier → Paiement",
-        body: `${fmtPct(drop)} d'abandon — principal point de friction détecté sur les données réelles.`,
-        reco: "Réduire les étapes du tunnel, proposer le paiement invité, afficher tôt les frais de livraison.",
+        title: "Cart → Checkout",
+        body: `${fmtPct(drop)} abandonment — main friction point detected in live data.`,
+        reco: "Reduce funnel steps, offer guest checkout, and show shipping costs early.",
       });
     }
   }
@@ -314,24 +324,265 @@ function buildFriction(f: {
     const drop = 100 * (1 - f.nFinal / f.nCheckoutPath);
     if (drop >= 15) {
       items.push({
-        priority: "PRIORITÉ MOYENNE",
+        priority: "MEDIUM PRIORITY",
         priorityClass: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-        title: "Paiement → Finalisation",
-        body: `${fmtPct(drop)} d'abandon à la dernière étape (retour paiement / erreurs).`,
-        reco: "Surveiller les erreurs JS (cb_js_error), tester le flux Chargily et le mobile sur le formulaire.",
+        title: "Checkout → Completion",
+        body: `${fmtPct(drop)} abandonment at the final step (payment return / errors).`,
+        reco: "Monitor JS errors (cb_js_error), test the Chargily flow and mobile on the form.",
       });
     }
   }
   if (items.length === 0) {
     items.push({
-      priority: "ANALYSE",
+      priority: "ANALYSIS",
       priorityClass: "border-zinc-600/50 bg-zinc-800/40 text-zinc-300",
-      title: "Volume insuffisant ou tunnel sain",
-      body: "Pas de friction majeure détectée sur la fenêtre actuelle, ou pas assez de données pour conclure.",
-      reco: "Lancez une analyse planifiée après accumulation de trafic, et enrichissez le tracking (scroll, hover, erreurs).",
+      title: "Insufficient volume or healthy funnel",
+      body: "No major friction detected in the current window, or not enough data to conclude.",
+      reco: "Run a scheduled analysis after traffic builds, and enrich tracking (scroll, hover, errors).",
     });
   }
   return items.slice(0, 4);
+}
+
+function fmtDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return `${minutes}m ${remainder}s`;
+}
+
+function collapsePath(pages: string[]): string {
+  const deduped: string[] = [];
+  for (const page of pages) {
+    const normalized = page.trim();
+    if (!normalized) continue;
+    if (deduped[deduped.length - 1] === normalized) continue;
+    deduped.push(normalized);
+  }
+  return deduped.join(" → ");
+}
+
+function emptyUserBehavior(): ConceptionUserBehaviorBrief {
+  return {
+    journeys: [],
+    heatmapBands: [],
+    scrollDepth: [],
+    scrollInsight: null,
+    scrollRecommendation: null,
+    sessionReplays: [],
+    productPageLabel: null,
+  };
+}
+
+async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehaviorBrief> {
+  const journeyRes = await db.execute(sql`
+    WITH ordered AS (
+      SELECT
+        session_key,
+        page_path,
+        event_name,
+        created_at,
+        ROW_NUMBER() OVER (
+          PARTITION BY session_key
+          ORDER BY sequence_index, created_at
+        ) AS ord
+      FROM sales_micro_event
+      WHERE created_at >= ${since}
+        AND page_path IS NOT NULL
+        AND page_path <> ''
+    ),
+  session_paths AS (
+      SELECT
+        session_key,
+        string_agg(page_path, ' → ' ORDER BY ord) AS path_raw,
+        bool_or(event_name = ${STORE_EVENT.purchase}) AS converted,
+        EXTRACT(EPOCH FROM (MAX(created_at) - MIN(created_at)))::double precision AS duration_s
+      FROM ordered
+      GROUP BY session_key
+      HAVING COUNT(*) >= 2
+    )
+    SELECT path_raw, converted, duration_s
+    FROM session_paths
+    ORDER BY duration_s DESC NULLS LAST
+    LIMIT 200
+  `);
+
+  const journeyRows = journeyRes.rows as {
+    path_raw: unknown;
+    converted: unknown;
+    duration_s: unknown;
+  }[];
+
+  const journeyCounts = new Map<
+    string,
+    { sessions: number; converted: number; durationTotal: number }
+  >();
+
+  for (const row of journeyRows) {
+    const raw = typeof row.path_raw === "string" ? row.path_raw : "";
+    const path = collapsePath(raw.split(" → "));
+    if (!path) continue;
+    const converted = Boolean(row.converted);
+    const duration = Number(row.duration_s ?? 0);
+    const current = journeyCounts.get(path) ?? { sessions: 0, converted: 0, durationTotal: 0 };
+    current.sessions += 1;
+    if (converted) current.converted += 1;
+    if (Number.isFinite(duration)) current.durationTotal += duration;
+    journeyCounts.set(path, current);
+  }
+
+  const totalJourneySessions = Array.from(journeyCounts.values()).reduce((sum, item) => sum + item.sessions, 0);
+  const journeys = Array.from(journeyCounts.entries())
+    .sort((a, b) => b[1].sessions - a[1].sessions)
+    .slice(0, 4)
+    .map(([path, stats]) => ({
+      path,
+      status: stats.converted > stats.sessions / 2 ? ("CONVERTED" as const) : ("ABANDONED" as const),
+      ratePct: totalJourneySessions > 0 ? (100 * stats.sessions) / totalJourneySessions : 0,
+      sessions: stats.sessions,
+      durationLabel: fmtDuration(stats.sessions > 0 ? stats.durationTotal / stats.sessions : 0),
+    }));
+
+  const scrollRes = await db.execute(sql`
+    SELECT
+      COALESCE(NULLIF(payload_json::jsonb->>'depth_pct', ''), '0')::int AS depth,
+      COUNT(DISTINCT session_key)::int AS sessions
+    FROM sales_micro_event
+    WHERE created_at >= ${since}
+      AND event_name = 'pa_scroll'
+    GROUP BY 1
+    ORDER BY 1
+  `);
+
+  const scrollRows = scrollRes.rows as { depth: unknown; sessions: unknown }[];
+  const scrollByDepth = new Map<number, number>();
+  for (const row of scrollRows) {
+    const depth = Number(row.depth ?? 0);
+    const sessions = Number(row.sessions ?? 0);
+    if (!Number.isFinite(depth) || depth <= 0 || !Number.isFinite(sessions)) continue;
+    scrollByDepth.set(depth, sessions);
+  }
+
+  const depthLabels = [
+    { depth: 25, label: "25% of page" },
+    { depth: 50, label: "50% of page" },
+    { depth: 75, label: "75% of page" },
+    { depth: 100, label: "Bottom of page (100%)" },
+  ];
+
+  const scrollSessions = depthLabels.map((item) => scrollByDepth.get(item.depth) ?? 0);
+  const scrollMax = Math.max(1, ...scrollSessions);
+  const scrollDepth = depthLabels.map((item, index) => {
+    const sessions = scrollSessions[index] ?? 0;
+    return {
+      label: item.label,
+      sessions,
+      sessionsLabel: `${fmtInt(sessions)} session(s)`,
+      pct: (100 * sessions) / scrollMax,
+    };
+  });
+
+  const heatmapBands = depthLabels.map((item, index) => ({
+    label: item.label,
+    intensityPct: Math.round(scrollDepth[index]?.pct ?? 0),
+  }));
+
+  const top25 = scrollByDepth.get(25) ?? 0;
+  const bottom100 = scrollByDepth.get(100) ?? 0;
+  let scrollInsight: string | null = null;
+  let scrollRecommendation: string | null = null;
+  if (top25 > 0 && bottom100 >= 0) {
+    const reachBottomPct = (100 * bottom100) / top25;
+    scrollInsight = `${fmtPct(reachBottomPct, 0)} of sessions that reach 25% scroll depth continue to the bottom of the page.`;
+    if (reachBottomPct < 35) {
+      scrollRecommendation =
+        "Move social proof elements and the secondary CTA above the long description section.";
+    }
+  }
+
+  const productPageRes = await db.execute(sql`
+    SELECT page_path
+    FROM sales_micro_event
+    WHERE created_at >= ${since}
+      AND event_name = 'pa_scroll'
+      AND page_path IS NOT NULL
+      AND page_path <> ''
+    GROUP BY page_path
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+  `);
+  const productPageRow = productPageRes.rows[0] as { page_path: unknown } | undefined;
+  const productPageLabel =
+    typeof productPageRow?.page_path === "string" && productPageRow.page_path ?
+      productPageRow.page_path
+    : null;
+
+  const replayRes = await db.execute(sql`
+    WITH cart_sessions AS (
+      SELECT DISTINCT session_key
+      FROM sales_micro_event
+      WHERE created_at >= ${since}
+        AND event_name = ${STORE_EVENT.addToCart}
+    ),
+    purchase_sessions AS (
+      SELECT DISTINCT session_key
+      FROM sales_micro_event
+      WHERE created_at >= ${since}
+        AND event_name = ${STORE_EVENT.purchase}
+    ),
+    abandoned AS (
+      SELECT session_key
+      FROM cart_sessions
+      EXCEPT
+      SELECT session_key
+      FROM purchase_sessions
+    )
+    SELECT
+      e.session_key,
+      EXTRACT(EPOCH FROM (MAX(e.created_at) - MIN(e.created_at)))::double precision AS duration_s,
+      MAX(e.payload_json::jsonb->>'device') FILTER (
+        WHERE e.event_name = ${STORE_EVENT.globalContext}
+      ) AS device
+    FROM sales_micro_event e
+    INNER JOIN abandoned a ON a.session_key = e.session_key
+    WHERE e.created_at >= ${since}
+    GROUP BY e.session_key
+    ORDER BY MAX(e.created_at) DESC
+    LIMIT 6
+  `);
+
+  const sessionReplays = (replayRes.rows as { session_key: unknown; duration_s: unknown; device: unknown }[]).map(
+    (row, index) => {
+      const sessionKey = typeof row.session_key === "string" ? row.session_key : `session-${index + 1}`;
+      const tail = sessionKey.slice(-4).toUpperCase();
+      const device = typeof row.device === "string" && row.device ? row.device : "Unknown";
+      return {
+        id: tail,
+        durationLabel: fmtDuration(Number(row.duration_s ?? 0)),
+        device: device.charAt(0).toUpperCase() + device.slice(1),
+        status: "Cart abandonment",
+      };
+    }
+  );
+
+  if (
+    journeys.length === 0 &&
+    scrollDepth.every((row) => row.sessions === 0) &&
+    sessionReplays.length === 0
+  ) {
+    return emptyUserBehavior();
+  }
+
+  return {
+    journeys,
+    heatmapBands,
+    scrollDepth,
+    scrollInsight,
+    scrollRecommendation,
+    sessionReplays,
+    productPageLabel,
+  };
 }
 
 export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> {
@@ -352,6 +603,7 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     topPages,
     devices,
     security,
+    userBehavior,
   ] = await Promise.all([
     distinctSessionsSince(d7),
     totalEventsSince(d7),
@@ -362,6 +614,7 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     topPagesByVolume(d7, 8),
     deviceSlices(d7),
     securityBrief(d7),
+    buildUserBehaviorBrief(d7),
   ]);
 
   const prevRes = await db.execute(sql`
@@ -401,46 +654,46 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
 
   const kpis: ConceptionKpiRow[] = [
     {
-      label: "Taux de conversion",
+      label: "Conversion rate",
       value: fmtPct(100 * rateNow, 2),
       delta: `${deltaConv >= 0 ? "+" : ""}${fmtPct(deltaConv, 2)}`,
       deltaPositive: deltaConv >= 0,
     },
     {
-      label: "Visiteurs uniques (7j)",
+      label: "Unique visitors (7d)",
       value: fmtInt(sessions7d),
       delta:
         sessionsPrev7dWindow > 0
           ? `${sessions7d >= sessionsPrev7dWindow ? "+" : ""}${fmtPct(
               (100 * (sessions7d - sessionsPrev7dWindow)) / sessionsPrev7dWindow,
               1
-            )} vs période préc.`
+            )} vs prev. period`
           : "—",
       deltaPositive: sessions7d >= sessionsPrev7dWindow,
     },
     {
-      label: "Abandon panier (proxy)",
+      label: "Cart abandonment (proxy)",
       value: fmtPct(cartAbandonProxy, 1),
-      delta: "Panier → commande",
+      delta: "Cart → order",
       deltaPositive: cartAbandonProxy < 65,
     },
     {
-      label: "Événements (7j)",
+      label: "Events (7d)",
       value: fmtInt(events7d),
-      delta: "collecte micro",
+      delta: "micro collection",
       deltaPositive: true,
     },
   ];
 
   const funnelSummary: ConceptionFunnelSummary[] = [
     {
-      label: "Taux de conversion global",
+      label: "Overall conversion rate",
       value: fmtPct(100 * rateNow, 2),
-      sub: `${deltaConv >= 0 ? "+" : ""}${fmtPct(deltaConv, 2)} vs fenêtre précédente`,
+      sub: `${deltaConv >= 0 ? "+" : ""}${fmtPct(deltaConv, 2)} vs previous window`,
       subTone: deltaConv >= 0 ? "emerald" : "rose",
     },
     {
-      label: "Perte moyenne par étape",
+      label: "Average loss per step",
       value:
         funnel.nProduct > 0
           ? fmtPct(
@@ -449,33 +702,18 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
               1
             )
           : "—",
-      sub: "Basé sur le tunnel 4 étapes",
+      sub: "Based on the 4-step funnel",
       subTone: "amber",
     },
     {
-      label: "Sessions actives (15 min)",
+      label: "Active sessions (15 min)",
       value: fmtInt(active15m),
-      sub: "Clés de session distinctes",
+      sub: "Distinct session keys",
       subTone: "emerald",
     },
   ];
 
   const hasEventData = events7d > 0;
-
-  let trafficChart = traffic;
-  if (trafficChart.length < 8) {
-    const base = trafficChart.length ? trafficChart.reduce((a, b) => a + b, 0) / trafficChart.length : 0.2;
-    trafficChart = Array.from({ length: 24 }, (_, i) => {
-      const t = i / 23;
-      return clamp01(base + 0.15 * Math.sin(t * Math.PI * 2));
-    });
-  } else if (trafficChart.length > 24) {
-    trafficChart = trafficChart.slice(-24);
-  } else {
-    while (trafficChart.length < 24) {
-      trafficChart.push(trafficChart[trafficChart.length - 1] ?? 0.1);
-    }
-  }
 
   return {
     source: hasEventData ? "live" : "empty",
@@ -487,10 +725,12 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     frictionItems: buildFriction(funnel),
     topPages,
     devices,
-    trafficHourlyNormalized: trafficChart,
+    trafficHourlyNormalized: traffic,
     activeVisitors15m: active15m,
     totalEvents7d: events7d,
     security,
+    userBehavior,
+    alertRules: CONCEPTION_ALERT_RULES,
     computedAt: new Date().toISOString(),
   };
 }

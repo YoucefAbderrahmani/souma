@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { setProductAnalyticsProductContext, trackProductAnalytics } from "@/lib/product-analytics-client";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  flushProductAnalyticsNow,
+  setProductAnalyticsProductContext,
+  trackProductAnalytics,
+} from "@/lib/product-analytics-client";
+import { PRODUCT_HEATMAP_SURFACE_ATTR, productHeatmapPointerPct } from "@/lib/product-heatmap-surface";
 
 function inferDevice(ua: string): "mobile" | "tablet" | "desktop" {
   const l = ua.toLowerCase();
@@ -39,6 +44,9 @@ type Args = {
   activeColor: string;
   selectedSpecs: Record<string, string>;
   detailPrice: number;
+  surfaceReady?: boolean;
+  embed?: boolean;
+  disablePointerTracking?: boolean;
 };
 
 export function useProductAnalyticsTracking({
@@ -51,6 +59,9 @@ export function useProductAnalyticsTracking({
   activeColor,
   selectedSpecs,
   detailPrice,
+  surfaceReady = true,
+  embed = false,
+  disablePointerTracking = false,
 }: Args) {
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const priceRef = useRef<HTMLHeadingElement | null>(null);
@@ -64,6 +75,14 @@ export function useProductAnalyticsTracking({
   const pageEnter = useRef<number>(Date.now());
   const specsVisibleSince = useRef<number | null>(null);
   const specsDwellProductId = useRef<number | null>(null);
+  const surfaceElementRef = useRef<HTMLElement | null>(null);
+  const [trackingSurface, setTrackingSurface] = useState<HTMLElement | null>(null);
+  const optionsPrimed = useRef(false);
+
+  const surfaceRef = useCallback((node: HTMLElement | null) => {
+    surfaceElementRef.current = node;
+    setTrackingSurface(node);
+  }, []);
 
   const flushSpecsViewTime = useCallback((reason: "tab_change" | "unmount") => {
     const t = specsVisibleSince.current;
@@ -86,6 +105,7 @@ export function useProductAnalyticsTracking({
     pageEnter.current = Date.now();
     imgSince.current = Date.now();
     prevImg.current = 0;
+    optionsPrimed.current = false;
     flushSpecsViewTime("unmount");
   }, [productId, flushSpecsViewTime]);
 
@@ -155,24 +175,112 @@ export function useProductAnalyticsTracking({
     };
   }, [productId]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onScroll = () => {
-      const el = document.documentElement;
-      const h = el.scrollHeight - el.clientHeight;
-      if (h <= 0) return;
-      const p = (el.scrollTop / h) * 100;
-      for (const band of [25, 50, 75, 100] as const) {
-        if (p >= band - 2 && !scrollBands.current.has(band)) {
-          scrollBands.current.add(band);
-          trackProductAnalytics("pa_scroll", { depth_pct: band, page: window.location.pathname });
-        }
-      }
+  useLayoutEffect(() => {
+    if (
+      disablePointerTracking ||
+      embed ||
+      !surfaceReady ||
+      typeof window === "undefined" ||
+      productId <= 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let frameId = 0;
+    let cleanup: (() => void) | null = null;
+    let retryTimer: number | null = null;
+    let lateRetryTimer: number | null = null;
+
+    const resolveSurface = () => {
+      const fromRef = surfaceElementRef.current;
+      if (fromRef?.isConnected) return fromRef;
+      return document.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+
+    const syncProductContext = () => {
+      setProductAnalyticsProductContext({
+        productId,
+        productTitle,
+        pagePath: window.location.pathname,
+      });
+    };
+
+    const bindSurface = (surface: HTMLElement) => {
+      let lastHoverSent = 0;
+      const onPointerMove = (event: MouseEvent) => {
+        const now = Date.now();
+        if (now - lastHoverSent < 280) return;
+        lastHoverSent = now;
+        syncProductContext();
+        const position = productHeatmapPointerPct(surface, event);
+        trackProductAnalytics("pa_pointer_hover", {
+          product_id: productId,
+          page_path: window.location.pathname,
+          heatmap_embed: false,
+          ...position,
+        });
+      };
+
+      const onPointerClick = (event: MouseEvent) => {
+        syncProductContext();
+        const position = productHeatmapPointerPct(surface, event);
+        trackProductAnalytics("pa_pointer_click", {
+          product_id: productId,
+          page_path: window.location.pathname,
+          heatmap_embed: false,
+          ...position,
+        });
+        void flushProductAnalyticsNow();
+      };
+
+      surface.addEventListener("mousemove", onPointerMove, { passive: true });
+      surface.addEventListener("click", onPointerClick, { capture: true, passive: true });
+
+      const onScroll = () => {
+        const el = document.documentElement;
+        const h = el.scrollHeight - el.clientHeight;
+        if (h <= 0) return;
+        const p = (el.scrollTop / h) * 100;
+        for (const band of [25, 50, 75, 100] as const) {
+          if (p >= band - 2 && !scrollBands.current.has(band)) {
+            scrollBands.current.add(band);
+            trackProductAnalytics("pa_scroll", { depth_pct: band, page: window.location.pathname });
+          }
+        }
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      return () => {
+        surface.removeEventListener("mousemove", onPointerMove);
+        surface.removeEventListener("click", onPointerClick, { capture: true });
+        window.removeEventListener("scroll", onScroll);
+      };
+    };
+
+    const tryAttach = () => {
+      if (cancelled || cleanup) return;
+      const surface = resolveSurface();
+      if (!surface) {
+        frameId = window.requestAnimationFrame(tryAttach);
+        return;
+      }
+      cleanup = bindSurface(surface);
+    };
+
+    tryAttach();
+    retryTimer = window.setTimeout(tryAttach, 250);
+    lateRetryTimer = window.setTimeout(tryAttach, 1000);
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+      if (retryTimer != null) window.clearTimeout(retryTimer);
+      if (lateRetryTimer != null) window.clearTimeout(lateRetryTimer);
+      cleanup?.();
+    };
+  }, [disablePointerTracking, embed, productId, productTitle, surfaceReady, trackingSurface]);
 
   useEffect(() => {
     if (prevImg.current === previewImg) return;
@@ -189,6 +297,12 @@ export function useProductAnalyticsTracking({
 
   useEffect(() => {
     const j = JSON.stringify(selectedSpecs);
+    if (!optionsPrimed.current) {
+      optionsPrimed.current = true;
+      lastSpecsJson.current = j;
+      lastColor.current = activeColor;
+      return;
+    }
     if (lastSpecsJson.current === j && lastColor.current === activeColor) return;
     lastSpecsJson.current = j;
     lastColor.current = activeColor;
@@ -303,6 +417,7 @@ export function useProductAnalyticsTracking({
   return {
     titleRef,
     priceRef,
+    surfaceRef,
     onGalleryZoom,
     onThumbnailSelect,
   };

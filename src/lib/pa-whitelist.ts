@@ -16,6 +16,8 @@ export const PA_EVENT_NAMES = [
   "pa_specs_interaction",
   "pa_specs_view_time",
   "pa_scroll",
+  "pa_pointer_hover",
+  "pa_pointer_click",
   "pa_add_to_cart",
   "pa_remove_from_cart",
   "pa_begin_checkout",

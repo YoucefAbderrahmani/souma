@@ -7,6 +7,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const SingleItem = ({ item, removeItemFromCart }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -29,7 +30,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
       window.localStorage.setItem("productDetails", JSON.stringify(item));
     }
     sequenceStartProduct(item.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(item.id));
   };
 
   return (
@@ -41,7 +42,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
 
         <div>
           <h3 className="font-medium text-dark mb-1 ease-out duration-200 hover:text-blue">
-            <Link href="/shop-details" onClick={handleOpenProduct}>
+            <Link href={productDetailsHref(item.id)} onClick={handleOpenProduct}>
               {item.title}
             </Link>
           </h3>

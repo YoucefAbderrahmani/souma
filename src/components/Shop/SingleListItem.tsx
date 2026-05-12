@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const SingleListItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -27,7 +28,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
     dispatch(updateproductDetails({ ...item }));
     localStorage.setItem("productDetails", JSON.stringify(item));
     sequenceStartProduct(item.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(item.id));
   };
 
   const goToProductPage = () => {
@@ -158,7 +159,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
         <div className="w-full flex flex-col gap-5 sm:flex-row sm:items-center justify-center sm:justify-between py-5 px-4 sm:px-7.5 lg:pl-11 lg:pr-12">
           <div>
             <h3 className="font-medium text-dark ease-out duration-200 hover:text-blue mb-1.5">
-              <Link href="/shop-details" onClick={goToProductPage}>
+              <Link href={productDetailsHref(item.id)} onClick={goToProductPage}>
                 {" "}
                 {item.title}{" "}
               </Link>

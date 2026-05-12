@@ -7,6 +7,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
+import {
+  applyVitrinaQuickFixes,
+  parseSubmittedVitrinaQuickFixes,
+  resolveVitrinaQuickFixes,
+} from "@/server/seller-helper/apply-vitrina-quick-fixes";
 
 export type CreateProductState = {
   success?: boolean;
@@ -267,6 +272,58 @@ export async function updateProductDetailsAction(
   }
 }
 
+export type ApplyVitrinaQuickFixesState = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  applied?: string[];
+};
+
+export async function applyVitrinaQuickFixesAction(
+  _prevState: ApplyVitrinaQuickFixesState,
+  formData: FormData
+): Promise<ApplyVitrinaQuickFixesState> {
+  try {
+    const productId = String(formData.get("productId") ?? "").trim();
+    const rawFixes = String(formData.get("fixes") ?? "[]");
+    const rawFixIds = String(formData.get("fixIds") ?? "[]");
+
+    if (!productId) {
+      return { error: "Missing product id." };
+    }
+
+    let requestedFixes;
+    try {
+      requestedFixes = parseSubmittedVitrinaQuickFixes(rawFixes, rawFixIds);
+    } catch {
+      return { error: "Invalid quick fix selection." };
+    }
+
+    const resolved = await resolveVitrinaQuickFixes(productId, requestedFixes);
+    if (resolved.error) {
+      return { error: resolved.error };
+    }
+
+    const result = await applyVitrinaQuickFixes(productId, resolved.fixes);
+    if (result.error) {
+      return { error: result.error };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/seller-helper");
+    revalidatePath("/shop-with-sidebar");
+    return {
+      success: true,
+      applied: result.applied,
+      message: `Applied ${result.applied.length} quick fix${result.applied.length === 1 ? "" : "es"}.`,
+    };
+  } catch (error) {
+    console.error("[applyVitrinaQuickFixesAction]", error);
+    const message = error instanceof Error ? error.message : "Failed to apply quick fixes.";
+    return { error: message };
+  }
+}
+
 export async function updateProductFullAction(
   _prevState: UpdateProductState,
   formData: FormData
@@ -398,6 +455,7 @@ export async function updateProductFullAction(
     }
 
     revalidatePath("/admin");
+    revalidatePath("/seller-helper");
     revalidatePath("/shop-with-sidebar");
     return { success: true, message: "Product updated successfully." };
   } catch {

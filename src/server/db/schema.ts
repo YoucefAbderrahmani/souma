@@ -93,7 +93,7 @@ export const productsTable = pgTable("products", {
   /** Vitrina (promo) price — when set, customer pays this and price is +20% reference */
   jomlaPrice: integer("jomla_price"),
   rating: integer().notNull().default(0),
-  description: varchar({ length: 255 }).notNull(),
+  description: text("description").notNull(),
   manufacturer: varchar({ length: 255 }).notNull(),
   // in stock attribute for normal ecommerce but for the project with w4t3r
   // replace it with quantity till the product is ordered from the store

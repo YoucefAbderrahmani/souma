@@ -2,7 +2,12 @@
 export function salesMicroEventCategory(eventName: string): string {
   const n = eventName.toLowerCase();
 
-  if (n.startsWith("pa_image") || n.startsWith("pa_scroll") || n.startsWith("pa_specs_view")) {
+  if (
+    n.startsWith("pa_image") ||
+    n.startsWith("pa_scroll") ||
+    n.startsWith("pa_specs_view") ||
+    n.startsWith("pa_pointer")
+  ) {
     return "Visual & engagement";
   }
 

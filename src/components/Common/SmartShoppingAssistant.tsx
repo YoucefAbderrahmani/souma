@@ -8,6 +8,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const ASSISTANT_BROWSER_SESSION_KEY = "sq_browser_session";
 
@@ -73,7 +74,7 @@ const SmartShoppingAssistant = () => {
     }
     dispatch(updateproductDetails(product));
     sequenceStartProduct(product.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(product.id));
   };
 
   const handleAsk = async () => {

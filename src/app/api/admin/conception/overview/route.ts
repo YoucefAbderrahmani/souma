@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import { buildConceptionOverview } from "@/server/conception/metrics";

@@ -64,6 +64,23 @@ export const PA_TRACKING_PARAMETER_GROUPS: PaParameterGroup[] = [
     ],
   },
   {
+    id: "heatmap",
+    title: "Product page heatmap",
+    description: "Pointer position on the product detail surface for hover and click heatmaps.",
+    items: [
+      {
+        event: "pa_pointer_hover",
+        label: "Pointer hover",
+        hint: "product_id, page_path, x_pct, y_pct",
+      },
+      {
+        event: "pa_pointer_click",
+        label: "Pointer click",
+        hint: "product_id, page_path, x_pct, y_pct",
+      },
+    ],
+  },
+  {
     id: "cart",
     title: "Cart & wishlist",
     items: [

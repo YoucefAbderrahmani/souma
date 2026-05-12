@@ -11,6 +11,7 @@ import shopData from "@/components/Shop/shopData";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const Hero = () => {
   const router = useRouter();
@@ -27,7 +28,7 @@ const Hero = () => {
     dispatch(updateproductDetails({ ...product }));
     localStorage.setItem("productDetails", JSON.stringify(product));
     sequenceStartProduct(product.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(product.id));
   };
 
   return (

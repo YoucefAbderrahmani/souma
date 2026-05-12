@@ -19,6 +19,17 @@ function parseClientTs(v: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function resolveProductLocalId(
+  bodyProductId: number | null,
+  payload: Record<string, unknown> | null
+): number | null {
+  if (bodyProductId != null && bodyProductId > 0) return bodyProductId;
+  const raw = payload?.product_id ?? payload?.productId;
+  const parsed = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
@@ -93,7 +104,7 @@ export async function POST(req: NextRequest) {
       rows.push({
         sessionKey,
         userId,
-        productLocalId,
+        productLocalId: resolveProductLocalId(productLocalId, payload),
         productTitle: productTitle ? productTitle.slice(0, 500) : null,
         pagePath,
         referrer,

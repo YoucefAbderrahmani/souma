@@ -9,6 +9,7 @@ import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const LatestProducts = ({ products }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -44,7 +45,7 @@ const LatestProducts = ({ products }) => {
 
               <div>
                 <h3 className="font-medium text-dark mb-1 ease-out duration-200 hover:text-blue">
-                  <Link href="/shop-details" onClick={() => goToProduct(product)}>
+                  <Link href={productDetailsHref(product.id)} onClick={() => goToProduct(product)}>
                     {" "}
                     {product.title}{" "}
                   </Link>

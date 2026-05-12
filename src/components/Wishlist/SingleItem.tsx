@@ -10,6 +10,7 @@ import Link from "next/link";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
 
@@ -60,7 +61,7 @@ const SingleItem = ({ item }) => {
       window.localStorage.setItem("productDetails", JSON.stringify(item));
     }
     sequenceStartProduct(item.title);
-    router.push("/shop-details");
+    router.push(productDetailsHref(item.id));
   };
 
   return (
@@ -102,7 +103,7 @@ const SingleItem = ({ item }) => {
 
             <div>
               <h3 className="text-dark ease-out duration-200 hover:text-blue">
-                <Link href="/shop-details" onClick={handleOpenProduct}>
+                <Link href={productDetailsHref(item.id)} onClick={handleOpenProduct}>
                   {item.title}
                 </Link>
               </h3>

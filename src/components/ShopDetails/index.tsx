@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
@@ -8,8 +8,9 @@ import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
+import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parseProductContent } from "@/lib/product-content";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
@@ -17,12 +18,69 @@ import ProductPageAssistant from "./ProductPageAssistant";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
+import type { Product } from "@/types/product";
+import { resolveTrackingProductId } from "@/lib/product-page-link";
+import { HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX } from "@/lib/product-heatmap-surface";
 
-const ShopDetails = () => {
+type ShopDetailsProps = {
+  initialProductId?: string | null;
+  embed?: boolean;
+  heatmapPreview?: boolean;
+};
+
+function readCachedProductDetails(): Product | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem("productDetails");
+    return raw ? (JSON.parse(raw) as Product) : null;
+  } catch {
+    return null;
+  }
+}
+
+function sameProductId(
+  left: string | number | null | undefined,
+  right: string | number | null | undefined
+) {
+  if (left == null || right == null) return false;
+  return String(left) === String(right);
+}
+
+function hasDisplayableProduct(product: Product | null | undefined) {
+  return Boolean(product?.title);
+}
+
+function pickShopDetailsProduct(
+  reduxProduct: Product,
+  cachedProduct: Product | null,
+  requestedProductId: string | null
+) {
+  if (requestedProductId) {
+    if (hasDisplayableProduct(reduxProduct) && sameProductId(reduxProduct.id, requestedProductId)) {
+      return reduxProduct;
+    }
+    if (hasDisplayableProduct(cachedProduct) && sameProductId(cachedProduct.id, requestedProductId)) {
+      return cachedProduct;
+    }
+    return reduxProduct;
+  }
+
+  if (hasDisplayableProduct(reduxProduct)) return reduxProduct;
+  if (hasDisplayableProduct(cachedProduct)) return cachedProduct;
+  return reduxProduct;
+}
+
+const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = false }: ShopDetailsProps) => {
+  const compactEmbed = embed && !heatmapPreview;
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector(selectCartItems);
   const totalPrice = useSelector(selectTotalPrice);
+  const productFromRedux = useAppSelector((state) => state.productDetailsReducer.value);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedProductId = searchParams.get("productId") ?? initialProductId;
+  const isHeatmapPreview =
+    heatmapPreview || searchParams.get("heatmapPreview") === "1";
   const [activeColor, setActiveColor] = useState("blue");
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
@@ -30,7 +88,26 @@ const ShopDetails = () => {
   const [quantity, setQuantity] = useState(1);
 
   const [activeTab, setActiveTab] = useState("tabOne");
+  const [cachedProduct, setCachedProduct] = useState<Product | null>(null);
+  const [catalogRequestResolved, setCatalogRequestResolved] = useState(false);
 
+  useLayoutEffect(() => {
+    setCachedProduct(readCachedProductDetails());
+  }, []);
+
+  const product = useMemo(
+    () => pickShopDetailsProduct(productFromRedux, cachedProduct, requestedProductId),
+    [cachedProduct, productFromRedux, requestedProductId]
+  );
+  const canRenderProduct =
+    hasDisplayableProduct(product) &&
+    (!requestedProductId || catalogRequestResolved || sameProductId(product.id, requestedProductId));
+  const trackingProductId = useMemo(() => {
+    if (canRenderProduct && Number.isFinite(product.id) && product.id > 0) {
+      return Math.trunc(product.id);
+    }
+    return resolveTrackingProductId(requestedProductId, product.id);
+  }, [canRenderProduct, product.id, requestedProductId]);
 
   const tabs = [
     {
@@ -47,12 +124,6 @@ const ShopDetails = () => {
     },
   ];
 
-  const alreadyExist = localStorage.getItem("productDetails");
-  const productFromStorage = useAppSelector(
-    (state) => state.productDetailsReducer.value
-  );
-
-  const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
   const parsedContent = parseProductContent(product.description);
   const colorOptions = useMemo(
     () =>
@@ -66,12 +137,72 @@ const ShopDetails = () => {
   const jomlaPrice = product.jomlaPrice;
 
   useEffect(() => {
+    if (!hasDisplayableProduct(product)) return;
     localStorage.setItem("productDetails", JSON.stringify(product));
   }, [product]);
 
   useEffect(() => {
+    setCatalogRequestResolved(false);
+    if (!requestedProductId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/catalog/product?id=${encodeURIComponent(requestedProductId)}`, {
+          cache: "no-store",
+        });
+        const body = await response.json();
+        if (cancelled || !response.ok || !body.product) return;
+        const canonicalProduct = body.product as Product;
+        dispatch(updateproductDetails(canonicalProduct));
+        setCachedProduct(canonicalProduct);
+        localStorage.setItem("productDetails", JSON.stringify(canonicalProduct));
+        setCatalogRequestResolved(true);
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, requestedProductId]);
+
+  useLayoutEffect(() => {
+    if (embed || typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootMinWidth = root.style.minWidth;
+    const previousBodyMinWidth = body.style.minWidth;
+
+    root.style.minWidth = `${HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX}px`;
+    body.style.minWidth = `${HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX}px`;
+
+    return () => {
+      root.style.minWidth = previousRootMinWidth;
+      body.style.minWidth = previousBodyMinWidth;
+    };
+  }, [embed]);
+
+  useEffect(() => {
+    if (embed || isHeatmapPreview) return;
     sequenceVisitProduct();
-  }, []);
+  }, [embed, isHeatmapPreview]);
+
+  useEffect(() => {
+    if (!embed) return;
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      body.style.overflow = previousBodyOverflow;
+    };
+  }, [embed]);
 
   useEffect(() => {
     setActiveColor(colorOptions[0]?.name ?? "blue");
@@ -98,7 +229,7 @@ const ShopDetails = () => {
   }, [activeColor, baseDetailPrice, colorOptions, parsedContent, selectedSpecs]);
 
   const pa = useProductAnalyticsTracking({
-    productId: product.id,
+    productId: trackingProductId,
     productTitle: product.title,
     category: typeof product.category === "string" ? product.category : "",
     jomlaPrice: jomlaPrice ?? null,
@@ -107,6 +238,9 @@ const ShopDetails = () => {
     activeColor,
     selectedSpecs,
     detailPrice,
+    surfaceReady: canRenderProduct,
+    embed,
+    disablePointerTracking: embed || isHeatmapPreview,
   });
 
   // pass the product here when you get the real data.
@@ -147,20 +281,31 @@ const ShopDetails = () => {
 
   return (
     <>
-      <Breadcrumb
-        title={"Shop Details"}
-        pages={["shop details"]}
-        onHomeClick={() =>
-          trackProductAnalytics("pa_navigation", { kind: "breadcrumb_home", href: "/" })
-        }
-      />
+      {!embed ?
+        <Breadcrumb
+          title={"Shop Details"}
+          pages={["shop details"]}
+          onHomeClick={() =>
+            trackProductAnalytics("pa_navigation", { kind: "breadcrumb_home", href: "/" })
+          }
+        />
+      : null}
 
-      {product.title === "" ? (
-        "Please add product"
-      ) : (
+      {!canRenderProduct ?
+        requestedProductId ?
+          <div className="px-4 py-16 text-center text-dark-4">Loading product…</div>
+        : "Please add product"
+      : (
         <>
-          <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
-            <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <div ref={pa.surfaceRef} data-product-heatmap-surface="" className="relative">
+            <section
+              className={
+                compactEmbed ?
+                  "overflow-hidden relative pb-4 pt-2"
+                : "overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28"
+              }
+            >
+              <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
               <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
                 <div className="lg:max-w-[570px] w-full">
                   <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
@@ -743,11 +888,17 @@ const ShopDetails = () => {
               {/* <!--== tab content end ==--> */}
             </div>
           </section>
+          </div>
 
-          <RecentlyViewdItems />
-
-          <Newsletter />
-          <ProductPageAssistant product={product} availabilityLabel="In Stock" />
+          {!embed ?
+            <>
+              <RecentlyViewdItems />
+              <Newsletter />
+            </>
+          : null}
+          {!embed ?
+            <ProductPageAssistant product={product} availabilityLabel="In Stock" />
+          : null}
         </>
       )}
     </>

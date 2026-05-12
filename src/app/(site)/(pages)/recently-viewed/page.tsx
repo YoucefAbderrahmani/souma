@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Product } from "@/types/product";
+import { productDetailsHref } from "@/lib/product-page-link";
 
 const RecentlyViewedPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
@@ -45,7 +46,7 @@ const RecentlyViewedPage = () => {
                   <p className="mt-2 font-medium text-dark">{product.detailPrice.toFixed(2)} DA</p>
                 </div>
                 <Link
-                  href="/shop-details"
+                  href={productDetailsHref(product.id)}
                   className="inline-flex items-center justify-center rounded-md bg-blue px-6 py-3 font-medium text-white transition hover:bg-blue-dark"
                 >
                   Open Product

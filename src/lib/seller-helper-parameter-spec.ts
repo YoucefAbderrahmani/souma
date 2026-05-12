@@ -62,5 +62,17 @@ export const SELLER_HELPER_PARAMETER_SPECS: SellerHelperParameterSpec[] = [
     newParameters: ["page_path", "stack_head"],
     usedByDashboard: ["Security/quality signals", "Analyze signals"],
   },
+  {
+    event: "pa_pointer_hover",
+    legacyParameters: ["product_id"],
+    newParameters: ["page_path", "x_pct", "y_pct", "surface_width", "surface_height", "heatmap_embed"],
+    usedByDashboard: ["User Behavior: product page heatmap (hover layer)"],
+  },
+  {
+    event: "pa_pointer_click",
+    legacyParameters: ["product_id"],
+    newParameters: ["page_path", "x_pct", "y_pct", "surface_width", "surface_height", "heatmap_embed"],
+    usedByDashboard: ["User Behavior: product page heatmap (click layer)"],
+  },
 ];
 

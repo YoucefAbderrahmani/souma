@@ -1,6 +1,9 @@
+import { runConceptionLlmAnalysis } from "@/server/conception/llm-analysis";
 import { buildConceptionAnalyzeSignals } from "@/server/conception/metrics";
+import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
+import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 
 function dayFingerprint(prefix: string): string {
   const d = new Date();
@@ -15,6 +18,11 @@ function hourFingerprint(prefix: string): string {
 export type ConceptionAnalyzeResult = {
   insertedAlerts: number;
   insertedRecommendations: number;
+  llmUsed: boolean;
+  llmSummary: string | null;
+  llmError: string | null;
+  llmModel: string | null;
+  vitrinaRecommendations: VitrinaProductMarketingRecommendation[];
 };
 
 /**
@@ -33,9 +41,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     alerts.push({
       alertType: "CONVERSION_DROP",
       severity: "critical",
-      title: "Chute de conversion",
-      description: "Taux de conversion inférieur de plus de 20 % à la moyenne de la fenêtre précédente (7 jours).",
-      detail: `Taux actuel ${(100 * s.rateNow).toFixed(2)} % vs référence ${(100 * s.rateOld).toFixed(2)} %.`,
+      title: "Conversion drop",
+      description: "Conversion rate more than 20% below the previous window average (7 days).",
+      detail: `Current rate ${(100 * s.rateNow).toFixed(2)}% vs reference ${(100 * s.rateOld).toFixed(2)}%.`,
       affectedSessionsEstimate: null,
       metadataJson: JSON.stringify({ rateNow: s.rateNow, rateOld: s.rateOld }),
       fingerprint: dayFingerprint("CONVERSION_DROP"),
@@ -46,9 +54,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     alerts.push({
       alertType: "TRAFFIC_SPIKE",
       severity: "high",
-      title: "Trafic anormal",
-      description: "Augmentation brutale du volume d'événements sur les 15 dernières minutes.",
-      detail: `${s.events15m} événements vs ~${Math.round(s.baseline15)} attendus par quinzaine de minutes (baseline 90 min).`,
+      title: "Abnormal traffic",
+      description: "Sharp increase in event volume over the last 15 minutes.",
+      detail: `${s.events15m} events vs ~${Math.round(s.baseline15)} expected per 15-minute window (90 min baseline).`,
       affectedSessionsEstimate: null,
       metadataJson: JSON.stringify({ events15m: s.events15m, baseline15: s.baseline15 }),
       fingerprint: hourFingerprint("TRAFFIC_SPIKE"),
@@ -59,9 +67,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     alerts.push({
       alertType: "CART_ABANDON_MASS",
       severity: "medium",
-      title: "Abandon panier massif",
-      description: "Taux d'abandon panier supérieur à 80 % sur une fenêtre de 2 heures.",
-      detail: `${s.cart2h} sessions avec ajout panier, ${s.final2h} achats confirmés (pa_purchase).`,
+      title: "Mass cart abandonment",
+      description: "Cart abandonment rate above 80% over a 2-hour window.",
+      detail: `${s.cart2h} sessions with add-to-cart, ${s.final2h} confirmed purchases (pa_purchase).`,
       affectedSessionsEstimate: Math.max(0, s.cart2h - s.final2h),
       metadataJson: JSON.stringify({ cart2h: s.cart2h, final2h: s.final2h }),
       fingerprint: hourFingerprint("CART_ABANDON_MASS"),
@@ -72,9 +80,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     alerts.push({
       alertType: "JS_ERROR_BURST",
       severity: "high",
-      title: "Erreur technique (client)",
-      description: "Erreurs JavaScript détectées sur plus de 5 % des sessions touchant le checkout (2 h).",
-      detail: `${s.jsErrorSessions} session(s) avec pa_js_error sur ${s.sessionsCheckout2h} sessions checkout.`,
+      title: "Technical error (client)",
+      description: "JavaScript errors detected on more than 5% of sessions touching checkout (2 h).",
+      detail: `${s.jsErrorSessions} session(s) with pa_js_error out of ${s.sessionsCheckout2h} checkout sessions.`,
       affectedSessionsEstimate: s.jsErrorSessions,
       metadataJson: JSON.stringify({ jsErrorSessions: s.jsErrorSessions, sessionsCheckout2h: s.sessionsCheckout2h }),
       fingerprint: hourFingerprint("JS_ERROR_BURST"),
@@ -86,9 +94,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     alerts.push({
       alertType: "PERF_SLOW",
       severity: "low",
-      title: "Problème de performance",
-      description: "Temps de chargement ou LCP supérieur à 4 secondes sur plusieurs sessions.",
-      detail: `${perfSessions} sessions avec navigation lente ou LCP élevé (2 h).`,
+      title: "Performance issue",
+      description: "Load time or LCP above 4 seconds on multiple sessions.",
+      detail: `${perfSessions} sessions with slow navigation or elevated LCP (2 h).`,
       affectedSessionsEstimate: perfSessions,
       metadataJson: JSON.stringify({ slowNavSessions: s.slowNavSessions, lcpSlowSessions: s.lcpSlowSessions }),
       fingerprint: hourFingerprint("PERF_SLOW"),
@@ -110,11 +118,11 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   if (f.nProduct > 0 && f.nCart / f.nProduct < 0.35) {
     recs.push({
       priority: "high",
-      impactLabel: "+4–8 % de conversion (estim.)",
-      title: "Renforcer l’intention entre page produit et panier",
-      analysis: `Seulement ${(100 * (f.nCart / f.nProduct)).toFixed(1)} % des vues produit se traduisent par un clic d’achat.`,
+      impactLabel: "+4–8% conversion (est.)",
+      title: "Strengthen intent between product page and cart",
+      analysis: `Only ${(100 * (f.nCart / f.nProduct)).toFixed(1)}% of product views lead to an add-to-cart click.`,
       recommendation:
-        "Clarifier le prix TTC, la disponibilité et la livraison au-dessus de la ligne de flottaison ; renforcer les avis et la garantie près du CTA principal.",
+        "Clarify all-in price, availability, and shipping above the fold; strengthen reviews and guarantees near the primary CTA.",
       confidence: 82,
       revenueHint: "—",
       implementationHint: "2–4 jours",
@@ -127,11 +135,11 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   if (f.nCart > 0 && f.nCheckoutPath / f.nCart < 0.45) {
     recs.push({
       priority: "high",
-      impactLabel: "+5–10 % de conversion (estim.)",
-      title: "Réduire la friction panier → paiement",
-      analysis: `${(100 * (1 - f.nCheckoutPath / f.nCart)).toFixed(1)} % des sessions avec intention d’achat ne parviennent pas à une étape de paiement.`,
+      impactLabel: "+5–10% conversion (est.)",
+      title: "Reduce cart → checkout friction",
+      analysis: `${(100 * (1 - f.nCheckoutPath / f.nCart)).toFixed(1)}% of sessions with purchase intent never reach a checkout step.`,
       recommendation:
-        "Activer le paiement invité, réduire les champs du formulaire sur mobile, afficher tôt les frais de livraison et une barre de progression du tunnel.",
+        "Enable guest checkout, reduce form fields on mobile, show shipping costs early, and add a funnel progress bar.",
       confidence: 88,
       revenueHint: "—",
       implementationHint: "3–5 jours",
@@ -144,11 +152,11 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   if (s.lcpSlowSessions >= 3) {
     recs.push({
       priority: "medium",
-      impactLabel: "+2–4 % de conversion (estim.)",
-      title: "Optimiser le LCP des pages produit",
-      analysis: "Plusieurs sessions présentent un LCP supérieur à 4 s, ce qui augmente le rebond avant interaction.",
+      impactLabel: "+2–4% conversion (est.)",
+      title: "Optimize product page LCP",
+      analysis: "Multiple sessions show LCP above 4 s, which increases bounce before interaction.",
       recommendation:
-        "Compresser les visuels (WebP/AVIF), lazy-load hors viewport, prioriser le hero et limiter les scripts tiers sur la fiche produit.",
+        "Compress visuals (WebP/AVIF), lazy-load below the fold, prioritize the hero, and limit third-party scripts on the product page.",
       confidence: 76,
       revenueHint: "—",
       implementationHint: "1–3 jours",
@@ -167,5 +175,50 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     if (ins.length > 0) insertedRecommendations += 1;
   }
 
-  return { insertedAlerts, insertedRecommendations };
+  let llmUsed = false;
+  let llmSummary: string | null = null;
+  let llmError: string | null = null;
+  let llmModel: string | null = null;
+
+  try {
+    const llmResult = await runConceptionLlmAnalysis();
+    if (llmResult) {
+      llmUsed = true;
+      llmSummary = llmResult.summary;
+      llmModel = llmResult.model;
+
+      for (const alert of llmResult.alerts) {
+        const inserted = await db
+          .insert(conceptionAlertTable)
+          .values(alert)
+          .onConflictDoNothing({ target: conceptionAlertTable.fingerprint })
+          .returning({ id: conceptionAlertTable.id });
+        if (inserted.length > 0) insertedAlerts += 1;
+      }
+
+      for (const recommendation of llmResult.recommendations) {
+        const inserted = await db
+          .insert(conceptionRecommendationTable)
+          .values(recommendation)
+          .onConflictDoNothing({ target: conceptionRecommendationTable.fingerprint })
+          .returning({ id: conceptionRecommendationTable.id });
+        if (inserted.length > 0) insertedRecommendations += 1;
+      }
+    }
+  } catch (error) {
+    llmError = error instanceof Error ? error.message : String(error);
+    console.error("[conception/analyze][llm]", error);
+  }
+
+  const vitrinaRecommendations = await listVitrinaProductMarketingRecommendations();
+
+  return {
+    insertedAlerts,
+    insertedRecommendations,
+    llmUsed,
+    llmSummary,
+    llmError,
+    llmModel,
+    vitrinaRecommendations,
+  };
 }

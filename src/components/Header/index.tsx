@@ -18,6 +18,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
+import { productDetailsHref } from "@/lib/product-page-link";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -62,7 +63,7 @@ const Header = () => {
     sequenceStartProduct(productItem.title);
     setSearchQuery("");
     setShowSearchResults(false);
-    router.push("/shop-details");
+    router.push(productDetailsHref(productItem.id));
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
