@@ -21,6 +21,18 @@ import { useSelector } from "react-redux";
 import type { Product } from "@/types/product";
 import { resolveTrackingProductId } from "@/lib/product-page-link";
 import { HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX } from "@/lib/product-heatmap-surface";
+import {
+  productAvailableQuantity,
+} from "@/components/Common/ProductAvailableQuantity";
+import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
+import { getVitrinaMerchandisingFromAdditionalInfo, isVitrinaMerchandisingKey } from "@/lib/vitrina-merchandising";
+import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
+import { ProductTrendingCountdown } from "@/components/Common/ProductTrendingCountdown";
+import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
+import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
+import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
+import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 
 type ShopDetailsProps = {
   initialProductId?: string | null;
@@ -124,17 +136,39 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     },
   ];
 
-  const parsedContent = parseProductContent(product.description);
+  const parsedContent = useMemo(
+    () => parseProductContent(product.description),
+    [product.description]
+  );
+  const vitrinaMerchandising = useMemo(
+    () => getVitrinaMerchandisingFromAdditionalInfo(parsedContent.additionalInfo),
+    [parsedContent.additionalInfo]
+  );
   const colorOptions = useMemo(
     () =>
       parsedContent.colors.length > 0
         ? parsedContent.colors
         : [{ name: "red" }, { name: "blue" }, { name: "orange" }, { name: "pink" }, { name: "purple" }],
-    [parsedContent.colors]
+    [parsedContent]
+  );
+  const colorSignature = useMemo(
+    () =>
+      colorOptions
+        .map((color) => `${color.name}:${color.inStock === false ? "0" : "1"}`)
+        .join("|"),
+    [colorOptions]
   );
 
   const baseDetailPrice = product.detailPrice ?? 0;
   const jomlaPrice = product.jomlaPrice;
+  const { instock: liveInstock } = useLiveProductInventory(
+    canRenderProduct ? product.id : null,
+    product.instock ?? null,
+    { enabled: canRenderProduct }
+  );
+  const availableQuantity = liveInstock ?? productAvailableQuantity(product);
+  const maxOrderQuantity =
+    availableQuantity != null ? Math.max(availableQuantity, 0) : null;
 
   useEffect(() => {
     if (!hasDisplayableProduct(product)) return;
@@ -205,8 +239,18 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   }, [embed]);
 
   useEffect(() => {
-    setActiveColor(colorOptions[0]?.name ?? "blue");
-  }, [colorOptions]); // reset when selected product changes
+    const preferredColor = colorOptions.find((color) => color.inStock !== false) ?? colorOptions[0];
+    setActiveColor(preferredColor?.name ?? "blue");
+  }, [product.id, colorSignature, colorOptions]);
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [product.id]);
+
+  useEffect(() => {
+    if (maxOrderQuantity == null || maxOrderQuantity <= 0) return;
+    setQuantity((current) => Math.min(current, maxOrderQuantity));
+  }, [maxOrderQuantity, product.id]);
 
   const detailPrice = useMemo(() => {
     let selectedPrice = baseDetailPrice;
@@ -309,11 +353,11 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
               <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
                 <div className="lg:max-w-[570px] w-full">
                   <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
-                    <div>
+                    <div className="relative">
                       <button
                         onClick={handlePreviewSlider}
                         aria-label="button for zoom"
-                        className="gallery__Image w-11 h-11 rounded-[5px] bg-gray-1 shadow-1 flex items-center justify-center ease-out duration-200 text-dark hover:text-blue absolute top-4 lg:top-6 right-4 lg:right-6 z-50"
+                        className="gallery__Image w-11 h-11 rounded-[5px] bg-gray-1 shadow-1 flex items-center justify-center ease-out duration-200 text-dark hover:text-blue absolute top-4 lg:top-6 right-4 lg:right-6 z-[60]"
                       >
                         <svg
                           className="fill-current"
@@ -332,12 +376,21 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         </svg>
                       </button>
 
-                      <Image
-                        src={product.imgs?.previews[previewImg]}
-                        alt="products-details"
-                        width={400}
-                        height={400}
-                      />
+                      {product.imgs?.previews?.[previewImg] ?
+                        <ProductCatalogImageWithMerch
+                          product={product}
+                          src={product.imgs.previews[previewImg]}
+                          alt="products-details"
+                          width={400}
+                          height={400}
+                          heroReviewSnippet={vitrinaMerchandising.heroReviewSnippet ?? null}
+                          showHeroReviewOverlay
+                          showPromoLabels={false}
+                        />
+                      : null}
+                      {product.imgs?.previews?.[previewImg] ?
+                        <ProductCardPromoLayer product={product} className="z-[55]" />
+                      : null}
                     </div>
                   </div>
 
@@ -382,9 +435,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-5.5 mb-4.5">
-                    <div className="flex items-center gap-2.5">
-                      {/* <!-- stars --> */}
+                  <ProductCardStarsRowWithStock
+                    product={{ id: product.id, instock: product.instock }}
+                    className="mb-4.5"
+                    stars={
                       <div className="flex items-center gap-1">
                         <svg
                           className="fill-[#FFA645]"
@@ -491,58 +545,51 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           </defs>
                         </svg>
                       </div>
+                    }
+                    trailing={<span> (See Reviews tab) </span>}
+                  />
 
-                      <span> (See Reviews tab) </span>
-                    </div>
+                  {vitrinaMerchandising.trendingCountdownEndsAt ?
+                    <ProductTrendingCountdown
+                      endsAt={vitrinaMerchandising.trendingCountdownEndsAt}
+                      className="mb-4"
+                    />
+                  : null}
 
-                    <div className="flex items-center gap-1.5">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <g clipPath="url(#clip0_375_9221)">
-                          <path
-                            d="M10 0.5625C4.78125 0.5625 0.5625 4.78125 0.5625 10C0.5625 15.2188 4.78125 19.4688 10 19.4688C15.2188 19.4688 19.4688 15.2188 19.4688 10C19.4688 4.78125 15.2188 0.5625 10 0.5625ZM10 18.0625C5.5625 18.0625 1.96875 14.4375 1.96875 10C1.96875 5.5625 5.5625 1.96875 10 1.96875C14.4375 1.96875 18.0625 5.59375 18.0625 10.0312C18.0625 14.4375 14.4375 18.0625 10 18.0625Z"
-                            fill="#F27430"
-                          />
-                          <path
-                            d="M12.6875 7.09374L8.9688 10.7187L7.2813 9.06249C7.00005 8.78124 6.56255 8.81249 6.2813 9.06249C6.00005 9.34374 6.0313 9.78124 6.2813 10.0625L8.2813 12C8.4688 12.1875 8.7188 12.2812 8.9688 12.2812C9.2188 12.2812 9.4688 12.1875 9.6563 12L13.6875 8.12499C13.9688 7.84374 13.9688 7.40624 13.6875 7.12499C13.4063 6.84374 12.9688 6.84374 12.6875 7.09374Z"
-                            fill="#F27430"
-                          />
-                        </g>
-                        <defs>
-                          <clipPath id="clip0_375_9221">
-                            <rect width="20" height="20" fill="white" />
-                          </clipPath>
-                        </defs>
-                      </svg>
-
-                      <span className="text-green"> In Stock </span>
-                    </div>
+                  <div className="mb-4.5">
+                    <h3
+                      ref={pa.priceRef}
+                      className="flex w-full max-w-full flex-col items-stretch gap-0.5"
+                    >
+                      {typeof jomlaPrice === "number" ? (
+                        <>
+                          <ProductPriceRowWithInlineStock>
+                            <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                              <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
+                                {jomlaPrice.toFixed(2)} DA
+                              </span>
+                            </VitrinaPriceWithPromoTimerRow>
+                          </ProductPriceRowWithInlineStock>
+                          <span className="text-sm sm:text-base text-dark-4 line-through whitespace-nowrap">
+                            {detailPrice.toFixed(2)} DA
+                          </span>
+                        </>
+                      ) : (
+                        <ProductPriceRowWithInlineStock>
+                          <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-dark">
+                            {detailPrice.toFixed(2)} DA
+                          </span>
+                        </ProductPriceRowWithInlineStock>
+                      )}
+                    </h3>
+                    <ProductPriceAdjacentMeta
+                      product={{
+                        id: product.id,
+                        title: product.title,
+                        instock: availableQuantity ?? undefined,
+                      }}
+                    />
                   </div>
-
-                  <h3
-                    ref={pa.priceRef}
-                    className="mb-4.5 flex flex-col items-start gap-0.5"
-                  >
-                    {typeof jomlaPrice === "number" ? (
-                      <>
-                        <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
-                          {jomlaPrice.toFixed(2)} DA
-                        </span>
-                        <span className="text-sm sm:text-base text-dark-4 line-through whitespace-nowrap">
-                          {detailPrice.toFixed(2)} DA
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-dark">
-                        {detailPrice.toFixed(2)} DA
-                      </span>
-                    )}
-                  </h3>
 
                   <ul className="flex flex-col gap-2">
                     <li className="flex items-center gap-2.5">
@@ -718,9 +765,16 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         </span>
 
                         <button
-                          onClick={() => setQuantity(quantity + 1)}
+                          onClick={() => {
+                            if (maxOrderQuantity != null) {
+                              setQuantity((current) => Math.min(maxOrderQuantity, current + 1));
+                              return;
+                            }
+                            setQuantity(quantity + 1);
+                          }}
                           aria-label="button for add product"
-                          className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue"
+                          className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={maxOrderQuantity != null && quantity >= maxOrderQuantity}
                         >
                           <svg
                             className="fill-current"
@@ -745,7 +799,8 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                       <button
                         type="button"
                         onClick={handlePurchaseNow}
-                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
+                        disabled={maxOrderQuantity === 0}
+                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Purchase Now
                       </button>
@@ -851,8 +906,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                     activeTab === "tabTwo" ? "block" : "hidden"
                   }`}
                 >
-                  {parsedContent.additionalInfo.length > 0 ? (
-                    parsedContent.additionalInfo.map((row) => (
+                  {parsedContent.additionalInfo.filter((row) => !isVitrinaMerchandisingKey(row.key)).length > 0 ? (
+                    parsedContent.additionalInfo
+                      .filter((row) => !isVitrinaMerchandisingKey(row.key))
+                      .map((row) => (
                       <div key={row.key} className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
                         <div className="max-w-[450px] min-w-[140px] w-full">
                           <p className="text-sm sm:text-base text-dark">{row.key}</p>

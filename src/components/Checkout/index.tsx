@@ -21,6 +21,10 @@ import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
 import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
 import { AppDispatch } from "@/redux/store";
+import {
+  commitPendingInventoryPurchase,
+  savePendingInventoryPurchase,
+} from "@/hooks/useLiveProductInventory";
 
 type CheckoutFormValues = {
   firstName: string;
@@ -158,7 +162,13 @@ const Checkout = () => {
   }, [cartItems.length, itemsQtyTotal, totalPrice]);
 
   React.useEffect(() => {
-    if (paymentStatus === "success" && cartItems.length > 0) {
+    if (paymentStatus !== "success" || cartItems.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      await commitPendingInventoryPurchase();
+      if (cancelled) return;
+
       purchaseCompletedRef.current = true;
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
@@ -172,7 +182,11 @@ const Checkout = () => {
       void flushProductAnalyticsNow();
       dispatch(removeAllItemsFromCart());
       toast.success("Payment confirmed. Your cart has been cleared.");
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [cartItems.length, dispatch, itemsQtyTotal, paymentStatus, totalPrice]);
 
   React.useEffect(() => {
@@ -280,6 +294,13 @@ const Checkout = () => {
       if (!response.ok || !data.checkoutUrl) {
         throw new Error(data.error || "Failed to start Chargily checkout.");
       }
+
+      savePendingInventoryPurchase(
+        cartItems.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+        }))
+      );
 
       sequenceEndPurchase();
       trackProductAnalytics("pa_performance", {

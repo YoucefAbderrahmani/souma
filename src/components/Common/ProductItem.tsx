@@ -13,6 +13,12 @@ import { sequenceStartProduct } from "@/lib/sequence-client";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
 import { productDetailsHref } from "@/lib/product-page-link";
+import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
+import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
+import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
+import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
+import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -96,10 +102,20 @@ const ProductItem = ({ item }: { item: Product }) => {
           aria-label={`Quick view ${item.title}`}
           className="flex items-center justify-center w-full h-full"
         >
-          <Image src={item.imgs.previews[0]} alt="" width={250} height={250} />
+          <span className="relative inline-block max-w-full overflow-hidden rounded-lg">
+            <ProductCatalogImageWithMerch
+              product={item}
+              src={item.imgs.previews[0]}
+              alt=""
+              width={250}
+              height={250}
+              showHeroReviewOverlay
+              showPromoLabels={false}
+            />
+          </span>
         </button>
 
-        <div className="absolute left-0 bottom-0 translate-y-full w-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0">
+        <div className="absolute left-0 bottom-0 z-20 flex w-full translate-y-full items-center justify-center gap-2.5 pb-5 transition-transform duration-200 ease-linear delay-0 group-hover:translate-y-0 group-hover:delay-150">
           <button
             onClick={handleOpenQuickView}
             id="newOne"
@@ -159,44 +175,48 @@ const ProductItem = ({ item }: { item: Product }) => {
             </svg>
           </button>
         </div>
+
+        <ProductCardPromoLayer product={item} />
       </div>
 
-      <div className="flex items-center gap-2.5 mb-2">
-        <div className="flex items-center gap-1">
-          <Image
-            src="/images/icons/icon-star.svg"
-            alt="star icon"
-            width={14}
-            height={14}
-          />
-          <Image
-            src="/images/icons/icon-star.svg"
-            alt="star icon"
-            width={14}
-            height={14}
-          />
-          <Image
-            src="/images/icons/icon-star.svg"
-            alt="star icon"
-            width={14}
-            height={14}
-          />
-          <Image
-            src="/images/icons/icon-star.svg"
-            alt="star icon"
-            width={14}
-            height={14}
-          />
-          <Image
-            src="/images/icons/icon-star.svg"
-            alt="star icon"
-            width={14}
-            height={14}
-          />
-        </div>
-
-        <p className="text-custom-sm">({item.reviews})</p>
-      </div>
+      <ProductCardStarsRowWithStock
+        product={item}
+        stars={
+          <div className="flex items-center gap-1">
+            <Image
+              src="/images/icons/icon-star.svg"
+              alt="star icon"
+              width={14}
+              height={14}
+            />
+            <Image
+              src="/images/icons/icon-star.svg"
+              alt="star icon"
+              width={14}
+              height={14}
+            />
+            <Image
+              src="/images/icons/icon-star.svg"
+              alt="star icon"
+              width={14}
+              height={14}
+            />
+            <Image
+              src="/images/icons/icon-star.svg"
+              alt="star icon"
+              width={14}
+              height={14}
+            />
+            <Image
+              src="/images/icons/icon-star.svg"
+              alt="star icon"
+              width={14}
+              height={14}
+            />
+          </div>
+        }
+        trailing={<p className="text-custom-sm">({item.reviews})</p>}
+      />
 
       <h3
         className="font-medium text-dark ease-out duration-200 hover:text-blue mb-1.5"
@@ -208,22 +228,27 @@ const ProductItem = ({ item }: { item: Product }) => {
         </Link>
       </h3>
 
-      <span className="flex flex-col items-start gap-0.5 font-medium">
+      <span className="flex w-full max-w-full flex-col items-stretch gap-0.5 font-medium">
         {typeof jomlaPrice === "number" ? (
           <>
-            <span className="whitespace-nowrap text-[#FB923C] text-lg">
-              {jomlaPrice.toFixed(2)} DA
-            </span>
+            <ProductPriceRowWithInlineStock>
+              <VitrinaPriceWithPromoTimerRow product={{ id: item.id, title: item.title }}>
+                <span className="whitespace-nowrap text-[#FB923C] text-lg">
+                  {jomlaPrice.toFixed(2)} DA
+                </span>
+              </VitrinaPriceWithPromoTimerRow>
+            </ProductPriceRowWithInlineStock>
             <span className="text-dark-4 line-through text-sm whitespace-nowrap">
               {detailPrice.toFixed(2)} DA
             </span>
           </>
         ) : (
-          <span className="whitespace-nowrap text-dark text-lg">
-            {detailPrice.toFixed(2)} DA
-          </span>
+          <ProductPriceRowWithInlineStock>
+            <span className="whitespace-nowrap text-dark text-lg">{detailPrice.toFixed(2)} DA</span>
+          </ProductPriceRowWithInlineStock>
         )}
       </span>
+      <ProductPriceAdjacentMeta product={item} />
     </div>
   );
 };

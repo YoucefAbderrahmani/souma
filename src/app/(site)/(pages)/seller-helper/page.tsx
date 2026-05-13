@@ -12,7 +12,6 @@ import {
   listConceptionAlertsForAdmin,
   listDismissedConceptionAlertsForAdmin,
 } from "@/server/conception/conception-db";
-import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
 import {
   sellerHelperContainer,
   sellerHelperSection,
@@ -53,13 +52,12 @@ export default async function SellerHelperPage() {
   let initialError: string | null = null;
   if (isAdmin) {
     try {
-      const [overview, alerts, resolvedAlerts, vitrinaRecommendations] = await Promise.all([
+      const [overview, alerts, resolvedAlerts] = await Promise.all([
         buildConceptionOverview(),
         listConceptionAlertsForAdmin({ limit: 50 }),
         listDismissedConceptionAlertsForAdmin({ limit: 12 }),
-        listVitrinaProductMarketingRecommendations(),
       ]);
-      initialData = { overview, alerts, resolvedAlerts, recommendations: [], vitrinaRecommendations };
+      initialData = { overview, alerts, resolvedAlerts, recommendations: [] };
     } catch (error) {
       initialError = error instanceof Error ? error.message : String(error);
     }

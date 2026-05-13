@@ -10,6 +10,10 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { productDetailsHref } from "@/lib/product-page-link";
+import { LiveProductAvailableQuantity } from "@/components/Common/LiveProductAvailableQuantity";
+import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
+import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
+import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 
 const LatestProducts = ({ products }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -53,19 +57,31 @@ const LatestProducts = ({ products }) => {
                 <div className="text-custom-sm">
                   {typeof jomlaPrice === "number" ? (
                     <>
-                      <p className="text-[#FB923C] whitespace-nowrap">
-                        Price: {jomlaPrice.toFixed(2)} DA
-                      </p>
+                      <ProductPriceRowWithInlineStock>
+                        <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                          <p className="text-[#FB923C] whitespace-nowrap">
+                            Price: {jomlaPrice.toFixed(2)} DA
+                          </p>
+                        </VitrinaPriceWithPromoTimerRow>
+                      </ProductPriceRowWithInlineStock>
                       <p className="text-dark-4 text-xs whitespace-nowrap line-through">
                         {detailPrice.toFixed(2)} DA
                       </p>
                     </>
                   ) : (
-                    <p className="text-dark whitespace-nowrap">
-                      Price: {detailPrice.toFixed(2)} DA
-                    </p>
+                    <ProductPriceRowWithInlineStock>
+                      <p className="text-dark whitespace-nowrap">
+                        Price: {detailPrice.toFixed(2)} DA
+                      </p>
+                    </ProductPriceRowWithInlineStock>
                   )}
                 </div>
+                <LiveProductAvailableQuantity
+                  product={{ id: product.id, instock: product.instock }}
+                  variant="compact"
+                  className="mt-1 text-custom-sm"
+                />
+                <ProductPriceAdjacentMeta product={product} className="mt-1" />
               </div>
             </div>
           )})}

@@ -1,5 +1,6 @@
 export const SELLER_HELPER_NAV = [
   "Dashboard",
+  "Timeline",
   "User Behavior",
   "Conversion Funnel",
   "Vitrina Recommendation",
@@ -17,6 +18,10 @@ export const SELLER_HELPER_NAV_META: Record<
   Dashboard: {
     label: "Overview",
     description: "Traffic, devices, and top pages at a glance.",
+  },
+  Timeline: {
+    label: "Timeline",
+    description: "Plot any metric over time — whole store or a specific product.",
   },
   "User Behavior": {
     label: "Behavior",

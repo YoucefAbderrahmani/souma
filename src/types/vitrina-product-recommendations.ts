@@ -4,7 +4,9 @@ export type VitrinaQuickFixId =
   | "default_color"
   | "promo_price"
   | "availability_note"
-  | "quality_highlight";
+  | "quality_highlight"
+  | "trending_countdown"
+  | "hero_review_snippet";
 
 export type VitrinaQuickFixOption = {
   id: VitrinaQuickFixId;

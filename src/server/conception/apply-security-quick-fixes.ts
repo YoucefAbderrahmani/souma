@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { conceptionSecurityBlockTable } from "@/server/db/schema";
+import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import type { ConceptionSecurityQuickFixId } from "@/types/conception-admin";
 
 const QUICK_FIX_IDS = new Set<ConceptionSecurityQuickFixId>(["block_session", "unblock_session"]);
@@ -45,25 +46,28 @@ export async function applySecurityQuickFixes(
   }
 
   const applied: string[] = [];
+  const appliedKinds: Array<"block_session" | "unblock_session"> = [];
+  const reasonText = reason.trim() || "Blocage manuel";
   for (const fix of fixes) {
     if (fix.id === "block_session") {
       await db
         .insert(conceptionSecurityBlockTable)
         .values({
           sessionKey: normalizedKey,
-          reason: reason.trim() || "Blocage manuel",
+          reason: reasonText,
           source: "seller_helper",
         })
         .onConflictDoUpdate({
           target: conceptionSecurityBlockTable.sessionKey,
           set: {
-            reason: reason.trim() || "Blocage manuel",
+            reason: reasonText,
             blockedAt: new Date(),
             liftedAt: null,
             source: "seller_helper",
           },
         });
       applied.push(fix.summary);
+      appliedKinds.push("block_session");
       continue;
     }
 
@@ -78,11 +82,29 @@ export async function applySecurityQuickFixes(
           )
         );
       applied.push(fix.summary);
+      appliedKinds.push("unblock_session");
     }
   }
 
   if (applied.length === 0) {
     return { applied: [], error: "Aucune action n'a pu être appliquée." };
+  }
+
+  for (const kind of appliedKinds) {
+    const isBlock = kind === "block_session";
+    await logAppliedAction({
+      kind: isBlock ? "security_block" : "security_unblock",
+      title: isBlock ? `Session blocked · ${normalizedKey.slice(0, 12)}…` : `Session unblocked · ${normalizedKey.slice(0, 12)}…`,
+      summary: isBlock ? reasonText : "Session removed from blocklist",
+      sourceRefId: normalizedKey,
+      details: {
+        sessionKey: normalizedKey,
+        reason: reasonText,
+        fixIds: appliedKinds,
+        action: kind,
+        appliedSummaries: applied,
+      },
+    });
   }
 
   return { applied };

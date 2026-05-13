@@ -92,7 +92,50 @@ function vitrinaProductImportanceRank(item: VitrinaProductMarketingRecommendatio
   return Math.min(...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority]));
 }
 
-const MAX_VISIBLE_TIPS = 2;
+function primarySuggestionLabel(item: VitrinaProductMarketingRecommendation) {
+  return item.tips[0]?.label.trim() || "General merchandising";
+}
+
+function interleaveFeaturedHighlights(
+  items: VitrinaProductMarketingRecommendation[]
+): VitrinaProductMarketingRecommendation[] {
+  if (items.length <= 1) return [...items];
+
+  const buckets = new Map<string, VitrinaProductMarketingRecommendation[]>();
+  for (const item of items) {
+    const label = primarySuggestionLabel(item);
+    const bucket = buckets.get(label) ?? [];
+    bucket.push(item);
+    buckets.set(label, bucket);
+  }
+
+  const queues = Array.from(buckets.entries()).map(([label, queue]) => ({
+    label,
+    queue: [...queue],
+  }));
+
+  const ordered: VitrinaProductMarketingRecommendation[] = [];
+  let previousLabel: string | null = null;
+
+  while (ordered.length < items.length) {
+    const available = queues
+      .filter((entry) => entry.queue.length > 0)
+      .sort((left, right) => right.queue.length - left.queue.length);
+
+    const picked = available.find((entry) => entry.label !== previousLabel) ?? available[0];
+    if (!picked) break;
+
+    const next = picked.queue.shift();
+    if (!next) break;
+
+    ordered.push(next);
+    previousLabel = picked.label;
+  }
+
+  return ordered;
+}
+
+const MAX_VISIBLE_TIPS = 1;
 
 function VitrinaProductCard({
   item,
@@ -180,8 +223,10 @@ function VitrinaProductCard({
 
 export function VitrinaRecommendationsContent({
   recommendations,
+  onVitrinaQuickFixApplied,
 }: {
   recommendations: VitrinaProductMarketingRecommendation[];
+  onVitrinaQuickFixApplied?: (productId: string) => void;
 }) {
   const [editingProduct, setEditingProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [quickFixProduct, setQuickFixProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
@@ -225,6 +270,11 @@ export function VitrinaRecommendationsContent({
     return sortFilteredRecommendations(items, sortMode);
   }, [categoryFilter, preparedRecommendations, searchQuery, sortMode]);
 
+  const featuredHighlightRecommendations = useMemo(
+    () => interleaveFeaturedHighlights(visibleRecommendations),
+    [visibleRecommendations]
+  );
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (categoryFilter !== ALL_ITEMS_CATEGORY) count += 1;
@@ -265,7 +315,7 @@ export function VitrinaRecommendationsContent({
 
       {preparedRecommendations.length === 0 ?
         <div className={sellerPlaceholder}>
-          No storefront products available yet. Add catalog items or run analysis after shopper signals arrive.
+          No Vitrina recommendations yet. Run analysis to generate storefront merchandising suggestions.
         </div>
       : <div className="space-y-4">
           <section
@@ -314,7 +364,7 @@ export function VitrinaRecommendationsContent({
                 }}
                 className="overflow-hidden"
               >
-                {visibleRecommendations.map((item) => (
+                {featuredHighlightRecommendations.map((item) => (
                   <SwiperSlide key={item.productId}>
                     <VitrinaProductCard
                       item={item}
@@ -441,6 +491,7 @@ export function VitrinaRecommendationsContent({
           key={quickFixProduct.productId}
           product={quickFixProduct}
           onClose={() => setQuickFixProduct(null)}
+          onApplied={onVitrinaQuickFixApplied}
         />
       : null}
     </div>

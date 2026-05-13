@@ -2,6 +2,7 @@ import { desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import { compareImportance, normalizeImportanceTier, sortByImportance } from "@/lib/importance-ranking";
+import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import type {
   ConceptionAlertDto,
   ConceptionRecommendationDto,
@@ -123,9 +124,7 @@ export async function dismissConceptionAlertById(
   disposition: ConceptionAlertDisposition = "resolved"
 ): Promise<boolean> {
   const [existing] = await db
-    .select({
-      metadataJson: conceptionAlertTable.metadataJson,
-    })
+    .select()
     .from(conceptionAlertTable)
     .where(eq(conceptionAlertTable.id, id))
     .limit(1);
@@ -144,23 +143,75 @@ export async function dismissConceptionAlertById(
     metadataJson = JSON.stringify({ dismissalKind: disposition });
   }
 
+  const dismissedAt = new Date();
   const rows = await db
     .update(conceptionAlertTable)
-    .set({ dismissedAt: new Date(), metadataJson })
+    .set({ dismissedAt, metadataJson })
     .where(eq(conceptionAlertTable.id, id))
     .returning({ id: conceptionAlertTable.id });
 
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+
+  if (disposition === "resolved") {
+    await logAppliedAction({
+      kind: "alert_resolved",
+      title: `Alert resolved · ${existing.title}`,
+      summary: existing.description,
+      sourceRefId: id,
+      occurredAt: dismissedAt,
+      details: {
+        alertId: id,
+        alertType: existing.alertType,
+        severity: existing.severity,
+        description: existing.description,
+        detail: existing.detail,
+        affectedSessionsEstimate: existing.affectedSessionsEstimate,
+        disposition,
+      },
+    });
+  }
+
+  return true;
 }
 
 export async function dismissConceptionRecommendationById(id: string): Promise<boolean> {
+  const [existing] = await db
+    .select()
+    .from(conceptionRecommendationTable)
+    .where(eq(conceptionRecommendationTable.id, id))
+    .limit(1);
+
+  if (!existing) return false;
+
+  const dismissedAt = new Date();
   const rows = await db
     .update(conceptionRecommendationTable)
-    .set({ dismissedAt: new Date() })
+    .set({ dismissedAt })
     .where(eq(conceptionRecommendationTable.id, id))
     .returning({ id: conceptionRecommendationTable.id });
 
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+
+  await logAppliedAction({
+    kind: "ai_recommendation",
+    title: `Recommendation applied · ${existing.title}`,
+    summary: existing.recommendation,
+    sourceRefId: id,
+    occurredAt: dismissedAt,
+    details: {
+      recommendationId: id,
+      priority: existing.priority,
+      impactLabel: existing.impactLabel,
+      analysis: existing.analysis,
+      recommendation: existing.recommendation,
+      confidence: existing.confidence,
+      revenueHint: existing.revenueHint,
+      implementationHint: existing.implementationHint,
+      roiHint: existing.roiHint,
+    },
+  });
+
+  return true;
 }
 
 export async function listConceptionRecommendationsForAdmin(options?: {

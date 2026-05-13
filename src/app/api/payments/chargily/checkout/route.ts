@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/server/lib/auth";
 import { ChargilyClient } from "@chargily/chargily-pay";
+import { validateInventoryForPurchase } from "@/server/data-access/product-inventory";
 
 type CheckoutItemInput = {
   id: number;
@@ -112,6 +113,16 @@ export async function POST(req: NextRequest) {
     const items = Array.isArray(body.items) ? body.items : [];
     if (!total || total <= 0 || items.length === 0) {
       return NextResponse.json({ error: "Checkout amount/items are invalid." }, { status: 400 });
+    }
+
+    const inventoryCheck = await validateInventoryForPurchase(
+      items.map((item) => ({
+        productId: Math.trunc(Number(item.id)),
+        quantity: Math.max(1, Math.trunc(Number(item.quantity ?? 1))),
+      }))
+    );
+    if (inventoryCheck.ok === false) {
+      return NextResponse.json({ error: inventoryCheck.error, code: "INVENTORY_UNAVAILABLE" }, { status: 409 });
     }
 
     const session = await auth.api.getSession({ headers: req.headers });

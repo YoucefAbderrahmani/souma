@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCatalogProductByRequestedId } from "@/server/data-access/product-catalog";
+import { getLiveInventoryForStorefrontProduct } from "@/server/data-access/product-inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,11 @@ export async function GET(req: Request) {
   const product = await getCatalogProductByRequestedId(id);
   if (!product) {
     return NextResponse.json({ error: "not_found", message: "Product not found." }, { status: 404 });
+  }
+
+  const liveInstock = await getLiveInventoryForStorefrontProduct(id);
+  if (liveInstock != null) {
+    product.instock = liveInstock;
   }
 
   return NextResponse.json({ product });

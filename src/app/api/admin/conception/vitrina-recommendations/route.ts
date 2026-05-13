@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
-import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
+import { readVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 
 export async function GET(req: Request) {
   const gate = await requireAdminApi(req);
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const recommendations = await listVitrinaProductMarketingRecommendations();
+    const recommendations = await readVitrinaRecommendationsCache();
     return NextResponse.json({ recommendations });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

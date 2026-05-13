@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   applyVitrinaQuickFixesAction,
@@ -14,18 +14,26 @@ const initialState: ApplyVitrinaQuickFixesState = {};
 type Props = {
   product: VitrinaProductMarketingRecommendation;
   onClose: () => void;
+  onApplied?: (productId: string) => void;
 };
 
-export default function VitrinaQuickFixConfirmModal({ product, onClose }: Props) {
+export default function VitrinaQuickFixConfirmModal({ product, onClose, onApplied }: Props) {
   const router = useRouter();
   const [state, action, isPending] = useActionState(applyVitrinaQuickFixesAction, initialState);
   const fixes = product.quickFixes ?? [];
+  const successHandledRef = useRef(false);
 
   useEffect(() => {
-    if (!state.success) return;
+    successHandledRef.current = false;
+  }, [product.productId]);
+
+  useEffect(() => {
+    if (!state.success || successHandledRef.current) return;
+    successHandledRef.current = true;
+    onApplied?.(product.productId);
     router.refresh();
     onClose();
-  }, [onClose, router, state.success]);
+  }, [onApplied, onClose, product.productId, router, state.success]);
 
   return (
     <div

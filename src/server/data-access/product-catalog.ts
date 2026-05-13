@@ -3,6 +3,8 @@ import { db } from "@/server/db";
 import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
+import { parseProductContent } from "@/lib/product-content";
+import { getVitrinaMerchandisingFromAdditionalInfo } from "@/lib/vitrina-merchandising";
 import { Product } from "@/types/product";
 
 const normalize = (value: string) => value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -16,7 +18,7 @@ const slugify = (value: string) =>
 const toNumericId = (id: string) =>
   id.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 7);
 
-function resolveStorefrontProductId(title: string, databaseId: string) {
+export function resolveStorefrontProductId(title: string, databaseId: string) {
   const matchedStatic = shopData.find((item) => normalize(item.title) === normalize(title));
   return matchedStatic ? matchedStatic.id : toNumericId(databaseId);
 }
@@ -59,6 +61,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
         price: productsTable.price,
         jomlaPrice: productsTable.jomlaPrice,
         rating: productsTable.rating,
+        instock: productsTable.instock,
         mainimage: productsTable.mainimage,
         categoryName: categoryTable.name,
       })
@@ -72,6 +75,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       reviews: item.rating ?? 0,
       detailPrice: item.price,
       jomlaPrice: item.jomlaPrice != null ? item.jomlaPrice : undefined,
+      instock: item.instock,
       category: mapCategoryNameToSlug(item.categoryName),
       imgs: {
         thumbnails: [item.mainimage, item.mainimage],
@@ -148,4 +152,30 @@ export async function getCatalogProductAliasIds(productId: number): Promise<numb
   }
 
   return Array.from(ids);
+}
+
+export async function getHeroReviewSnippetsByStorefrontIds(
+  requestedIds: number[]
+): Promise<Record<number, string>> {
+  const uniqueIds = new Set(
+    requestedIds
+      .map((id) => Math.trunc(Number(id)))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  );
+  if (uniqueIds.size === 0) return {};
+
+  const products = await getCatalogProducts();
+  const snippets: Record<number, string> = {};
+
+  for (const product of products) {
+    if (!uniqueIds.has(product.id)) continue;
+    const snippet = getVitrinaMerchandisingFromAdditionalInfo(
+      parseProductContent(product.description).additionalInfo
+    ).heroReviewSnippet;
+    if (snippet) {
+      snippets[product.id] = snippet;
+    }
+  }
+
+  return snippets;
 }

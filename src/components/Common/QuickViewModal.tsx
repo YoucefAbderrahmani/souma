@@ -10,6 +10,12 @@ import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { resetQuickView } from "@/redux/features/quickView-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
+import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
+import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
+import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
+import { productAvailableQuantity } from "@/components/Common/ProductAvailableQuantity";
+import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
@@ -27,6 +33,14 @@ const QuickViewModal = () => {
 
   const detailPrice = product.detailPrice ?? 0;
   const jomlaPrice = product.jomlaPrice;
+  const { instock: liveInstock } = useLiveProductInventory(
+    product.id,
+    product.instock ?? null,
+    { enabled: isModalOpen }
+  );
+  const availableQuantity = liveInstock ?? productAvailableQuantity(product);
+  const maxOrderQuantity =
+    availableQuantity != null ? Math.max(availableQuantity, 0) : null;
 
   // preview modal
   const handlePreviewSlider = () => {
@@ -83,6 +97,12 @@ const QuickViewModal = () => {
       setQuantity(1);
     };
   }, [isModalOpen, closeModal]);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    if (maxOrderQuantity == null || maxOrderQuantity <= 0) return;
+    setQuantity((current) => Math.min(current, maxOrderQuantity));
+  }, [isModalOpen, maxOrderQuantity, product.id]);
 
   return (
     <div
@@ -185,9 +205,10 @@ const QuickViewModal = () => {
                 {product.title}
               </h3>
 
-              <div className="flex flex-wrap items-center gap-5 mb-6">
-                <div className="flex items-center gap-1.5">
-                  {/* <!-- stars --> */}
+              <ProductCardStarsRowWithStock
+                product={{ id: product.id, instock: product.instock }}
+                className="mb-6"
+                stars={
                   <div className="flex items-center gap-1">
                     <svg
                       className="fill-[#FFA645]"
@@ -294,41 +315,14 @@ const QuickViewModal = () => {
                       </defs>
                     </svg>
                   </div>
-
+                }
+                trailing={
                   <span>
                     <span className="font-medium text-dark"> 4.7 Rating </span>
                     <span className="text-dark-2"> (5 reviews) </span>
                   </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <g clipPath="url(#clip0_375_9221)">
-                      <path
-                        d="M10 0.5625C4.78125 0.5625 0.5625 4.78125 0.5625 10C0.5625 15.2188 4.78125 19.4688 10 19.4688C15.2188 19.4688 19.4688 15.2188 19.4688 10C19.4688 4.78125 15.2188 0.5625 10 0.5625ZM10 18.0625C5.5625 18.0625 1.96875 14.4375 1.96875 10C1.96875 5.5625 5.5625 1.96875 10 1.96875C14.4375 1.96875 18.0625 5.59375 18.0625 10.0312C18.0625 14.4375 14.4375 18.0625 10 18.0625Z"
-                        fill="#22AD5C"
-                      />
-                      <path
-                        d="M12.6875 7.09374L8.9688 10.7187L7.2813 9.06249C7.00005 8.78124 6.56255 8.81249 6.2813 9.06249C6.00005 9.34374 6.0313 9.78124 6.2813 10.0625L8.2813 12C8.4688 12.1875 8.7188 12.2812 8.9688 12.2812C9.2188 12.2812 9.4688 12.1875 9.6563 12L13.6875 8.12499C13.9688 7.84374 13.9688 7.40624 13.6875 7.12499C13.4063 6.84374 12.9688 6.84374 12.6875 7.09374Z"
-                        fill="#22AD5C"
-                      />
-                    </g>
-                    <defs>
-                      <clipPath id="clip0_375_9221">
-                        <rect width="20" height="20" fill="white" />
-                      </clipPath>
-                    </defs>
-                  </svg>
-
-                  <span className="font-medium text-dark"> In Stock </span>
-                </div>
-              </div>
+                }
+              />
 
               <p>
                 Lorem Ipsum is simply dummy text of the printing and typesetting
@@ -341,21 +335,34 @@ const QuickViewModal = () => {
                     Price
                   </h4>
 
-                  <span className="flex flex-col items-start gap-0.5">
+                  <span className="flex w-full max-w-full flex-col items-stretch gap-0.5">
                     {typeof jomlaPrice === "number" ? (
                       <>
-                        <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-[#FB923C]">
-                          {jomlaPrice.toFixed(2)} DA
-                        </span>
+                        <ProductPriceRowWithInlineStock>
+                          <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                            <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-[#FB923C]">
+                              {jomlaPrice.toFixed(2)} DA
+                            </span>
+                          </VitrinaPriceWithPromoTimerRow>
+                        </ProductPriceRowWithInlineStock>
                         <span className="font-medium text-dark-4 text-lg xl:text-2xl line-through whitespace-nowrap">
                           {detailPrice.toFixed(2)} DA
                         </span>
                       </>
                     ) : (
-                      <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-dark">
-                        {detailPrice.toFixed(2)} DA
-                      </span>
+                      <ProductPriceRowWithInlineStock>
+                        <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-dark">
+                          {detailPrice.toFixed(2)} DA
+                        </span>
+                      </ProductPriceRowWithInlineStock>
                     )}
+                    <ProductPriceAdjacentMeta
+                      product={{
+                        id: product.id,
+                        title: product.title,
+                        instock: availableQuantity ?? undefined,
+                      }}
+                    />
                   </span>
                 </div>
 
@@ -396,9 +403,16 @@ const QuickViewModal = () => {
                     </span>
 
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() => {
+                        if (maxOrderQuantity != null) {
+                          setQuantity((current) => Math.min(maxOrderQuantity, current + 1));
+                          return;
+                        }
+                        setQuantity(quantity + 1);
+                      }}
                       aria-label="button for add product"
-                      className="flex items-center justify-center w-10 h-10 rounded-[5px] bg-gray-2 text-dark ease-out duration-200 hover:text-blue"
+                      className="flex items-center justify-center w-10 h-10 rounded-[5px] bg-gray-2 text-dark ease-out duration-200 hover:text-blue disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={maxOrderQuantity != null && quantity >= maxOrderQuantity}
                     >
                       <svg
                         className="fill-current"
@@ -428,10 +442,9 @@ const QuickViewModal = () => {
 
               <div className="flex flex-wrap items-center gap-4">
                 <button
-                  disabled={quantity === 0 && true}
+                  disabled={maxOrderQuantity === 0 || quantity <= 0}
                   onClick={() => handleAddToCart()}
-                  className={`inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark
-                  `}
+                  className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Add to Cart
                 </button>

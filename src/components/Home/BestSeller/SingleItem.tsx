@@ -133,17 +133,13 @@ const SingleItem = ({ item }: { item: Product }) => {
           <span className="flex flex-col items-center gap-0.5 font-medium">
             {typeof jomlaPrice === "number" ? (
               <>
-                <span className="whitespace-nowrap text-[#FB923C] text-lg">
-                  {jomlaPrice.toFixed(2)} DA
-                </span>
+                <span className="whitespace-nowrap text-[#FB923C] text-lg">{jomlaPrice.toFixed(2)} DA</span>
                 <span className="text-dark-4 line-through whitespace-nowrap text-sm">
                   {detailPrice.toFixed(2)} DA
                 </span>
               </>
             ) : (
-              <span className="whitespace-nowrap text-dark text-lg">
-                {detailPrice.toFixed(2)} DA
-              </span>
+              <span className="whitespace-nowrap text-dark text-lg">{detailPrice.toFixed(2)} DA</span>
             )}
           </span>
         </div>
@@ -152,12 +148,12 @@ const SingleItem = ({ item }: { item: Product }) => {
           type="button"
           onClick={handleOpenQuickView}
           aria-label={`Quick view ${item.title}`}
-          className="flex justify-center items-center w-full"
+          className="flex w-full justify-center"
         >
-          <Image src={item.imgs.previews[0]} alt="" width={280} height={280} />
+          <Image src={item.imgs.previews[0]} alt="" width={280} height={280} className="rounded-b-lg" />
         </button>
 
-        <div className="absolute right-0 bottom-0 translate-x-full u-w-full flex flex-col gap-2 p-5.5 ease-linear duration-300 group-hover:translate-x-0">
+        <div className="absolute right-0 bottom-0 z-20 flex translate-x-full flex-col gap-2 p-5.5 transition-transform duration-300 ease-linear delay-0 group-hover:translate-x-0 group-hover:delay-150">
           <button
             onClick={handleOpenQuickView}
             aria-label="button for quick view"

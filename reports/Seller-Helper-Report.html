@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Seller Helper — Feature, Technology, Prompt, Strategy & Policy Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,700&display=swap"
+  />
+  <style>
+    :root {
+      --accent: #ea580c;
+      --accent-dark: #b34306;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --soft: #f8fafc;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { padding: 0; margin: 0; background: #f5f7fb; color: var(--ink); }
+    body {
+      font-family: "Source Serif 4", "Georgia", serif;
+      font-size: 11pt;
+      line-height: 1.55;
+    }
+    h1, h2, h3, h4, .ui {
+      font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--ink);
+    }
+    a { color: var(--accent-dark); }
+    code {
+      background: #f1f5f9;
+      border: 1px solid var(--line);
+      padding: 1px 5px;
+      border-radius: 6px;
+      font-size: .95em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    pre.code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 9pt;
+      line-height: 1.5;
+      padding: 1rem 1.1rem;
+      background: #0b1220;
+      color: #e2e8f0;
+      border-radius: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    pre.ascii {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 8.4pt;
+      line-height: 1.35;
+      margin: 0;
+      white-space: pre;
+      overflow: auto;
+    }
+    .cover {
+      min-height: 96vh;
+      padding: 4rem 8% 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(234,88,12,.20), transparent 55%),
+        radial-gradient(circle at 85% 80%, rgba(15,23,42,.12), transparent 60%),
+        linear-gradient(180deg, #ffffff, #f1f5f9);
+      page-break-after: always;
+    }
+    .cover-brand {
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: "DM Sans", sans-serif;
+      font-size: .95rem;
+    }
+    .cover h1 {
+      font-size: 3rem;
+      line-height: 1.05;
+      margin: .75rem 0 1rem;
+      max-width: 22ch;
+    }
+    .cover .subtitle {
+      font-size: 1.1rem;
+      max-width: 60ch;
+      color: var(--muted);
+    }
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .5rem .85rem;
+      border-radius: 999px;
+      background: rgba(15,23,42,.06);
+      color: var(--ink);
+      font-family: "DM Sans", sans-serif;
+      font-size: .85rem;
+      margin-top: 1.5rem;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: .35rem 2rem;
+      font-family: "DM Sans", sans-serif;
+      font-size: .85rem;
+      color: var(--muted);
+      max-width: 720px;
+    }
+    .document {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 2.5rem 4% 4rem;
+      background: #ffffff;
+    }
+    .abstract {
+      background: #fff7ed;
+      border: 1px solid rgba(234,88,12,.25);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .toc {
+      page-break-after: always;
+      margin: 2rem 0 3rem;
+    }
+    .toc-title {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+    .toc ol { columns: 2; gap: 2.5rem; padding-left: 1.1rem; }
+    .toc li { margin: .35rem 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .chapter { margin: 2.25rem 0 2.75rem; }
+    .chapter-kicker {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: .72rem;
+      margin-bottom: .35rem;
+    }
+    h2 {
+      font-size: 1.55rem;
+      margin: 0 0 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 3px solid rgba(234,88,12,.35);
+    }
+    h3 { font-size: 1.15rem; margin-top: 1.5rem; }
+    h4 { font-size: 1rem; margin: 1.25rem 0 .5rem; }
+    .lead { font-size: 1.05rem; }
+    ul.tight, ol.tight { margin: .75rem 0; padding-left: 1.2rem; }
+    ul.tight li, ol.tight li { margin: .35rem 0; }
+    .diagram {
+      margin: 1.25rem 0;
+      padding: 1rem 1rem 1.1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+    .diagram figcaption {
+      font-family: "DM Sans", sans-serif;
+      font-weight: 600;
+      font-size: .9rem;
+      margin-bottom: .75rem;
+    }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.6pt;
+      margin: .75rem 0 1.25rem;
+    }
+    table.data th, table.data td {
+      border: 1px solid var(--line);
+      padding: .45rem .5rem;
+      vertical-align: top;
+    }
+    table.data thead th {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: "DM Sans", sans-serif;
+      font-weight: 600;
+      text-align: left;
+    }
+    table.data tbody tr:nth-child(even) { background: #f8fafc; }
+    table.data--compact { font-size: 8.4pt; }
+    table.data--compact th, table.data--compact td { padding: .28rem .35rem; }
+    .muted { color: var(--muted); font-weight: 400; }
+    .appendix-block { margin: 2rem 0; page-break-inside: avoid; }
+    .prompt-card {
+      margin: 1.5rem 0;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      background: #0b1220;
+      color: #f8fafc;
+    }
+    .prompt-card__head {
+      display: flex;
+      align-items: baseline;
+      gap: .85rem;
+      padding: .65rem 1rem;
+      background: linear-gradient(90deg, rgba(234,88,12,.95), rgba(234,88,12,.65));
+    }
+    .prompt-card__head h4 { color: #fff; margin: 0; font-size: .95rem; }
+    .prompt-card__lang {
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .68rem;
+      font-family: "DM Sans", sans-serif;
+      font-weight: 700;
+      color: rgba(255,255,255,.85);
+    }
+    .prompt-card pre.code {
+      margin: 0;
+      border-radius: 0;
+      background: #0b1220;
+    }
+    .policy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: .85rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .policy-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: .9rem 1rem;
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(15,23,42,.04);
+    }
+    .policy-card h4 {
+      margin: 0 0 .35rem;
+      font-size: .96rem;
+      color: var(--accent-dark);
+    }
+    .policy-card p { margin: 0; font-size: .92rem; color: var(--ink); }
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: .85rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .rule-card {
+      border: 1px solid var(--line);
+      border-left-width: 5px;
+      border-radius: 12px;
+      padding: .9rem 1rem;
+      background: #fff;
+    }
+    .rule-card--critical { border-left-color: #dc2626; }
+    .rule-card--high { border-left-color: #ea580c; }
+    .rule-card--medium { border-left-color: #d97706; }
+    .rule-card--low { border-left-color: #64748b; }
+    .rule-card__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: .75rem;
+      margin-bottom: .35rem;
+    }
+    .rule-card__code {
+      font-family: "DM Sans", sans-serif;
+      font-weight: 700;
+      font-size: .85rem;
+      color: var(--ink);
+    }
+    .rule-card__severity {
+      font-family: "DM Sans", sans-serif;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      color: var(--muted);
+    }
+    .rule-card__row {
+      margin: .25rem 0;
+      font-size: .88rem;
+      color: var(--ink);
+    }
+    .rule-card__body {
+      margin: .5rem 0 0;
+      font-size: .88rem;
+      color: var(--muted);
+    }
+    .colophon {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-top: 3rem;
+      page-break-before: always;
+    }
+    @media print {
+      @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+      body { font-size: 10.4pt; background: #ffffff; }
+      .cover { min-height: auto; padding: 3rem 8%; }
+      .document { padding: 1rem 0 2rem; }
+      a[href^="http"]::after { content: ""; }
+      .chapter { page-break-before: always; }
+      .chapter:first-of-type { page-break-before: auto; }
+      .policy-grid, .rule-grid { grid-template-columns: 1fr 1fr; }
+      pre.code { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <div>
+      <div class="cover-brand">Vitrina · Seller Helper</div>
+      <h1>Feature, Technology, Prompt &amp; Policy Report</h1>
+      <p class="subtitle">A complete, audit-ready walkthrough of the Seller Helper console — its seven tabs, the rule engine and LLM strategy behind it, the verbatim prompts, the quick-fix catalogue, and the policies enforced in code.</p>
+      <div class="cover-badge">Generated <span>2026-05-12T21:01:57Z</span> · Confidential draft</div>
+    </div>
+    <div class="cover-meta">
+      <div>Module path: <strong>/seller-helper</strong></div>
+      <div>Engine path: <strong>src/server/conception/*</strong></div>
+      <div>Heuristic path: <strong>src/server/seller-helper/*</strong></div>
+      <div>UI path: <strong>src/components/SellerHelper/*</strong></div>
+    </div>
+  </header>
+
+  <main class="document">
+    <section class="abstract">
+      <h2 style="border:none;padding:0;margin:0 0 .5rem;">Abstract</h2>
+      <p>This report documents the Seller Helper console exactly as it ships in the repository: the data foundation (pa_* micro-events), the seven dashboard tabs, the deterministic rule engine and its thresholds, the LLM strategy with provider fallback, the verbatim prompts, the per-product Vitrina heuristics and scoring formulas, the quick-fix catalogue, and the privacy and operational policies enforced by the code.</p>
+    </section>
+
+    <nav class="toc">
+      <div class="toc-title">Table of contents</div>
+      <ol>
+        <li><a href="#ch-1">1. Executive summary</a></li><li><a href="#ch-2">2. Product context and audience</a></li><li><a href="#ch-3">3. Information architecture</a></li><li><a href="#ch-4">4. Solution architecture and tech stack</a></li><li><a href="#ch-5">5. Access control and routing policy</a></li><li><a href="#ch-6">6. Data foundation: events, alerts, security blocks, applied actions</a></li><li><a href="#ch-7">7. Dashboard (Overview) tab</a></li><li><a href="#ch-8">8. Timeline tab</a></li><li><a href="#ch-9">9. User Behavior tab</a></li><li><a href="#ch-10">10. Conversion Funnel tab</a></li><li><a href="#ch-11">11. Vitrina Recommendation tab</a></li><li><a href="#ch-12">12. AI Recommendations tab</a></li><li><a href="#ch-13">13. Alerts tab</a></li><li><a href="#ch-14">14. Security tab</a></li><li><a href="#ch-15">15. Rule engine — full catalogue</a></li><li><a href="#ch-16">16. LLM strategy and provider fallback</a></li><li><a href="#ch-17">17. Prompt library (verbatim)</a></li><li><a href="#ch-18">18. Vitrina heuristics, scoring and ranking</a></li><li><a href="#ch-19">19. Quick fixes (Vitrina and Security)</a></li><li><a href="#ch-20">20. Refresh model and side effects</a></li><li><a href="#ch-21">21. Privacy, integrity and operational policies</a></li>
+        <li><a href="#appendices">Appendices (source index, env, glossary)</a></li>
+      </ol>
+    </nav>
+
+    
+  <section class="chapter" id="ch-1">
+    <div class="chapter-kicker">Chapter 1</div>
+    <h2>Executive summary</h2>
+    <p class="lead">Seller Helper is the operations console packaged inside Vitrina Store at the route <code>/seller-helper</code>. It gives privileged sellers a single page to read the storefront's pulse — traffic, funnel, behaviour, security — and to act on it with curated, schema-validated AI recommendations and reversible quick fixes.</p>
+      <p>The product combines a <strong>deterministic rule engine</strong> (five thresholds expressed directly in SQL/TypeScript) with a <strong>large-language-model pass</strong> (OpenRouter primary, Gemini fallback) that runs against a tight JSON snapshot of the latest signals. Every output is fingerprinted, idempotent, and scoped to fields that can be undone — there is no destructive automation.</p>
+      <ul class="tight">
+        <li><strong>Surface:</strong> 7 tabs — Overview, Behavior, Funnel, Vitrina, AI Recommendations, Alerts, Security.</li>
+        <li><strong>Engine:</strong> rule engine on rolling 15-minute, 2-hour and 7-day windows; LLM analysis with retries and provider fallback.</li>
+        <li><strong>Auditability:</strong> alerts/recos carry a stable fingerprint per UTC day or hour; insert-on-conflict-do-nothing keeps re-runs safe.</li>
+        <li><strong>Reversibility:</strong> 4 Vitrina quick fixes and 2 security quick fixes — block/unblock + 4 catalogue edits, no event deletion.</li>
+        <li><strong>Privacy posture:</strong> session_key only, masked in UI, French-language operator copy on Security.</li>
+      </ul>
+  </section>
+  <section class="chapter" id="ch-2">
+    <div class="chapter-kicker">Chapter 2</div>
+    <h2>Product context and audience</h2>
+    <p>Seller Helper targets store owners and operations admins of the Algerian e-commerce front end (Vitrina Store). The audience expects French operational copy on sensitive flows (Security) and DA-denominated prices, while keeping global analytics in English (en-US locale) to align with web analytics conventions.</p>
+      <p>Operationally the page has two visible jobs:</p>
+      <ol class="tight">
+        <li><strong>Diagnose</strong> — surface what is changing in traffic, conversion, behaviour and security right now.</li>
+        <li><strong>Act</strong> — apply small, reversible mutations (Vitrina catalogue tweaks, session blocks) without leaving the page.</li>
+      </ol>
+      <p>The hero contains a live data badge (<em>Live data · auto-refresh</em> when events are flowing) and a sessions-per-15-minute counter. Two CTAs live to the right: <em>Refresh</em> re-reads the precomputed overview; <em>Run analysis</em> triggers the rule engine + LLM pass server-side.</p>
+  </section>
+  <section class="chapter" id="ch-3">
+    <div class="chapter-kicker">Chapter 3</div>
+    <h2>Information architecture</h2>
+    <p>The dashboard exposes a deterministic 7-tab navigation. Tab metadata lives in <code>src/components/SellerHelper/nav.ts</code> — the source of truth for the labels and tooltip descriptions visible under the nav bar.</p>
+      <table class="data"><thead><tr><th>Tab</th><th>Label</th><th>Purpose</th><th>Primary source</th><th>Primary signal</th></tr></thead><tbody><tr><td>Dashboard (Overview)</td><td>Overview</td><td>Traffic, devices, and top pages at a glance.</td><td>src/components/SellerHelper/SellerHelperDashboard.tsx</td><td>All pa_* micro-events in the last 24 h / 7 d window.</td></tr><tr><td>Timeline</td><td>Timeline</td><td>Plot any metric over time — whole store or a specific product.</td><td>src/components/SellerHelper/timeline-tab.tsx, src/server/seller-helper/timeline-series.ts</td><td>Bucketed pa_* micro-events over the selected range (24 h hourly · 7/30/90 d daily).</td></tr><tr><td>User Behavior</td><td>Behavior</td><td>Heatmaps, journeys, scroll depth, and session replays.</td><td>src/components/SellerHelper/sections.tsx, ProductPageHeatmap.tsx</td><td>pa_scroll, pa_pointer_hover, pa_pointer_click, pa_product_view_time.</td></tr><tr><td>Conversion Funnel</td><td>Funnel</td><td>Drop-offs from product view to payment.</td><td>src/server/conception/metrics.ts (funnelCounts)</td><td>pa_product_view → pa_add_to_cart → pa_begin_checkout → pa_purchase.</td></tr><tr><td>Vitrina Recommendation</td><td>Vitrina</td><td>Catalog and merchandising fixes by product.</td><td>src/server/seller-helper/product-marketing-recommendations.ts</td><td>Per-product aggregates over 7 days joined with the product catalogue.</td></tr><tr><td>AI Recommendations</td><td>AI</td><td>Prioritised actions derived from analytics signals.</td><td>src/server/conception/llm-analysis.ts, analyze.ts</td><td>Conception overview snapshot + funnel/security signals sent to the LLM.</td></tr><tr><td>Alerts</td><td>Alerts</td><td>Active incidents and recent resolutions.</td><td>src/server/conception/analyze.ts, alert-detail-analysis.ts</td><td>Rule engine on rolling windows of micro-events + LLM-emitted alerts.</td></tr><tr><td>Security</td><td>Security</td><td>Suspicious sessions, data integrity, and session blocking.</td><td>src/server/conception/security-intel.ts, apply-security-quick-fixes.ts</td><td>Per-session aggregates over 7 days, with 14-day reference window.</td></tr></tbody></table>
+      
+  <figure class="diagram">
+    <figcaption>Figure 3 — Tabs as orthogonal lenses over the same DB</figcaption>
+    <pre class="ascii">
+                ┌──────────── sales_micro_event (pa_*) ────────────┐
+                │  productView · addToCart · beginCheckout ·       │
+                │  purchase · pointer_click/hover · scroll · etc.  │
+                └─────────────────────────────────────────────────┘
+                          │            │            │           │
+        ┌─────────────────┴─┐  ┌───────┴──────┐  ┌──┴──────┐  ┌─┴────────┐
+        │ Overview (24h KPI)│  │ Funnel (7d)  │  │Behavior │  │Security  │
+        │ traffic · devices │  │ product→cart │  │heatmaps │  │incidents │
+        │ top pages         │  │ →checkout    │  │journeys │  │blocks    │
+        └───────────────────┘  └──────────────┘  └─────────┘  └──────────┘
+                          │
+                ┌─────────┴──────────┐
+                │  conception_alert  │ ← rule engine + LLM
+                │  conception_recom. │
+                └────────────────────┘
+                          │
+                ┌─────────┴───────────────────────────┐
+                │  Vitrina · per-product heuristics   │
+                │  + optional LLM merchandising prompt │
+                └──────────────────────────────────────┘
+    </pre>
+  </figure>
+      <p>Each tab consumes data from the same overview DTO (<code>ConceptionOverviewDto</code>) plus its own slice. There is no tab-to-tab data fetching dependency: switching tabs is instantaneous because all data already lives in the client store after server hydration.</p>
+  </section>
+  <section class="chapter" id="ch-4">
+    <div class="chapter-kicker">Chapter 4</div>
+    <h2>Solution architecture and tech stack</h2>
+    <p>Seller Helper is rendered through Next.js App Router. The page is a server component that authenticates, joins the user role, prefetches all initial data in parallel, and passes it as <code>initialData</code> to a client dashboard.</p>
+      
+  <figure class="diagram">
+    <figcaption>Figure 1 — Seller Helper request and data flow</figcaption>
+    <pre class="ascii">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                 Browser  •  /seller-helper  •  Admin only               │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │     SellerHelperDashboard (Client)                                │  │
+│  │  Hero · Nav · Status badges · 7 tab contents                      │  │
+│  │  └─ useConceptionAdminData() → refresh / runAnalyze / dismiss     │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────▲────────────────────────────────────────┘
+                              │
+              Server Component prefetch (Next.js App Router)
+                              │
+┌─────────────────────────────▼────────────────────────────────────────┐
+│  src/server/conception/*    src/server/seller-helper/*               │
+│  ────────────────────────   ───────────────────────────              │
+│   metrics.ts          ┐                                              │
+│   security-intel.ts   ├─► buildConceptionOverview()                  │
+│   alert-rules.ts      ┘                                              │
+│                                                                      │
+│   analyze.ts ─► rule engine + LLM (llm-analysis.ts)                  │
+│                                                                      │
+│   product-marketing-recommendations.ts ─► Vitrina heuristics         │
+│   vitrina-recommendation-prompt.ts     ─► Vitrina LLM prompt         │
+│                                                                      │
+│   apply-security-quick-fixes.ts        ─► block / unblock session   │
+│   apply-vitrina-quick-fixes.ts         ─► default_color, promo_price │
+└──────────┬────────────────────────────────┬─────────────────────────┘
+           │                                │
+           ▼                                ▼
+┌────────────────────┐         ┌──────────────────────────────────────┐
+│ PostgreSQL         │         │  LLM providers                       │
+│ sales_micro_event  │         │  OpenRouter (primary, JSON mode)     │
+│ conception_alert   │         │  Gemini 2.0 Flash (fallback)         │
+│ conception_recom.  │         │  Temperature 0.2 · max 2 200 tokens  │
+│ conception_block   │         └──────────────────────────────────────┘
+└────────────────────┘
+    </pre>
+  </figure>
+      <h3>Stack at a glance</h3>
+      <table class="data"><thead><tr><th>Layer</th><th>Technology / Library</th><th>Role inside Seller Helper</th></tr></thead><tbody><tr><td>App Router page</td><td>Next.js 15 (React 19) — server component</td><td>Authenticates the request, gates admin access, prefetches data for hydration.</td></tr><tr><td>Client dashboard</td><td>React Client Component + Redux-aware hooks</td><td>Renders the 7 tabs and manages the active section via local state.</td></tr><tr><td>Styling</td><td>Tailwind CSS 3 + tailwind-merge + class-variance-authority</td><td>Cohesive panel/insight/badge primitives in layout.ts shared across tabs.</td></tr><tr><td>Icons</td><td>lucide-react</td><td>Section icons (Store, Compass, AlertTriangle, Shield, Bell, Zap, Users…).</td></tr><tr><td>Carousels</td><td>Swiper</td><td>Featured Vitrina recommendations slider with custom navigation.</td></tr><tr><td>Charts</td><td>Custom SVG (TrafficChart, ThreatActivityChart, ProgressBar)</td><td>Lightweight chart primitives in charts.tsx — no chart library dependency.</td></tr><tr><td>State sync</td><td>React state + custom useConceptionAdminData hook</td><td>Holds overview/alerts/recommendations/security data, exposes refresh/runAnalyze/dismiss handlers.</td></tr><tr><td>Server runtime</td><td>Next.js Route Handlers (Node)</td><td>Server actions for analysis, alert detail, quick fixes.</td></tr><tr><td>Database</td><td>PostgreSQL through Drizzle ORM</td><td>sales_micro_event, conception_alert, conception_recommendation, conception_security_block tables.</td></tr><tr><td>LLM (primary)</td><td>OpenRouter Chat Completions API</td><td>JSON-mode completions for the conception analysis pass.</td></tr><tr><td>LLM (fallback)</td><td>Google Generative Language API (Gemini 2.0 Flash)</td><td>Used when OpenRouter returns credit / quota errors.</td></tr><tr><td>Validation</td><td>Zod schemas</td><td>Hard schema for LLM output (severity, priority, ranges) before persisting.</td></tr><tr><td>Auth</td><td>Better Auth (server)</td><td>Session + privileged admin email gating for /seller-helper and admin APIs.</td></tr><tr><td>Telemetry contract</td><td>pa_* event whitelist (event-contract.ts)</td><td>Stable funnel + interaction event names from the storefront.</td></tr><tr><td>Pricing / catalog</td><td>product-content.ts, product-page-link.ts</td><td>Parses product description blocks, builds canonical product URLs.</td></tr><tr><td>Image rendering</td><td>next/image</td><td>Optimised thumbnails in the Vitrina cards (64×64) and modals.</td></tr><tr><td>Internationalisation</td><td>Intl.NumberFormat + Intl.RelativeTimeFormat</td><td>Dashboard uses en-US; security tab uses fr-FR (Algerian merchant audience).</td></tr></tbody></table>
+      <h3>Environment configuration</h3>
+      <table class="data"><thead><tr><th>Variable</th><th>Required for</th><th>Notes</th></tr></thead><tbody><tr><td>OPENROUTER_API_KEY</td><td>AI Recommendations (primary LLM)</td><td>Without it, only rule-engine alerts and Vitrina heuristics are produced.</td></tr><tr><td>CONCEPTION_OPENROUTER_MODEL</td><td>AI Recommendations (override)</td><td>Falls back to ASSISTANT_FREEFLOW_MODEL, then google/gemini-2.0-flash-001.</td></tr><tr><td>GOOGLE_API_KEY</td><td>AI Recommendations (Gemini fallback)</td><td>Used when OpenRouter fails with 402/insufficient credits.</td></tr><tr><td>CONCEPTION_GEMINI_MODEL</td><td>AI Recommendations (Gemini override)</td><td>Defaults to gemini-2.0-flash.</td></tr><tr><td>CONCEPTION_LLM_GEMINI_FALLBACK</td><td>Override fallback policy</td><td>Set to 'true' to always fall back, 'false' to never fall back.</td></tr><tr><td>DATABASE_URL</td><td>All Seller Helper data</td><td>PostgreSQL connection used by Drizzle in src/server/db.</td></tr><tr><td>BETTER_AUTH_URL / NEXT_PUBLIC_APP_URL</td><td>OpenRouter HTTP-Referer header</td><td>Identifies the calling app on OpenRouter.</td></tr></tbody></table>
+  </section>
+  <section class="chapter" id="ch-5">
+    <div class="chapter-kicker">Chapter 5</div>
+    <h2>Access control and routing policy</h2>
+    <p>The route guards itself before rendering a single byte to the client:</p>
+      <ol class="tight">
+        <li><code>auth.api.getSession()</code> resolves the current Better Auth session. Missing session → redirect to <code>/signin</code>.</li>
+        <li>The user's row is loaded from <code>user</code> to read the <code>role</code> column.</li>
+        <li>Admin is <code>role === "admin" || isPrivilegedAdminEmail(email)</code>. Non-admins receive a stub page with links back to <code>/my-account</code> and <code>/</code> — <em>no telemetry payload</em> ever reaches their browser.</li>
+        <li>Only when admin is true does the page prefetch the overview, alerts, dismissed alerts and Vitrina recommendations in parallel via <code>Promise.all</code>.</li>
+      </ol>
+      <p>Errors during the prefetch are captured as a string and rendered as a non-blocking banner; the dashboard still hydrates with whatever data was available.</p>
+  </section>
+  <section class="chapter" id="ch-6">
+    <div class="chapter-kicker">Chapter 6</div>
+    <h2>Data foundation: events, alerts, security blocks, applied actions</h2>
+    <p>All Seller Helper computations rely on five tables:</p>
+      <ul class="tight">
+        <li><strong>sales_micro_event</strong> — the storefront micro-event log (pa_* events). Columns used: <code>session_key</code>, <code>event_name</code>, <code>payload_json</code>, <code>page_path</code>, <code>product_local_id</code>, <code>created_at</code>.</li>
+        <li><strong>conception_alert</strong> — persistent alerts emitted by the rule engine and the LLM. Each row has a unique <code>fingerprint</code>, severity, optional metadata JSON and an <code>affected_sessions_estimate</code>.</li>
+        <li><strong>conception_recommendation</strong> — long-form recommendations with priority, impactLabel, analysis, recommendation, confidence and an evidenceJson trail.</li>
+        <li><strong>conception_security_block</strong> — active session blocklist. The unique key is <code>session_key</code> with a nullable <code>lifted_at</code> field — an open block has <code>lifted_at IS NULL</code>.</li>
+        <li><strong>seller_helper_applied_action</strong> — audit log of operator actions taken inside the Seller Helper (Vitrina quick fixes, security blocks, alert resolutions, AI recommendations marked as applied). Indexed on <code>occurred_at</code>, <code>product_local_id</code> and <code>kind</code>. Powers the Timeline checkpoint overlay.</li>
+      </ul>
+      <p>The canonical event vocabulary lives in <code>src/server/conception/event-contract.ts</code>:</p>
+      <pre class="code">export const STORE_EVENT = {
+  productView: &quot;pa_product_view&quot;,
+  addToCart: &quot;pa_add_to_cart&quot;,
+  beginCheckout: &quot;pa_begin_checkout&quot;,
+  purchase: &quot;pa_purchase&quot;,
+  globalContext: &quot;pa_global_context&quot;,
+  pagePerformance: &quot;pa_performance&quot;,
+} as const;
+
+export const PA_JS_ERROR = &quot;pa_js_error&quot; as const;</pre>
+      <p>Anything outside this whitelist is intentionally invisible to the dashboard.</p>
+  </section>
+  <section class="chapter" id="ch-7">
+    <div class="chapter-kicker">Chapter 7</div>
+    <h2>Dashboard (Overview) tab</h2>
+    <p>The Overview tab is the landing experience. It composes four panels:</p>
+      <ul class="tight">
+        <li><strong>KPI strip (top, 4 cards)</strong> — labels, values and a delta line marked positive/negative against the previous period. Drives the "is the store healthy?" judgement in under a second.</li>
+        <li><strong>Traffic & Sales (24 h)</strong> — a custom SVG <code>TrafficChart</code> driven by normalised hourly counts from <code>trafficHourlyNormalized()</code>. Counts are scaled to the local max so the visual is stable regardless of absolute volume.</li>
+        <li><strong>Devices</strong> — distribution slices parsed from the <code>device</code> field embedded in <code>payload_json</code> (mobile / tablet / desktop residual).</li>
+        <li><strong>Top performing pages</strong> — top page paths by view count, joined with their add-to-cart events to compute a per-page conversion rate.</li>
+      </ul>
+      <p>An empty-data fallback (<em>No metrics available yet</em>, <em>No pages with recorded traffic</em>) is rendered whenever the query returns zero rows — the dashboard never breaks on a fresh deployment.</p>
+  </section>
+  <section class="chapter" id="ch-8">
+    <div class="chapter-kicker">Chapter 8</div>
+    <h2>Timeline tab</h2>
+    <p>The Timeline tab plots any combination of metrics over time. The X axis is always time; the Y axis is whatever the operator picks. Two Y axes are used simultaneously so volume (counts) and quality (percentages) can be compared on the same chart. Overlaid on top of the curves are <em>checkpoint markers</em> — small flag-shaped pins that mark the exact time an action was taken in any of the recommendation surfaces.</p>
+      <h3>Controls</h3>
+      <ul class="tight">
+        <li><strong>Range</strong> — 24h (hourly buckets), 7d / 30d / 90d (daily buckets). Buckets are aligned to the current UTC hour or UTC day.</li>
+        <li><strong>Scope</strong> — Whole store, or a specific product. Per-product mode uses the same alias resolution as the heatmap (storefront product ID + DB hash aliases).</li>
+        <li><strong>Metrics</strong> — multi-select chips. The default set is views, add-to-carts, and purchases. Hovering each chip shows the metric's exact definition.</li>
+      </ul>
+      <h3>Metrics catalogue</h3>
+      <table class="data"><thead><tr><th>ID</th><th>Label</th><th>Unit</th><th>Definition</th></tr></thead><tbody><tr><td>views</td><td>Product views</td><td>count</td><td>pa_product_view events per bucket.</td></tr><tr><td>uniqueSessions</td><td>Unique sessions</td><td>count</td><td>Distinct session_key values per bucket.</td></tr><tr><td>addToCarts</td><td>Add to cart</td><td>count</td><td>pa_add_to_cart events per bucket.</td></tr><tr><td>purchases</td><td>Sales</td><td>count</td><td>pa_purchase events per bucket.</td></tr><tr><td>conversionRate</td><td>Conversion rate</td><td>percent</td><td>100 × purchases / views per bucket (0 if views=0).</td></tr></tbody></table>
+      <h3>Checkpoint markers (applied-action overlay)</h3>
+      <p>Every time an operator takes an action against a recommendation, a checkpoint is written to <code>seller_helper_applied_action</code> and rendered as a pin at its exact occurrence time on the Timeline chart. Hovering a pin reveals the action kind, exact timestamp and (when applicable) the product. Clicking the pin opens a details modal carrying the full recommendation context that was used at the moment of application.</p>
+      <table class="data"><thead><tr><th>Kind</th><th>Trigger</th><th>Sourced from</th><th>Scope</th></tr></thead><tbody><tr><td>Vitrina quick fix</td><td>Vitrina quick-fix application from Seller Helper › Vitrina tab</td><td>applyVitrinaQuickFixes()</td><td>Per-product</td></tr><tr><td>Recommendation applied</td><td>AI recommendation dismissed (marked as applied) on the Alerts/Recommendations panel</td><td>dismissConceptionRecommendationById()</td><td>Store-wide</td></tr><tr><td>Alert resolved</td><td>Conception alert marked as resolved</td><td>dismissConceptionAlertById() with disposition=resolved</td><td>Store-wide</td></tr><tr><td>Session blocked</td><td>Security quick-fix block_session</td><td>applySecurityQuickFixes()</td><td>Store-wide</td></tr><tr><td>Session unblocked</td><td>Security quick-fix unblock_session</td><td>applySecurityQuickFixes()</td><td>Store-wide</td></tr></tbody></table>
+      <h3>Server pipeline</h3>
+      <ol class="tight">
+        <li><code>bucketsForRange</code> aligns the current time to UTC hour/day and emits N evenly-spaced bucket boundaries.</li>
+        <li><code>loadEventCounts</code> runs one GROUP BY query on <code>sales_micro_event</code> with <code>date_trunc</code> and per-event filters (FILTER WHERE) producing one row per bucket and per metric counter.</li>
+        <li>For per-product scope, an <code>IN</code> filter on <code>product_local_id</code> uses the alias set returned by <code>getCatalogProductAliasIds()</code>.</li>
+        <li>Rate metrics (conversion rate) are computed at the bucket level — and at the window level for the KPI strip (sum of numerator / sum of denominator).</li>
+        <li><code>listAppliedActionsInRange</code> reads the <code>seller_helper_applied_action</code> audit table in the same window. Per-product timelines include both product-bound and store-wide checkpoints so operators see all signals competing for attribution.</li>
+      </ol>
+      <p>Below the chart, a three-card KPI strip surfaces, per active metric, the <em>total</em> (or window rate for percent metrics), the <em>average per bucket</em>, the <em>peak value</em> and the <em>peak bucket label</em>. The chart itself is a custom SVG line chart with hover tooltip and dual Y-axes — count axis on the left, percent axis on the right — so volume and rate metrics can coexist without distorting each other. Checkpoints sit above the curves with a small color-coded legend that summarizes how many of each kind occurred inside the visible window.</p>
+      <p>API surface:</p>
+      <pre class="code">GET /api/admin/seller-helper/timeline
+  ?range=24h|7d|30d|90d
+  &amp;scope=store|product
+  &amp;productId=&lt;storefront product id&gt;    # required when scope=product
+  &amp;metrics=views,addToCarts,purchases   # comma-separated
+
+# Response envelope (subset)
+{
+  &quot;timeline&quot;: {
+    &quot;range&quot;: &quot;24h&quot;,
+    &quot;scope&quot;: &quot;store&quot;,
+    &quot;granularity&quot;: &quot;hour&quot;,
+    &quot;buckets&quot;: [&quot;2026-05-12T13:00:00.000Z&quot;, ...],
+    &quot;series&quot;: [{ &quot;metric&quot;: &quot;views&quot;, &quot;values&quot;: [...], ... }],
+    &quot;appliedActions&quot;: [
+      {
+        &quot;id&quot;: &quot;uuid&quot;,
+        &quot;kind&quot;: &quot;vitrina_quick_fix&quot; | &quot;ai_recommendation&quot; | &quot;alert_resolved&quot; | &quot;security_block&quot; | &quot;security_unblock&quot;,
+        &quot;kindLabel&quot;: &quot;Vitrina quick fix&quot;,
+        &quot;title&quot;: &quot;Vitrina quick fix · Product name&quot;,
+        &quot;summary&quot;: &quot;Promote color • Add availability note&quot;,
+        &quot;occurredAt&quot;: &quot;2026-05-12T15:43:00.000Z&quot;,
+        &quot;productId&quot;: 123 | null,
+        &quot;productTitle&quot;: &quot;Product name&quot; | null,
+        &quot;sourceRefId&quot;: &quot;&lt;uuid or session key&gt;&quot;,
+        &quot;details&quot;: { ... }
+      }
+    ]
+  }
+}
+
+GET /api/admin/seller-helper/timeline/products
+  ?windowDays=30                        # ranks products by total views</pre>
+  </section>
+  <section class="chapter" id="ch-9">
+    <div class="chapter-kicker">Chapter 9</div>
+    <h2>User Behavior tab</h2>
+    <p>The Behavior tab renders the qualitative side of telemetry:</p>
+      <ul class="tight">
+        <li><strong>Heatmap bands</strong> — vertical bands shaded by intensity derived from <code>pa_scroll</code> depth distributions, attached to the most-viewed product page.</li>
+        <li><strong>Product page heatmap</strong> — an SVG composite from <code>ProductPageHeatmap.tsx</code> that overlays pointer activity zones on a synthetic product layout.</li>
+        <li><strong>Journeys</strong> — most frequent session journeys reconstructed from the funnel events.</li>
+        <li><strong>Scroll depth metrics</strong> — the proportion of sessions reaching 75% scroll.</li>
+        <li><strong>Session replays</strong> — non-video summaries: duration, device, status — opening the admin analytics for full event-by-event detail.</li>
+      </ul>
+      <p>Cross-navigation is wired through <code>onNavigateSection</code> — clicking <em>View funnel</em> on a behaviour insight jumps to the Conversion Funnel tab without re-fetching.</p>
+  </section>
+  <section class="chapter" id="ch-10">
+    <div class="chapter-kicker">Chapter 10</div>
+    <h2>Conversion Funnel tab</h2>
+    <p>The funnel computes nested-subset counts over the last 7 days. The CTE is intentionally written so that each level is the intersection with the previous one — i.e. <code>n_cart</code> only counts sessions that <em>also</em> had a <code>pa_product_view</code>.</p>
+      <pre class="code">WITH pe   AS (SELECT DISTINCT session_key FROM sales_micro_event WHERE event_name = 'pa_product_view'   AND created_at &gt;= since),
+     cart AS (SELECT DISTINCT session_key FROM sales_micro_event WHERE event_name = 'pa_add_to_cart'    AND created_at &gt;= since),
+     chk  AS (SELECT DISTINCT session_key FROM sales_micro_event WHERE (event_name = 'pa_begin_checkout' OR page_path LIKE '%checkout%') AND created_at &gt;= since),
+     fin  AS (SELECT DISTINCT session_key FROM sales_micro_event WHERE event_name = 'pa_purchase'       AND created_at &gt;= since)
+SELECT
+  (SELECT COUNT(*) FROM pe)                                                                                        AS n_product,
+  (SELECT COUNT(*) FROM pe JOIN cart USING (session_key))                                                          AS n_cart,
+  (SELECT COUNT(*) FROM pe JOIN cart USING (session_key) JOIN chk USING (session_key))                             AS n_checkout_path,
+  (SELECT COUNT(*) FROM pe JOIN cart USING (session_key) JOIN fin USING (session_key))                             AS n_final;</pre>
+      <p>Friction items are then computed from the deltas between adjacent steps. The same numbers drive the recommendation engine — see the next chapter on the rule engine for the exact thresholds.</p>
+      <table class="data"><thead><tr><th>Step</th><th>Source event(s)</th><th>Position in funnel</th></tr></thead><tbody><tr><td>Product view</td><td>pa_product_view</td><td>Entry</td></tr><tr><td>Add to cart</td><td>pa_add_to_cart</td><td>Intent</td></tr><tr><td>Begin checkout</td><td>pa_begin_checkout OR page_path LIKE '%checkout%'</td><td>Commit</td></tr><tr><td>Purchase</td><td>pa_purchase</td><td>Conversion</td></tr></tbody></table>
+  </section>
+  <section class="chapter" id="ch-11">
+    <div class="chapter-kicker">Chapter 11</div>
+    <h2>Vitrina Recommendation tab</h2>
+    <p>Vitrina is the merchandising lens. It enumerates the catalogue, builds a per-product interaction snapshot over the last 7 days, computes deterministic tips, ranks the products, and renders them in two views: a featured Swiper carousel and a filtered grid with search / category / sort controls.</p>
+      <h3>Pipeline</h3>
+      <ol class="tight">
+        <li><strong>Load catalogue rows</strong> from <code>productsTable</code> joined with <code>categoryTable</code>; cross-reference with the storefront product IDs from the catalogue helper.</li>
+        <li><strong>Aggregate signals</strong> per storefront product over 7 days using a single GROUP BY query (views, hovers, clicks, add-to-carts, option selects, image views, specs interactions) plus a detail pass for view dwell time, scroll depth, click Y%, hover Y%, selected colours and review interactions.</li>
+        <li><strong>Build display snapshot</strong> — title hints (colour, price, brand), descriptionLength, rating, stock.</li>
+        <li><strong>Build interaction snapshot</strong> — window-normalised metrics, avg click Y%, avg hover Y%, top selected colours, viewToCartRate, clickToCartRate.</li>
+        <li><strong>Build tips</strong> — see the heuristics table below.</li>
+        <li><strong>Build quick fixes</strong> — at most four whitelisted IDs.</li>
+        <li><strong>Score and rank</strong> by opportunity score (priority + traffic weight + friction weight).</li>
+      </ol>
+      <h3>Heuristic tip catalogue</h3>
+      <table class="data"><thead><tr><th>Tip</th><th>Priority logic</th><th>Trigger</th><th>Action</th></tr></thead><tbody><tr><td>Price tip</td><td>high / medium</td><td>views ≥ 6 AND ( (viewToCartRate &lt; 10%) OR (priceZoneClicks ≥ 3 AND addToCarts low) ) — price-sensitive case; or views ≥ 6 AND viewToCartRate ≥ 10% with an active jomlaPrice — well-priced case.</td><td>Surface the selling price on the catalog thumbnail; if no Vitrina promo price is set, suggest enabling one via the promo_price quick fix.</td></tr><tr><td>Quantity &amp; availability</td><td>high / medium</td><td>product.instock &gt; 0 AND (views ≥ 10 OR hovers ≥ 12 OR clicks ≥ 8 OR baseline views ≥ 6)</td><td>Display in-stock copy on thumbnail and detail page; severity goes high when only 5 or fewer units remain while demand rises.</td></tr><tr><td>Quality concern</td><td>high / medium</td><td>reviewInteractions ≥ 3 OR (product.rating between 0 and 3.5 AND views ≥ 5)</td><td>Highlight rating proof and reassurance near the CTA; the priority promotes to high once five or more shoppers open the reviews section.</td></tr></tbody></table>
+      <h3>Quick fixes catalogue</h3>
+      <table class="data"><thead><tr><th>ID</th><th>Label</th><th>Summary</th><th>Effect on DB</th></tr></thead><tbody><tr><td>default_color</td><td>Default color</td><td>Move the most-selected colour to the first option so the PDP opens on the preferred shade.</td><td>Reorders the colours array in the product description (parseProductContent / serializeProductContent).</td></tr><tr><td>promo_price</td><td>Vitrina promo price</td><td>Set jomlaPrice to price ÷ (1 + 0.20) so the storefront shows a Vitrina promo with the original as strikethrough.</td><td>Writes a new jomlaPrice on products.jomla_price.</td></tr><tr><td>availability_note</td><td>Availability message</td><td>Upsert an Availability entry — 'In stock — N unit(s) ready to ship.' — in the product description.</td><td>Writes the Availability additional-info key on products.description.</td></tr><tr><td>quality_highlight</td><td>Quality reassurance</td><td>Upsert a Quality entry showing the current rating (or a generic reassurance line if there's none yet).</td><td>Writes the Quality additional-info key on products.description.</td></tr></tbody></table>
+      <p>The LLM pass for Vitrina is optional — its prompts are reproduced in the Prompt Library chapter — and it consumes the top three opportunity-ranked products only, to keep the JSON payload small and the response deterministic.</p>
+  </section>
+  <section class="chapter" id="ch-12">
+    <div class="chapter-kicker">Chapter 12</div>
+    <h2>AI Recommendations tab</h2>
+    <p>This tab is the human-readable surface of the LLM analysis. Each card is a <code>conception_recommendation</code> row with: priority, impact label, title, analysis, recommendation, confidence (0–100), and optional revenueHint / implementationHint / roiHint.</p>
+      <p>Operators can mark a recommendation as <em>Dismissed</em>; the UI sorts cards by importance and supports jumping to the section that would implement the change (Vitrina, Funnel, Behavior, Alerts) via <code>resolveImplementationSection()</code> — a keyword router that reads the title and recommendation text in both English and French.</p>
+      <p>The deterministic funnel-based recommendations always appear too. They are reproduced below for transparency:</p>
+      <table class="data"><thead><tr><th>Code</th><th>Priority</th><th>Trigger</th><th>Impact label</th><th>Confidence</th><th>Recommendation</th></tr></thead><tbody><tr><td>REC_FUNNEL_PRODUCT_CART</td><td>high</td><td>nCart / nProduct &lt; 0.35 (with nProduct &gt; 0)</td><td>+4–8% conversion (est.)</td><td>82</td><td>Clarify all-in price, availability, and shipping above the fold; strengthen reviews and guarantees near the primary CTA.</td></tr><tr><td>REC_FUNNEL_CART_CHECKOUT</td><td>high</td><td>nCheckoutPath / nCart &lt; 0.45 (with nCart &gt; 0)</td><td>+5–10% conversion (est.)</td><td>88</td><td>Enable guest checkout, reduce form fields on mobile, show shipping costs early, and add a funnel progress bar.</td></tr><tr><td>REC_LCP_PERF</td><td>medium</td><td>lcpSlowSessions ≥ 3</td><td>+2–4% conversion (est.)</td><td>76</td><td>Compress visuals (WebP/AVIF), lazy-load below the fold, prioritise the hero, and limit third-party scripts on the product page.</td></tr></tbody></table>
+  </section>
+  <section class="chapter" id="ch-13">
+    <div class="chapter-kicker">Chapter 13</div>
+    <h2>Alerts tab</h2>
+    <p>The Alerts tab consolidates active and dismissed incidents. Each row in <code>conception_alert</code> renders as a card carrying severity (critical / high / medium / low), title, description, optional detail, and an "Analyze in detail" action that calls <code>/api/admin/conception/alerts/detail</code>.</p>
+      <p>The detail endpoint runs <code>analyzeConceptionAlertById()</code> — a deterministic, per-type deep-dive function that produces:</p>
+      <ul class="tight">
+        <li><strong>Key indicators</strong> — current vs reference values for the rate / volume / error count.</li>
+        <li><strong>Deviations</strong> — observed value vs baseline with a tone (critical/high/medium/low) computed from the delta.</li>
+        <li><strong>Clues</strong> — qualitative pointers (e.g. "Loss often concentrates between cart and checkout initiation").</li>
+        <li><strong>Fix steps</strong> — actionable checklist tailored to the alert family.</li>
+      </ul>
+      <p>The dismissal flow accepts a disposition of <code>"resolved"</code> or <code>"ignored"</code>, persisted on the alert row; the right column lists the most recent 12 dismissed alerts so operators can compare incident lifetimes.</p>
+  </section>
+  <section class="chapter" id="ch-14">
+    <div class="chapter-kicker">Chapter 14</div>
+    <h2>Security tab</h2>
+    <p>The Security tab is built from a dedicated brief computed by <code>buildConceptionSecurityBrief()</code>:</p>
+      <ul class="tight">
+        <li><strong>4 KPI cards</strong> — Bots détectés, Sessions bloquées, Tentatives de fraude, Score de sécurité.</li>
+        <li><strong>Score formula card</strong> — the formula is shown verbatim to operators (see below).</li>
+        <li><strong>Threat activity (24 h)</strong> — hourly series of events emitted by risky sessions; rendered through <code>ThreatActivityChart</code>.</li>
+        <li><strong>Threat types (7 d)</strong> — distribution of Bot scraping / Click fraud / Fausses commandes / Erreurs JS.</li>
+        <li><strong>Active incidents</strong> — top 8 risky sessions, masked identity, time-ago in French.</li>
+        <li><strong>Blocked sessions table</strong> — currently active blocks with reason and time-since-block.</li>
+        <li><strong>Engine notes</strong> — French-language narrative footnotes, always including the privacy reminder.</li>
+      </ul>
+      <p>The visible score formula:</p>
+      <pre class="code">Score = 100 − min(30, bots/sessions×35) − min(18, blocages/sessions×20) − min(24, fraudes×4) − min(16, pic horaire/80×16), borné entre 0 et 100.</pre>
+      <h3>Per-session risk patterns</h3>
+      <table class="data"><thead><tr><th>Pattern</th><th>Trigger</th><th>Score contribution</th></tr></thead><tbody><tr><td>Bot scraping (high velocity)</td><td>events ≥ 50 AND 0 &lt; duration_s ≤ 360</td><td>+40</td></tr><tr><td>Bot scraping (catalogue scrape)</td><td>product_views ≥ 25 AND 0 &lt; duration_s ≤ 600</td><td>+25</td></tr><tr><td>Click fraud</td><td>clicks ≥ 35 AND 0 &lt; duration_s ≤ 300</td><td>+20</td></tr><tr><td>Fake checkout</td><td>checkouts &gt; 0 AND no pa_product_view in the same session</td><td>+15</td></tr><tr><td>JS error storm</td><td>js_errors ≥ 3</td><td>+10</td></tr><tr><td>Clickfarm pattern (low engagement)</td><td>hovers ≤ 1 AND clicks ≥ 10</td><td>+8</td></tr></tbody></table>
+      <h3>Security quick fixes</h3>
+      <table class="data"><thead><tr><th>ID</th><th>Label</th><th>Summary</th><th>Effect on DB</th></tr></thead><tbody><tr><td>block_session</td><td>Bloquer la session</td><td>Adds the session_key to conception_security_block with a manual reason.</td><td>Upserts a row; on conflict, the existing row is reactivated (blockedAt reset, liftedAt cleared).</td></tr><tr><td>unblock_session</td><td>Débloquer la session</td><td>Lifts an active block by setting conception_security_block.lifted_at = now().</td><td>Only the current open block (lifted_at IS NULL) is updated.</td></tr></tbody></table>
+      <p>Both quick fixes are confirmed in a modal before being committed. Blocks are upserted (so re-blocking a previously lifted session reactivates the row); unblocks only update rows that are currently open.</p>
+  </section>
+  <section class="chapter" id="ch-15">
+    <div class="chapter-kicker">Chapter 15</div>
+    <h2>Rule engine — full catalogue</h2>
+    <p>The deterministic rule engine lives in <code>src/server/conception/analyze.ts</code> and runs on every <em>Run analysis</em> click. Each rule emits an alert with a unique fingerprint so re-runs don't duplicate.</p>
+      
+    <div class="rule-grid">
+      
+        <article class="rule-card rule-card--critical">
+          <div class="rule-card__head">
+            <span class="rule-card__code">CONVERSION_DROP</span>
+            <span class="rule-card__severity">critical</span>
+          </div>
+          <p class="rule-card__row"><strong>Window:</strong> 7 days vs previous 7 days</p>
+          <p class="rule-card__row"><strong>Trigger:</strong> rateNow &lt; 0.8 × rateOld (and rateOld &gt; 0.001)</p>
+          <p class="rule-card__row"><strong>Fingerprint:</strong> Daily — one alert per UTC day.</p>
+          <p class="rule-card__body">Conversion rate has dropped more than 20% versus the rolling reference. Detail captures both rates so operators can compare instantly.</p>
+        </article>
+        <article class="rule-card rule-card--high">
+          <div class="rule-card__head">
+            <span class="rule-card__code">TRAFFIC_SPIKE</span>
+            <span class="rule-card__severity">high</span>
+          </div>
+          <p class="rule-card__row"><strong>Window:</strong> Last 15 minutes vs 90-minute baseline</p>
+          <p class="rule-card__row"><strong>Trigger:</strong> events15m &gt; baseline15 × 4</p>
+          <p class="rule-card__row"><strong>Fingerprint:</strong> Hourly — one alert per UTC hour.</p>
+          <p class="rule-card__body">Event density at least 4× the 90-minute average over a 15-minute window. Hourly fingerprint avoids spam during sustained spikes.</p>
+        </article>
+        <article class="rule-card rule-card--medium">
+          <div class="rule-card__head">
+            <span class="rule-card__code">CART_ABANDON_MASS</span>
+            <span class="rule-card__severity">medium</span>
+          </div>
+          <p class="rule-card__row"><strong>Window:</strong> Rolling 2 hours</p>
+          <p class="rule-card__row"><strong>Trigger:</strong> cart2h ≥ 8 AND cartAbandon2h ≥ 0.8</p>
+          <p class="rule-card__row"><strong>Fingerprint:</strong> Hourly.</p>
+          <p class="rule-card__body">At least 8 sessions added to cart in 2 hours and 80%+ never reached pa_purchase. affectedSessionsEstimate = cart2h − final2h.</p>
+        </article>
+        <article class="rule-card rule-card--high">
+          <div class="rule-card__head">
+            <span class="rule-card__code">JS_ERROR_BURST</span>
+            <span class="rule-card__severity">high</span>
+          </div>
+          <p class="rule-card__row"><strong>Window:</strong> Rolling 2 hours</p>
+          <p class="rule-card__row"><strong>Trigger:</strong> jsErrorSessions / sessionsCheckout2h ≥ 0.05</p>
+          <p class="rule-card__row"><strong>Fingerprint:</strong> Hourly.</p>
+          <p class="rule-card__body">More than 5% of checkout sessions raise pa_js_error events — usually a regression on the checkout page.</p>
+        </article>
+        <article class="rule-card rule-card--low">
+          <div class="rule-card__head">
+            <span class="rule-card__code">PERF_SLOW</span>
+            <span class="rule-card__severity">low</span>
+          </div>
+          <p class="rule-card__row"><strong>Window:</strong> Rolling 2 hours</p>
+          <p class="rule-card__row"><strong>Trigger:</strong> slowNavSessions + lcpSlowSessions ≥ 5</p>
+          <p class="rule-card__row"><strong>Fingerprint:</strong> Hourly.</p>
+          <p class="rule-card__body">Five or more sessions show slow navigation or LCP &gt; 4 s, often image weight on the product page.</p>
+        </article>
+    </div>
+      <h3>Deterministic funnel recommendations</h3>
+      <p>The same analysis run also writes three deterministic recommendations when the funnel ratios fall under thresholds:</p>
+      <table class="data"><thead><tr><th>Code</th><th>Priority</th><th>Trigger</th><th>Impact label</th><th>Confidence</th><th>Recommendation</th></tr></thead><tbody><tr><td>REC_FUNNEL_PRODUCT_CART</td><td>high</td><td>nCart / nProduct &lt; 0.35 (with nProduct &gt; 0)</td><td>+4–8% conversion (est.)</td><td>82</td><td>Clarify all-in price, availability, and shipping above the fold; strengthen reviews and guarantees near the primary CTA.</td></tr><tr><td>REC_FUNNEL_CART_CHECKOUT</td><td>high</td><td>nCheckoutPath / nCart &lt; 0.45 (with nCart &gt; 0)</td><td>+5–10% conversion (est.)</td><td>88</td><td>Enable guest checkout, reduce form fields on mobile, show shipping costs early, and add a funnel progress bar.</td></tr><tr><td>REC_LCP_PERF</td><td>medium</td><td>lcpSlowSessions ≥ 3</td><td>+2–4% conversion (est.)</td><td>76</td><td>Compress visuals (WebP/AVIF), lazy-load below the fold, prioritise the hero, and limit third-party scripts on the product page.</td></tr></tbody></table>
+  </section>
+  <section class="chapter" id="ch-16">
+    <div class="chapter-kicker">Chapter 16</div>
+    <h2>LLM strategy and provider fallback</h2>
+    <p>The LLM pass is orchestrated by <code>runConceptionLlmAnalysis()</code>. Its goal is to produce a French operator summary plus structured alerts and recommendations grounded in the current telemetry snapshot, never inventing metrics that aren't in the payload.</p>
+      <h3>Provider chain</h3>
+      <ol class="tight">
+        <li><strong>OpenRouter</strong> (primary) — model picked from <code>CONCEPTION_OPENROUTER_MODEL</code> → <code>ASSISTANT_FREEFLOW_MODEL</code> → <code>google/gemini-2.0-flash-001</code>. JSON mode is enforced via <code>response_format: { type: "json_object" }</code>. Up to 3 attempts with 1.2 s × attempt back-off on 429/5xx.</li>
+        <li><strong>Gemini 2.0 Flash</strong> (fallback) — used when OpenRouter fails with a 402 (insufficient credits) or when <code>CONCEPTION_LLM_GEMINI_FALLBACK=true</code>. Calls <code>generativelanguage.googleapis.com</code> with <code>responseMimeType: "application/json"</code>.</li>
+      </ol>
+      <h3>Validation pipeline</h3>
+      <ol class="tight">
+        <li><code>extractJsonObject()</code> tolerates wrapping prose / markdown fences.</li>
+        <li><code>normalizeAnalysisPayload()</code> accepts both English and French keys (<code>alerts</code>/<code>alertes</code>, <code>recommendations</code>/<code>recommandations</code>, <code>analysis</code>/<code>analyse</code>) and coerces severity / priority through fuzzy matching (<code>crit</code>, <code>haute</code>, <code>moy</code>).</li>
+        <li><code>llmAnalysisSchema</code> (Zod) enforces <code>severity ∈ {critical, high, medium, low}</code>, <code>confidence ∈ [0, 100]</code>, max array sizes (6 alerts, 8 recommendations), and bounded string lengths.</li>
+        <li><code>mapLlmOutput()</code> appends day-fingerprints (<code>LLM-ALERT-…-2026-05-12</code>) and serialises <code>metadata_json</code>/<code>evidence_json</code> for traceability.</li>
+      </ol>
+      <h3>Determinism levers</h3>
+      <ul class="tight">
+        <li>Temperature is fixed at <code>0.2</code>.</li>
+        <li><code>max_tokens</code> is capped at 2 200 for OpenRouter.</li>
+        <li>The LLM only ever sees: latest overview, top 6 KPIs, funnel + summary + friction items, top 6 pages, devices, security brief and the analyze signals.</li>
+      </ul>
+  </section>
+  <section class="chapter" id="ch-17">
+    <div class="chapter-kicker">Chapter 17</div>
+    <h2>Prompt library (verbatim)</h2>
+    <p>This chapter quotes the prompts from source so reviewers can audit the exact instructions sent to the model. The strings are read from the repository at build time.</p>
+      
+    <section class="prompt-card">
+      <div class="prompt-card__head">
+        <span class="prompt-card__lang">src/server/conception/llm-analysis.ts</span>
+        <h4>Conception analysis — system prompt</h4>
+      </div>
+      <pre class="code">You are a senior ecommerce analytics consultant for Vitrina Store.
+Analyze only the telemetry JSON provided by the user.
+Return one JSON object only with exactly these top-level keys: summary, alerts, recommendations.
+summary must be a plain French string, never an object.
+alerts must be an array. recommendations must be an array.
+severity must be exactly one of: critical, high, medium, low.
+priority must be exactly one of: critical, high, medium, low.
+confidence must be an integer from 0 to 100.
+Write summary, titles, descriptions, analysis, and recommendation fields in French.
+Do not invent metrics that are absent from the payload.
+Prefer actionable merchandising, conversion, checkout, performance, and security insights.
+Each alert must include alertType (short snake_case code), severity, title, description, optional detail, optional affectedSessionsEstimate.
+Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, and optional revenueHint, implementationHint, roiHint.
+If event data is sparse, produce cautious recommendations and lower confidence instead of fabricating incidents.</pre>
+    </section>
+      
+    <section class="prompt-card">
+      <div class="prompt-card__head">
+        <span class="prompt-card__lang">src/server/conception/llm-analysis.ts</span>
+        <h4>Conception analysis — user prompt template</h4>
+      </div>
+      <pre class="code">Analyze this Seller Helper telemetry snapshot and return JSON only.
+
+${JSON.stringify(context)}</pre>
+    </section>
+      
+    <section class="prompt-card">
+      <div class="prompt-card__head">
+        <span class="prompt-card__lang">src/server/seller-helper/vitrina-recommendation-prompt.ts</span>
+        <h4>Vitrina merchandising — system prompt</h4>
+      </div>
+      <pre class="code">You are a merchandising analyst for Vitrina Store.
+Use only the JSON payload provided by the user.
+Return one JSON object with exactly one key: recommendations.
+recommendations must be an array with at most the maxRecommendations value from the payload.
+Each recommendation must include:
+- productId (string, must match an input productId)
+- primaryRecommendation (one concise merchandising action in French)
+- tips (array of 1 to 3 objects with label, action, priority)
+- isTopRecommendation (boolean; exactly one item in the array must be true)
+priority must be exactly one of: high, medium, low.
+Ground every recommendation in the supplied display and interaction fields.
+Prioritize changes to title, main image, price visibility, default color, promo price, and catalog thumbnail messaging.
+If interaction data is sparse, lower confidence and avoid inventing metrics.
+Write primaryRecommendation, label, and action in French.</pre>
+    </section>
+      
+    <section class="prompt-card">
+      <div class="prompt-card__head">
+        <span class="prompt-card__lang">src/server/seller-helper/vitrina-recommendation-prompt.ts</span>
+        <h4>Vitrina merchandising — user prompt template</h4>
+      </div>
+      <pre class="code">Generate storefront merchandising recommendations from this Seller Helper snapshot.
+Select only products that need a visible merchandising change.
+Return JSON only.
+
+${JSON.stringify(payload)}</pre>
+    </section>
+      <p class="muted">Both prompts insist on French operator copy, JSON-only output, and grounding in the supplied payload. Combined with the Zod schema, this gives the dashboard predictable, audit-ready recommendations.</p>
+  </section>
+  <section class="chapter" id="ch-18">
+    <div class="chapter-kicker">Chapter 18</div>
+    <h2>Vitrina heuristics, scoring and ranking</h2>
+    <p>Vitrina ranking is a three-component score in <code>opportunityScore()</code>:</p>
+      <pre class="code">opportunityScore = priorityWeight + trafficWeight + frictionWeight
+
+priorityWeight  = Σ (4 - IMPORTANCE_RANKS[tip.priority])     // high=3, medium=2, low=1
+trafficWeight   = min(12, log2(views + 2) × 2)
+frictionWeight  = (viewToCartRate != null &amp;&amp; viewToCartRate &lt; 0.1)
+                  ? (0.1 - viewToCartRate) × 40
+                  : 0</pre>
+      <p>Ties are broken by the strongest tip priority (lowest IMPORTANCE_RANK). The list is then filtered:</p>
+      <ul class="tight">
+        <li>Default view — any product with at least one tip.</li>
+        <li><code>actionableOnly</code> — products with at least one high or medium tip.</li>
+      </ul>
+      <p>The featured Swiper at the top of the tab shows the top three opportunity-ranked products; the grid below allows search by title/category/brand/slug, a category filter, and six sort modes (opportunity / interaction / merchandising priority — high or low).</p>
+      <h3>Per-product interaction signals</h3>
+      <table class="data"><thead><tr><th>Signal</th><th>Source event</th><th>Used in</th></tr></thead><tbody><tr><td>views</td><td>pa_product_view</td><td>opportunity score, price tip, quality tip</td></tr><tr><td>hovers</td><td>pa_pointer_hover (≠ heatmap_embed)</td><td>demand classification</td></tr><tr><td>clicks</td><td>pa_pointer_click (≠ heatmap_embed)</td><td>demand + click Y% zones</td></tr><tr><td>addToCarts</td><td>pa_add_to_cart</td><td>viewToCartRate, clickToCartRate</td></tr><tr><td>optionSelects</td><td>pa_select_option</td><td>default_color quick fix candidate</td></tr><tr><td>imageViews</td><td>pa_image_view_time</td><td>interaction score</td></tr><tr><td>specsInteractions</td><td>pa_specs_interaction</td><td>interaction score</td></tr><tr><td>specsDwellMs</td><td>pa_specs_view_time (visible_ms)</td><td>engagement signal</td></tr><tr><td>scrollDepth75Plus</td><td>pa_scroll (depth_pct ≥ 75)</td><td>engagement signal</td></tr><tr><td>clickYTotal / clickYCount</td><td>pa_pointer_click (y_pct)</td><td>avg click Y, priceZoneClicks</td></tr><tr><td>hoverYTotal / hoverYCount</td><td>pa_pointer_hover (y_pct)</td><td>avg hover Y</td></tr><tr><td>reviewInteractions</td><td>pa_review*</td><td>quality concern tip</td></tr><tr><td>priceZoneClicks</td><td>pa_pointer_click with y_pct ≤ 35</td><td>price tip (price-sensitive case)</td></tr></tbody></table>
+  </section>
+  <section class="chapter" id="ch-19">
+    <div class="chapter-kicker">Chapter 19</div>
+    <h2>Quick fixes (Vitrina and Security)</h2>
+    <p>Quick fixes are the only mutations the dashboard can apply. They share a strict contract:</p>
+      <ol class="tight">
+        <li>The client sends a structured payload (a list of <code>{ id, label, summary, context }</code>).</li>
+        <li>The server validates each <code>id</code> against a whitelist of <code>VitrinaQuickFixId</code> or <code>ConceptionSecurityQuickFixId</code>.</li>
+        <li>For Vitrina, the server re-reads the recommendation, so the actual fixes applied must match what was offered — no smuggling of new fix IDs.</li>
+        <li>Mutations are scoped to a tiny set of columns; nothing is destructive.</li>
+      </ol>
+      <h3>Vitrina catalogue mutations</h3>
+      <table class="data"><thead><tr><th>ID</th><th>Label</th><th>Summary</th><th>Effect on DB</th></tr></thead><tbody><tr><td>default_color</td><td>Default color</td><td>Move the most-selected colour to the first option so the PDP opens on the preferred shade.</td><td>Reorders the colours array in the product description (parseProductContent / serializeProductContent).</td></tr><tr><td>promo_price</td><td>Vitrina promo price</td><td>Set jomlaPrice to price ÷ (1 + 0.20) so the storefront shows a Vitrina promo with the original as strikethrough.</td><td>Writes a new jomlaPrice on products.jomla_price.</td></tr><tr><td>availability_note</td><td>Availability message</td><td>Upsert an Availability entry — 'In stock — N unit(s) ready to ship.' — in the product description.</td><td>Writes the Availability additional-info key on products.description.</td></tr><tr><td>quality_highlight</td><td>Quality reassurance</td><td>Upsert a Quality entry showing the current rating (or a generic reassurance line if there's none yet).</td><td>Writes the Quality additional-info key on products.description.</td></tr></tbody></table>
+      <p>Internal constants:</p>
+      <ul class="tight">
+        <li><code>VITRINA_STANDARD_MARKUP = 0.20</code> — used by the <em>promo_price</em> fix: <code>jomlaPrice = round(price / 1.20)</code> with a minimum of 1.</li>
+        <li><code>AVAILABILITY_KEY = "Availability"</code>, <code>QUALITY_KEY = "Quality"</code> — keys upserted in the product description's additional-info block.</li>
+        <li>Maximum 4 quick fixes per request.</li>
+      </ul>
+      <h3>Security mutations</h3>
+      <table class="data"><thead><tr><th>ID</th><th>Label</th><th>Summary</th><th>Effect on DB</th></tr></thead><tbody><tr><td>block_session</td><td>Bloquer la session</td><td>Adds the session_key to conception_security_block with a manual reason.</td><td>Upserts a row; on conflict, the existing row is reactivated (blockedAt reset, liftedAt cleared).</td></tr><tr><td>unblock_session</td><td>Débloquer la session</td><td>Lifts an active block by setting conception_security_block.lifted_at = now().</td><td>Only the current open block (lifted_at IS NULL) is updated.</td></tr></tbody></table>
+      <p>Security mutations also surface a confirmation modal and persist the reason in <code>conception_security_block.reason</code> (default fallback: <em>"Blocage manuel"</em>).</p>
+  </section>
+  <section class="chapter" id="ch-20">
+    <div class="chapter-kicker">Chapter 20</div>
+    <h2>Refresh model and side effects</h2>
+    <p>The dashboard maintains three explicit state-flow primitives in <code>useConceptionAdminData</code>:</p>
+      <ul class="tight">
+        <li><strong>refresh()</strong> — re-fetches the overview + alert lists + Vitrina list without touching the LLM. Cheap and idempotent.</li>
+        <li><strong>runAnalyze()</strong> — calls the analyze endpoint, which runs the rule engine, the LLM analysis (with provider fallback), and re-lists Vitrina. The hero button shows <em>Analyzing…</em> while busy. Returns the count of inserted alerts/recommendations and the LLM summary (if any).</li>
+        <li><strong>dismissAlert / dismissRecommendation</strong> — optimistic UI dismissal with a server confirmation.</li>
+      </ul>
+      <p>The hero status badge switches between <em>Live data · auto-refresh</em> (when <code>overview.hasEventData</code> is true) and <em>Waiting for data · auto-refresh</em>. The page is marked <code>export const dynamic = "force-dynamic"</code> so it never serves stale SSR cache.</p>
+  </section>
+  <section class="chapter" id="ch-21">
+    <div class="chapter-kicker">Chapter 21</div>
+    <h2>Privacy, integrity and operational policies</h2>
+    <p>The following policies are enforced in code, not just in documentation. Each is observable in the source files listed below.</p>
+      
+    <div class="policy-grid">
+      
+        <article class="policy-card">
+          <h4>Privileged access only</h4>
+          <p>/seller-helper resolves the current Better Auth session, joins user.role, and unions with the privileged admin email list. Anything that is not admin sees a stub page with links back to /my-account and / — no metrics are shipped to the client.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Server-rendered data, hydrated once</h4>
+          <p>The page server-fetches the conception overview, active alerts, dismissed alerts and Vitrina recommendations in parallel (Promise.all). The client receives a typed ConceptionAdminInitialData payload and uses it as the initial state of useConceptionAdminData — no waterfall on first paint.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Schema-validated LLM output</h4>
+          <p>Every LLM response goes through extractJsonObject, a permissive normaliser (English/French keys), then a Zod schema with hard enums (severity, priority) and clamped numeric ranges. If validation fails, the response is rejected — never written to the DB.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Idempotent, deduplicated writes</h4>
+          <p>Alerts and recommendations use stable fingerprints (CONVERSION_DROP-2026-05-12, REC_FUNNEL_CART_CHECKOUT-2026-05-12). Inserts are onConflictDoNothing against the fingerprint, so re-running the analysis job is safe.</p>
+        </article>
+        <article class="policy-card">
+          <h4>No raw PII in micro-events</h4>
+          <p>session_key is an opaque identifier. The security brief explicitly notes: 'Les identités client sont dérivées des clés de session — aucune adresse IP n'est stockée dans les micro-événements.' Display identities are masked (sliced + ellipsis).</p>
+        </article>
+        <article class="policy-card">
+          <h4>Bounded prompts and JSON-only contract</h4>
+          <p>Both the conception system prompt and the Vitrina prompt force a single top-level JSON object with explicit keys, capped arrays (≤ 6 alerts, ≤ 8 recommendations, ≤ 3 Vitrina products), bounded string lengths and confidence ∈ [0, 100]. Temperature is fixed at 0.2.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Provider fallback with retry budget</h4>
+          <p>OpenRouter is tried up to 3 times with exponential backoff on 429/5xx. A 402 (insufficient credits) automatically routes the same prompt to Gemini, unless CONCEPTION_LLM_GEMINI_FALLBACK overrides this default.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Localised seller voice</h4>
+          <p>Dashboard copy is in English (en-US), but recommendation prose written by the LLM and the entire Security tab are forced to French — the Algerian merchant audience reads operational text in French and DA prices.</p>
+        </article>
+        <article class="policy-card">
+          <h4>Quick fixes are scoped and reversible</h4>
+          <p>Vitrina quick fixes can only mutate four whitelisted fields (jomla_price, description.colors, Availability, Quality). Security quick fixes can only block or unblock a session — never delete events.</p>
+        </article>
+    </div>
+      <p>Operationally, the recommended runbook is:</p>
+      <ol class="tight">
+        <li>Run a daily <em>Run analysis</em> per store, or trigger it from a scheduled job hitting the same endpoint.</li>
+        <li>Treat fingerprints as authoritative deduplication keys; never alter them in migrations.</li>
+        <li>If OpenRouter credit is depleted, the dashboard remains functional through Gemini fallback — monitor the <code>llmModel</code> field returned from analyze to know which provider answered.</li>
+        <li>When extending the prompts, update the Zod schema and the normaliser at the same time; both must accept the new shape.</li>
+      </ol>
+  </section>
+
+    <section id="appendices">
+      <h2>Appendices</h2>
+      <p class="muted">Reference tables to keep this document auditable against the repository.</p>
+      
+    <section class="appendix-block">
+      <h3>Appendix A — Source file index</h3>
+      <table class="data"><thead><tr><th>File</th><th>Role</th></tr></thead><tbody><tr><td>src/app/(site)/(pages)/seller-helper/page.tsx</td><td>Server page — auth, admin gating, prefetch.</td></tr><tr><td>src/components/SellerHelper/SellerHelperDashboard.tsx</td><td>Client dashboard shell, hero, nav and tab switcher.</td></tr><tr><td>src/components/SellerHelper/nav.ts</td><td>Nav item enumeration and tab metadata (label + description).</td></tr><tr><td>src/components/SellerHelper/layout.ts</td><td>Tailwind class primitives shared across all tabs.</td></tr><tr><td>src/components/SellerHelper/sections.tsx</td><td>User Behavior, Alerts and AI Recommendations tab content.</td></tr><tr><td>src/components/SellerHelper/timeline-tab.tsx</td><td>Timeline tab — metric/scope/range selectors + big chart + KPI strip.</td></tr><tr><td>src/server/seller-helper/timeline-series.ts</td><td>Bucketed timeline aggregator (whole store or per-product).</td></tr><tr><td>src/types/seller-helper-timeline.ts</td><td>Timeline metric, range, scope, DTO definitions and applied-action kind catalogue.</td></tr><tr><td>src/app/api/admin/seller-helper/timeline/route.ts</td><td>GET endpoint returning the bucketed timeline DTO.</td></tr><tr><td>src/app/api/admin/seller-helper/timeline/products/route.ts</td><td>GET endpoint listing products available for per-product timelines.</td></tr><tr><td>src/server/seller-helper/applied-actions.ts</td><td>Audit logger + range reader for Timeline checkpoint markers.</td></tr><tr><td>src/components/SellerHelper/AppliedActionDetailsModal.tsx</td><td>Modal that renders full context for a checkpoint when clicked on the chart.</td></tr><tr><td>scripts/ensure-seller-helper-applied-action.mjs</td><td>Idempotent DDL script that ensures seller_helper_applied_action exists.</td></tr><tr><td>src/components/SellerHelper/vitrina-recommendations.tsx</td><td>Vitrina tab — search/filter/sort + featured Swiper + grid.</td></tr><tr><td>src/components/SellerHelper/security-tab.tsx</td><td>Security tab — KPIs, threats, incidents and blocked sessions.</td></tr><tr><td>src/components/SellerHelper/charts.tsx</td><td>Custom SVG charts (TrafficChart, ThreatActivityChart, ProgressBar).</td></tr><tr><td>src/components/SellerHelper/ProductPageHeatmap.tsx</td><td>Product page heatmap visualisation.</td></tr><tr><td>src/components/SellerHelper/VitrinaQuickEditModal.tsx</td><td>Inline product editor (title, price, description, colours…).</td></tr><tr><td>src/components/SellerHelper/VitrinaQuickFixConfirmModal.tsx</td><td>Confirmation modal for Vitrina quick fixes.</td></tr><tr><td>src/components/SellerHelper/SecurityQuickFixConfirmModal.tsx</td><td>Confirmation modal for security block / unblock.</td></tr><tr><td>src/hooks/useConceptionAdminData.ts</td><td>Hook that hydrates overview/alerts/recommendations and exposes actions.</td></tr><tr><td>src/server/conception/metrics.ts</td><td>Funnel, KPIs, devices, top pages and overview DTO builder.</td></tr><tr><td>src/server/conception/analyze.ts</td><td>Rule-engine + LLM orchestrator (runConceptionAnalysisJob).</td></tr><tr><td>src/server/conception/llm-analysis.ts</td><td>OpenRouter + Gemini analysis pipeline with Zod validation.</td></tr><tr><td>src/server/conception/alert-detail-analysis.ts</td><td>Per-alert deterministic deep-dive used by the Alerts modal.</td></tr><tr><td>src/server/conception/alert-rules.ts</td><td>Catalogue of active rules surfaced on the Alerts tab.</td></tr><tr><td>src/server/conception/security-intel.ts</td><td>Security brief — KPIs, threats 24 h chart, incidents, blocks.</td></tr><tr><td>src/server/conception/apply-security-quick-fixes.ts</td><td>Server logic for block_session / unblock_session quick fixes.</td></tr><tr><td>src/server/seller-helper/product-marketing-recommendations.ts</td><td>Heuristic Vitrina recommendations and signal aggregation.</td></tr><tr><td>src/server/seller-helper/vitrina-recommendation-prompt.ts</td><td>Prompt builder for the Vitrina LLM merchandising pass.</td></tr><tr><td>src/server/seller-helper/apply-vitrina-quick-fixes.ts</td><td>Server logic for the 4 Vitrina quick fixes.</td></tr><tr><td>src/server/conception/event-contract.ts</td><td>STORE_EVENT enumeration and PA_JS_ERROR constant.</td></tr><tr><td>src/server/lib/openrouter-client.ts</td><td>OpenRouter HTTP client used by the LLM analysis pipeline.</td></tr></tbody></table>
+    </section>
+    <section class="appendix-block">
+      <h3>Appendix B — Environment variables</h3>
+      <table class="data"><thead><tr><th>Variable</th><th>Required for</th><th>Notes</th></tr></thead><tbody><tr><td>OPENROUTER_API_KEY</td><td>AI Recommendations (primary LLM)</td><td>Without it, only rule-engine alerts and Vitrina heuristics are produced.</td></tr><tr><td>CONCEPTION_OPENROUTER_MODEL</td><td>AI Recommendations (override)</td><td>Falls back to ASSISTANT_FREEFLOW_MODEL, then google/gemini-2.0-flash-001.</td></tr><tr><td>GOOGLE_API_KEY</td><td>AI Recommendations (Gemini fallback)</td><td>Used when OpenRouter fails with 402/insufficient credits.</td></tr><tr><td>CONCEPTION_GEMINI_MODEL</td><td>AI Recommendations (Gemini override)</td><td>Defaults to gemini-2.0-flash.</td></tr><tr><td>CONCEPTION_LLM_GEMINI_FALLBACK</td><td>Override fallback policy</td><td>Set to 'true' to always fall back, 'false' to never fall back.</td></tr><tr><td>DATABASE_URL</td><td>All Seller Helper data</td><td>PostgreSQL connection used by Drizzle in src/server/db.</td></tr><tr><td>BETTER_AUTH_URL / NEXT_PUBLIC_APP_URL</td><td>OpenRouter HTTP-Referer header</td><td>Identifies the calling app on OpenRouter.</td></tr></tbody></table>
+    </section>
+    <section class="appendix-block">
+      <h3>Appendix C — Glossary</h3>
+      <table class="data data--compact"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody><tr><td>Seller Helper</td><td>Admin-only operations console for store owners. Combines analytics, AI recommendations, alerts, and security tools behind one URL: /seller-helper.</td></tr><tr><td>Conception engine</td><td>Internal name for the rule + LLM pipeline that emits alerts and recommendations from pa_* micro-events.</td></tr><tr><td>Vitrina recommendations</td><td>Per-product merchandising tips computed from interaction signals — drives the Vitrina tab.</td></tr><tr><td>pa_* events</td><td>Storefront micro-events (pa_product_view, pa_pointer_click, pa_add_to_cart…). The canonical telemetry contract.</td></tr><tr><td>session_key</td><td>Opaque per-session identifier. No IP or raw user data is persisted in micro-events.</td></tr><tr><td>Quick fix</td><td>A small, reversible mutation triggered from the dashboard — Vitrina or Security.</td></tr><tr><td>Fingerprint</td><td>Deterministic string used to deduplicate alerts and recommendations across re-runs.</td></tr><tr><td>Opportunity score</td><td>Composite Vitrina score combining priority weight + log(views) traffic + viewToCart friction.</td></tr><tr><td>Risk score</td><td>Per-session security score in [0, 100] — adds heuristics for bot scraping, click fraud, fake checkout, JS errors.</td></tr><tr><td>Importance ranking</td><td>Shared scale (critical, high, medium, low) used to sort friction items, alerts and recommendations.</td></tr></tbody></table>
+    </section>
+    </section>
+
+    <section class="colophon">
+      <p><strong>Colophon.</strong> Typography pairs DM Sans (headings, UI) with Source Serif 4 (body). Diagrams use plain figures for portable PDF rendering. Prompts are read from <code>src/server/conception/llm-analysis.ts</code> and <code>src/server/seller-helper/vitrina-recommendation-prompt.ts</code> at build time. To regenerate: <code>node scripts/build-seller-helper-report.mjs</code>, then <code>node scripts/build-seller-helper-report.mjs --pdf</code> with Playwright installed.</p>
+    </section>
+  </main>
+</body>
+</html>

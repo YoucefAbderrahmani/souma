@@ -1,6 +1,7 @@
 import { runConceptionLlmAnalysis } from "@/server/conception/llm-analysis";
 import { buildConceptionAnalyzeSignals } from "@/server/conception/metrics";
 import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
+import { writeVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
@@ -211,6 +212,7 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   }
 
   const vitrinaRecommendations = await listVitrinaProductMarketingRecommendations();
+  await writeVitrinaRecommendationsCache(vitrinaRecommendations);
 
   return {
     insertedAlerts,

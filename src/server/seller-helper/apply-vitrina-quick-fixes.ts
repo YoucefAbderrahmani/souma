@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
+import {
+  buildDefaultHeroReviewSnippet,
+  buildTrendingCountdownEnd,
+  VITRINA_MERCH_KEYS,
+} from "@/lib/vitrina-merchandising";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
+import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
+import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import type { VitrinaQuickFixId, VitrinaQuickFixOption } from "@/types/vitrina-product-recommendations";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
 
@@ -13,6 +20,8 @@ const QUICK_FIX_IDS = new Set<VitrinaQuickFixId>([
   "promo_price",
   "availability_note",
   "quality_highlight",
+  "trending_countdown",
+  "hero_review_snippet",
 ]);
 
 function upsertAdditionalInfo(
@@ -155,6 +164,7 @@ export async function applyVitrinaQuickFixes(
   const [product] = await db
     .select({
       id: productsTable.id,
+      title: productsTable.title,
       price: productsTable.price,
       jomlaPrice: productsTable.jomlaPrice,
       instock: productsTable.instock,
@@ -228,6 +238,36 @@ export async function applyVitrinaQuickFixes(
       nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, QUALITY_KEY, ratingLabel);
       contentChanged = true;
       applied.push(fix.summary);
+      continue;
+    }
+
+    if (fix.id === "trending_countdown") {
+      const countdownValue = buildTrendingCountdownEnd();
+      const existing = nextAdditionalInfo.find((entry) => entry.key === VITRINA_MERCH_KEYS.trendingCountdown);
+      if (existing?.value === countdownValue) {
+        applied.push(fix.summary);
+        continue;
+      }
+      nextAdditionalInfo = upsertAdditionalInfo(
+        nextAdditionalInfo,
+        VITRINA_MERCH_KEYS.trendingCountdown,
+        countdownValue
+      );
+      contentChanged = true;
+      applied.push(fix.summary);
+      continue;
+    }
+
+    if (fix.id === "hero_review_snippet") {
+      const snippet = buildDefaultHeroReviewSnippet(product.rating);
+      const existing = nextAdditionalInfo.find((entry) => entry.key === VITRINA_MERCH_KEYS.heroReview);
+      if (existing?.value === snippet) {
+        applied.push(fix.summary);
+        continue;
+      }
+      nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, VITRINA_MERCH_KEYS.heroReview, snippet);
+      contentChanged = true;
+      applied.push(fix.summary);
     }
   }
 
@@ -254,6 +294,35 @@ export async function applyVitrinaQuickFixes(
       })
       .where(eq(productsTable.id, productId));
   }
+
+  const storefrontProductId = resolveStorefrontProductId(product.title, product.id);
+  const appliedFixIds = fixes
+    .map((fix) => fix.id)
+    .filter((id, index, all) => all.indexOf(id) === index);
+  const summaryLines = applied.slice(0, 4).join(" • ");
+  await logAppliedAction({
+    kind: "vitrina_quick_fix",
+    title: `Vitrina quick fix · ${product.title}`,
+    summary: summaryLines || `${applied.length} quick fix${applied.length === 1 ? "" : "es"} applied`,
+    productLocalId: storefrontProductId > 0 ? storefrontProductId : null,
+    productTitle: product.title,
+    sourceRefId: productId,
+    details: {
+      productDbId: productId,
+      productLocalId: storefrontProductId,
+      productTitle: product.title,
+      fixIds: appliedFixIds,
+      fixes: fixes.map((fix) => ({
+        id: fix.id,
+        label: fix.label,
+        summary: fix.summary,
+        context: fix.context ?? null,
+      })),
+      appliedSummaries: applied,
+      priceChanged,
+      contentChanged,
+    },
+  });
 
   return { applied };
 }

@@ -9,6 +9,13 @@ import type {
   ConceptionResolvedAlertDto,
 } from "@/types/conception-admin";
 import { readJsonResponse } from "@/lib/admin-api-response";
+import {
+  readCachedVitrinaRecommendations,
+  writeCachedVitrinaRecommendations,
+  filterOutQuickFixAppliedRecommendations,
+  clearVitrinaQuickFixAppliedProductIds,
+  addVitrinaQuickFixAppliedProductId,
+} from "@/lib/vitrina-recommendations-cache";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 
 export type ConceptionAdminInitialData = {
@@ -37,6 +44,11 @@ const fetchOptions: RequestInit = {
   cache: "no-store",
 };
 
+function getInitialVitrinaRecommendations() {
+  if (typeof window === "undefined") return [];
+  return filterOutQuickFixAppliedRecommendations(readCachedVitrinaRecommendations());
+}
+
 export function useConceptionAdminData(
   initialData?: ConceptionAdminInitialData,
   initialError: string | null = null
@@ -46,7 +58,7 @@ export function useConceptionAdminData(
     alerts: initialData?.alerts ?? [],
     resolvedAlerts: initialData?.resolvedAlerts ?? [],
     recommendations: initialData?.recommendations ?? [],
-    vitrinaRecommendations: initialData?.vitrinaRecommendations ?? [],
+    vitrinaRecommendations: getInitialVitrinaRecommendations(),
     loading: !initialData,
     error: initialError,
     analyzeBusy: false,
@@ -59,11 +71,10 @@ export function useConceptionAdminData(
       setState((s) => ({ ...s, loading: true, error: null }));
     }
     try {
-      const [overviewRes, alertsRes, recommendationsRes, vitrinaRes] = await Promise.all([
+      const [overviewRes, alertsRes, recommendationsRes] = await Promise.all([
         fetch("/api/admin/conception/overview", fetchOptions),
         fetch("/api/admin/conception/alerts", fetchOptions),
         fetch("/api/admin/conception/recommendations", fetchOptions),
-        fetch("/api/admin/conception/vitrina-recommendations", fetchOptions),
       ]);
 
       const o = await readJsonResponse<{
@@ -83,19 +94,6 @@ export function useConceptionAdminData(
         recommendations?: ConceptionRecommendationDto[];
       }>(recommendationsRes, "Recommendations API");
 
-      let vitrinaRecommendations: VitrinaProductMarketingRecommendation[] | null = null;
-      try {
-        const v = await readJsonResponse<{
-          error?: string;
-          message?: string;
-          recommendations?: VitrinaProductMarketingRecommendation[];
-        }>(vitrinaRes, "Vitrina recommendations API");
-        if (v.error) throw new Error(v.message || v.error);
-        vitrinaRecommendations = (v.recommendations ?? []) as VitrinaProductMarketingRecommendation[];
-      } catch (vitrinaError) {
-        if (!background) throw vitrinaError;
-      }
-
       if (o.error) throw new Error(o.message || o.error);
       if (a.error) throw new Error(a.message || a.error);
       if (r.error) throw new Error(r.message || r.error);
@@ -106,7 +104,7 @@ export function useConceptionAdminData(
         alerts: (a.alerts ?? []) as ConceptionAlertDto[],
         resolvedAlerts: (a.resolvedAlerts ?? []) as ConceptionResolvedAlertDto[],
         recommendations: (r.recommendations ?? []) as ConceptionRecommendationDto[],
-        vitrinaRecommendations: vitrinaRecommendations ?? s.vitrinaRecommendations,
+        vitrinaRecommendations: s.vitrinaRecommendations,
         loading: false,
         error: background ? s.error : null,
       }));
@@ -122,6 +120,41 @@ export function useConceptionAdminData(
   useEffect(() => {
     void load({ background: Boolean(initialData) });
   }, [initialData, load]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/conception/vitrina-recommendations", fetchOptions);
+        const body = await readJsonResponse<{
+          error?: string;
+          message?: string;
+          recommendations?: VitrinaProductMarketingRecommendation[];
+        }>(res, "Vitrina recommendations API");
+        if (!res.ok) throw new Error(body.message || body.error || "Vitrina cache unavailable");
+        const recommendations = body.recommendations;
+        if (cancelled || !Array.isArray(recommendations)) return;
+
+        setState((current) => {
+          if (recommendations.length === 0 && current.vitrinaRecommendations.length > 0) {
+            return current;
+          }
+          return {
+            ...current,
+            vitrinaRecommendations: filterOutQuickFixAppliedRecommendations(recommendations),
+          };
+        });
+        writeCachedVitrinaRecommendations(recommendations);
+      } catch {
+        // Keep the last cached snapshot when the cache endpoint is unavailable.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshLive = useCallback(() => load({ background: true }), [load]);
   useLiveDataRefresh(refreshLive);
@@ -247,12 +280,14 @@ export function useConceptionAdminData(
         analyzeMessage = `${analyzeMessage} Set OPENROUTER_API_KEY or GOOGLE_API_KEY to enable AI analysis.`;
       }
 
+      clearVitrinaQuickFixAppliedProductIds();
       setState((s) => ({
         ...s,
         analyzeBusy: false,
         analyzeMessage,
         vitrinaRecommendations,
       }));
+      writeCachedVitrinaRecommendations(vitrinaRecommendations);
       await load({ background: true });
     } catch (e) {
       setState((s) => ({
@@ -263,5 +298,20 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
-  return { ...state, refresh: load, runAnalyze, dismissAlert, dismissRecommendation };
+  const dismissVitrinaAfterQuickFix = useCallback((productId: string) => {
+    addVitrinaQuickFixAppliedProductId(productId);
+    setState((s) => ({
+      ...s,
+      vitrinaRecommendations: s.vitrinaRecommendations.filter((p) => String(p.productId) !== String(productId)),
+    }));
+  }, []);
+
+  return {
+    ...state,
+    refresh: load,
+    runAnalyze,
+    dismissAlert,
+    dismissRecommendation,
+    dismissVitrinaAfterQuickFix,
+  };
 }

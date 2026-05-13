@@ -8,6 +8,8 @@ export type Product = {
   jomlaPrice?: number;
   category: string;
   id: number;
+  /** Units available to sell (from catalog `instock`). */
+  instock?: number;
   imgs?: {
     thumbnails: string[];
     previews: string[];

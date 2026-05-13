@@ -271,6 +271,30 @@ export const conceptionAlertTable = pgTable(
   (t) => [uniqueIndex("conception_alert_fingerprint_uidx").on(t.fingerprint)]
 );
 
+/**
+ * Audit log of admin actions taken inside the Seller Helper. Each row is a
+ * "checkpoint" that the Timeline chart can render: a quick fix applied, an
+ * alert resolved, a recommendation marked as applied, etc.
+ *
+ * `productLocalId` is set when the action is bound to a specific catalogue
+ * product (e.g. Vitrina quick fixes). It is null for store-wide actions
+ * (security blocks, alerts, AI recommendations).
+ *
+ * `detailsJson` is an opaque JSON envelope carrying enough context for the
+ * details modal to render (fix ids, before/after values, alert payload, etc.).
+ */
+export const sellerHelperAppliedActionTable = pgTable("seller_helper_applied_action", {
+  id: uuid().primaryKey().defaultRandom(),
+  kind: varchar("kind", { length: 32 }).notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  summary: text("summary"),
+  productLocalId: integer("product_local_id"),
+  productTitle: varchar("product_title", { length: 200 }),
+  sourceRefId: varchar("source_ref_id", { length: 80 }),
+  detailsJson: text("details_json"),
+  occurredAt: timestamp("occurred_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 /** Rule-based / engine-generated recommendations surfaced in the Conception admin UI */
 export const conceptionRecommendationTable = pgTable(
   "conception_recommendation",

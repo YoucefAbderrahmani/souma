@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { compareImportanceTiers, IMPORTANCE_RANKS } from "@/lib/importance-ranking";
+import { parseProductContent } from "@/lib/product-content";
 import { getCatalogProducts } from "@/server/data-access/product-catalog";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, salesMicroEventTable } from "@/server/db/schema";
@@ -44,7 +45,7 @@ const COLOR_WORDS = [
 const PRICE_IN_TITLE = /(\d[\d\s.,]*\s*(da|dzd|dinar|€|\$))|(\b(prix|promo|solde)\b)/i;
 const DEFAULT_VITRINA_CATALOG_LIMIT = 500;
 const PROMPT_TOP_RECOMMENDATIONS = 3;
-const MAX_VISIBLE_PRODUCT_TIPS = 2;
+const MAX_VISIBLE_PRODUCT_TIPS = 1;
 const MAX_QUICK_FIXES = 4;
 const SIGNAL_WINDOW_DAYS = 7;
 const MS_DAY = 86_400_000;
@@ -153,6 +154,12 @@ function topColors(colorCounts: Map<string, number>, limit = 2) {
     .sort((left, right) => right[1] - left[1])
     .slice(0, limit)
     .map(([color]) => color);
+}
+
+function isColorAlreadyDefault(product: ProductRow, colorName: string) {
+  const colors = parseProductContent(product.description).colors;
+  if (colors.length === 0) return false;
+  return colors[0].name.trim().toLowerCase() === colorName.trim().toLowerCase();
 }
 
 function buildDisplaySnapshot(product: ProductRow): VitrinaDisplaySnapshot {
@@ -265,6 +272,67 @@ function buildTips(
     });
   }
 
+  const trendingItem =
+    interaction.views >= 10 ||
+    interaction.hovers >= 12 ||
+    interaction.clicks >= 8 ||
+    (interaction.views >= 8 && interaction.clicks >= 5) ||
+    (interaction.addToCarts >= 2 && interaction.views >= 6);
+  if (trendingItem) {
+    tips.push({
+      label: "Countdown timer",
+      action:
+        interaction.addToCarts >= 2 ?
+          "This item is trending and already converting. Add a This deal ends in... countdown on the product page or catalog card to create urgency without requiring a real sale."
+        : "Traffic is rising on this item. Add a This deal ends in... countdown on the hero area or thumbnail to nudge shoppers before they leave.",
+      priority:
+        interaction.views >= 12 || interaction.clicks >= 10 || interaction.addToCarts >= 3 ? "high" : "medium",
+      quickFixId: "trending_countdown",
+    });
+  }
+
+  const heroReviewOpportunity =
+    (product.rating >= 4 && interaction.views >= 5) ||
+    (product.rating > 0 && aggregate.imageViews >= 4 && interaction.views >= 6) ||
+    (product.rating >= 3.5 && aggregate.reviewInteractions >= 2);
+  if (heroReviewOpportunity) {
+    tips.push({
+      label: "Mini review on hero image",
+      action:
+        product.rating > 0 ?
+          `Shoppers study the imagery before they buy. Overlay a one-liner on the main photo such as ⭐ ${product.rating.toFixed(1)} — "Even better than expected" to add trust at first glance.`
+        : "Shoppers open the gallery often. Overlay a short customer-style line on the main image so the first impression feels proven.",
+      priority:
+        aggregate.imageViews >= 6 || product.rating >= 4.5 ? "high" : "medium",
+      quickFixId: "hero_review_snippet",
+    });
+  }
+
+  const topColor = interaction.topSelectedColors[0];
+  const runnerUpColor = interaction.topSelectedColors[1];
+  const topColorSelections = topColor ? aggregate.colorCounts.get(topColor) ?? 0 : 0;
+  const runnerUpSelections = runnerUpColor ? aggregate.colorCounts.get(runnerUpColor) ?? 0 : 0;
+  const hasColorPreferenceSignal =
+    topColor &&
+    !isColorAlreadyDefault(product, topColor) &&
+    (topColorSelections >= 2 ||
+      interaction.optionSelects >= 3 ||
+      (interaction.views >= 5 && topColorSelections >= 1));
+  if (hasColorPreferenceSignal) {
+    tips.push({
+      label: "Default color",
+      action:
+        runnerUpColor && topColorSelections > runnerUpSelections ?
+          `Shoppers choose "${topColor}" more often than "${runnerUpColor}". Set it as the default color so the product page opens on the most wanted shade.`
+        : `"${topColor}" is the most selected color. Move it to the first swatch so the page opens on the shade shoppers want.`,
+      priority:
+        topColorSelections >= 4 || interaction.optionSelects >= 6 || topColorSelections >= runnerUpSelections + 2 ?
+          "high"
+        : "medium",
+      quickFixId: "default_color",
+    });
+  }
+
   return tips
     .sort((left, right) => compareImportanceTiers(left.priority, right.priority))
     .slice(0, MAX_VISIBLE_PRODUCT_TIPS);
@@ -286,17 +354,17 @@ function buildQuickFixes(
   };
 
   const topColor = interaction.topSelectedColors[0];
-  if (topColor) {
-    pushFix({
-      id: "default_color",
-      label: "Default color",
-      summary: `Move "${topColor}" to the first color option so the storefront opens on the most selected shade.`,
-      context: { color: topColor },
-    });
-  }
 
   for (const tip of tips) {
     if (!tip.quickFixId) continue;
+    if (tip.quickFixId === "default_color" && topColor) {
+      pushFix({
+        id: "default_color",
+        label: "Default color",
+        summary: `Move "${topColor}" to the first color option so the storefront opens on the most selected shade.`,
+        context: { color: topColor },
+      });
+    }
     if (tip.quickFixId === "promo_price" && product.jomlaPrice == null) {
       pushFix({
         id: "promo_price",
@@ -320,6 +388,24 @@ function buildQuickFixes(
           product.rating > 0 ?
             `Add a customer-rating highlight (${product.rating.toFixed(1)}/5) to the product details.`
           : "Add a quality reassurance note to the product details.",
+      });
+    }
+    if (tip.quickFixId === "trending_countdown") {
+      pushFix({
+        id: "trending_countdown",
+        label: "Trending countdown",
+        summary:
+          "Add a This deal ends in... countdown on the product hero area for this trending item.",
+      });
+    }
+    if (tip.quickFixId === "hero_review_snippet") {
+      pushFix({
+        id: "hero_review_snippet",
+        label: "Hero review snippet",
+        summary:
+          product.rating > 0 ?
+            `Overlay ⭐ ${product.rating.toFixed(1)} — "Even better than expected" on the main product image.`
+          : "Overlay a short customer-style review line on the main product image.",
       });
     }
   }

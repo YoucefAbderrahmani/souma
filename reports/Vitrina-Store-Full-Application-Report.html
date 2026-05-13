@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vitrina Store — Full Application Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0b1220;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --accent: #ea580c;
+      --accent-2: #fb923c;
+      --paper: #ffffff;
+      --wash: #f8fafc;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Source Serif 4", Georgia, serif;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 11.2pt;
+      line-height: 1.55;
+    }
+    h1, h2, h3, h4, .chapter-kicker, .cover-brand, .toc-title {
+      font-family: "DM Sans", system-ui, sans-serif;
+    }
+    .cover {
+      min-height: 100vh;
+      padding: 8rem 10% 4rem;
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(251,146,60,.35), transparent 55%),
+                  radial-gradient(900px 500px at 10% 20%, rgba(14,165,233,.18), transparent 50%),
+                  linear-gradient(135deg, #0b1220 0%, #0f172a 42%, #1e293b 100%);
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cover-brand { letter-spacing: .28em; text-transform: uppercase; font-size: .78rem; opacity: .85; }
+    .cover h1 {
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      line-height: 1.08;
+      margin: 1.2rem 0 .6rem;
+      max-width: 14ch;
+    }
+    .cover .subtitle {
+      font-size: 1.15rem;
+      opacity: .92;
+      max-width: 36ch;
+    }
+    .cover-meta {
+      display: grid;
+      gap: .35rem;
+      font-size: .95rem;
+      opacity: .85;
+      margin-top: 3rem;
+    }
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .45rem .85rem;
+      border-radius: 999px;
+      background: rgba(248,250,252,.12);
+      border: 1px solid rgba(248,250,252,.22);
+      width: fit-content;
+      font-family: "DM Sans", sans-serif;
+      font-size: .82rem;
+    }
+    .cover-badge span { color: var(--accent-2); font-weight: 700; }
+    .document {
+      padding: 0 10% 4rem;
+    }
+    .abstract {
+      margin: 2.5rem 0 2rem;
+      padding: 1.25rem 1.5rem;
+      border-radius: var(--radius);
+      background: var(--wash);
+      border: 1px solid var(--line);
+    }
+    .toc {
+      page-break-after: always;
+      margin: 2rem 0 3rem;
+    }
+    .toc-title {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+    .toc ol { columns: 2; gap: 2.5rem; padding-left: 1.1rem; }
+    .toc li { margin: .35rem 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .chapter {
+      margin: 2.25rem 0 2.75rem;
+    }
+    .chapter-kicker {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: .72rem;
+      margin-bottom: .35rem;
+    }
+    h2 {
+      font-size: 1.55rem;
+      margin: 0 0 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 3px solid rgba(234,88,12,.35);
+    }
+    h3 { font-size: 1.15rem; margin-top: 1.5rem; }
+    h4 { font-size: 1rem; margin: 1.25rem 0 .5rem; }
+    .lead { font-size: 1.08rem; }
+    ul.tight, ol.tight { margin: .75rem 0; padding-left: 1.2rem; }
+    ul.tight li, ol.tight li { margin: .35rem 0; }
+    blockquote {
+      margin: 1.25rem 0;
+      padding: 1rem 1.1rem;
+      border-left: 4px solid var(--accent);
+      background: #fff7ed;
+      font-style: italic;
+    }
+    .diagram {
+      margin: 1.25rem 0;
+      padding: 1rem 1rem 1.1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+    .diagram figcaption {
+      font-family: "DM Sans", sans-serif;
+      font-weight: 600;
+      font-size: .9rem;
+      margin-bottom: .75rem;
+    }
+    pre.ascii {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 8.6pt;
+      line-height: 1.35;
+      overflow: auto;
+      margin: 0;
+    }
+    pre.code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 8.8pt;
+      line-height: 1.45;
+      padding: .85rem 1rem;
+      background: #0b1220;
+      color: #e2e8f0;
+      border-radius: 10px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.8pt;
+      margin: .75rem 0 1.25rem;
+    }
+    table.data th, table.data td {
+      border: 1px solid var(--line);
+      padding: .45rem .5rem;
+      vertical-align: top;
+    }
+    table.data thead th {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: "DM Sans", sans-serif;
+      font-weight: 600;
+    }
+    table.data tbody tr:nth-child(even) { background: #f8fafc; }
+    table.data--compact { font-size: 8.4pt; }
+    table.data--compact th, table.data--compact td { padding: .28rem .35rem; }
+    .muted { color: var(--muted); font-weight: 400; }
+    .appendix-block { margin: 2rem 0; page-break-inside: avoid; }
+    .schema-table { margin: 1.5rem 0; page-break-inside: auto; }
+    dl.glossary dt { font-weight: 700; margin-top: .75rem; }
+    dl.glossary dd { margin: .25rem 0 0 0; }
+    .colophon {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-top: 3rem;
+      page-break-before: always;
+    }
+    @media print {
+      @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+      body { font-size: 10.6pt; }
+      .cover { min-height: auto; padding: 3rem 8%; }
+      a[href^="http"]::after { content: ""; }
+      .page-break-before { page-break-before: always; }
+      .chapter { page-break-before: always; }
+      .chapter:first-of-type { page-break-before: auto; }
+      pre.code { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <div>
+      <div class="cover-brand">Vitrina</div>
+      <h1>Full application report</h1>
+      <p class="subtitle">From product conception to architecture, integrations, data design, assistants, and operational readiness — print edition.</p>
+      <div class="cover-badge">Generated <span>2026-04-16T23:11:26Z</span> · Confidential draft</div>
+    </div>
+    <div class="cover-meta">
+      <div>Repository: <strong>vitrina-store</strong> (Next.js App Router)</div>
+      <div>Document class: technical + product narrative</div>
+      <div>Estimated print length: ~65–85 pages (engine, margins, and source tree size)</div>
+    </div>
+  </header>
+
+  <main class="document">
+    <section class="abstract">
+      <h2 style="border:none;padding:0;margin:0 0 .5rem;">Abstract</h2>
+      <p>This report consolidates the Vitrina Store application as implemented in source: user journeys, route map, API inventory, persistence model, AI features, and risk-aware recommendations. It is suitable as an onboarding artifact, design review appendix, or lightweight compliance pack when paired with your organization’s policies.</p>
+    </section>
+
+    <nav class="toc">
+      <div class="toc-title">Table of contents</div>
+      <ol>
+        <li><a href="#ch-1">1. Executive summary</a></li><li><a href="#ch-2">2. Vision, positioning, and conception</a></li><li><a href="#ch-3">3. Stakeholders and personas</a></li><li><a href="#ch-4">4. Functional scope overview</a></li><li><a href="#ch-5">5. Quality attributes (non-functional requirements)</a></li><li><a href="#ch-6">6. Solution architecture</a></li><li><a href="#ch-7">7. Frontend architecture (App Router)</a></li><li><a href="#ch-8">8. State management</a></li><li><a href="#ch-9">9. Authentication and sessions</a></li><li><a href="#ch-10">10. Commerce, pricing modes, and inventory</a></li><li><a href="#ch-11">11. Checkout, logistics fields, and payments</a></li><li><a href="#ch-12">12. AI assistants: behavior and safeguards</a></li><li><a href="#ch-13">13. Analytics: shopping sequences</a></li><li><a href="#ch-14">14. Data architecture and persistence</a></li><li><a href="#ch-15">15. API surface (summary)</a></li><li><a href="#ch-16">16. Security, privacy, and compliance posture</a></li><li><a href="#ch-17">17. Deployment model</a></li><li><a href="#ch-18">18. Testing strategy (recommendations)</a></li><li><a href="#ch-19">19. Roadmap themes</a></li><li><a href="#ch-20">20. Internationalization, locales, and assistant copy decks</a></li><li><a href="#ch-21">21. Repository layout and layering conventions</a></li><li><a href="#ch-22">22. Catalog data model and shop presentation</a></li><li><a href="#ch-23">23. Product detail page: composition and assistants</a></li><li><a href="#ch-24">24. Cart, persistence, and client state lifecycle</a></li><li><a href="#ch-25">25. Checkout UX: wilaya, commune, shipping presentation</a></li><li><a href="#ch-26">26. Payments: Chargily integration principles</a></li><li><a href="#ch-27">27. Wishlist domain model and UX</a></li><li><a href="#ch-28">28. Reviews, ratings, and moderation considerations</a></li><li><a href="#ch-29">29. Site feedback instrument</a></li><li><a href="#ch-30">30. Blog subsystem and editorial workflow</a></li><li><a href="#ch-31">31. Legal, trust, and policy surfaces</a></li><li><a href="#ch-32">32. Performance engineering checklist</a></li><li><a href="#ch-33">33. Accessibility baseline</a></li><li><a href="#ch-34">34. Engineering process: migrations, typing, and CI</a></li><li><a href="#ch-35">35. Glossary and extended definitions</a></li>
+        <li><a href="#appendices">Appendices (routes, APIs, use cases, risks, env, schema, source index)</a></li>
+      </ol>
+    </nav>
+
+    
+  <section class="chapter" id="ch-1">
+    <div class="chapter-kicker">Chapter 1</div>
+    <h2>Executive summary</h2>
+    <p class="lead">Vitrina Store is a production-grade e-commerce experience built on <strong>Next.js 15</strong> and <strong>React 19</strong>, combining a rich merchandising front end, authenticated accounts, Algerian-market checkout (wilaya/commune), <strong>Chargily</strong> payments, and an <strong>AI-assisted shopping layer</strong> with multilingual responses and telemetry for continuous improvement.</p>
+      <p>This document narrates the product from conception through architecture, data design, operational concerns, and a structured catalog of use cases suitable for stakeholders, engineers, and auditors. Diagrams use plain figures so they render reliably in PDF engines.</p>
+      <ul class="tight"><li><strong>Primary runtime:</strong> Node.js serverless (Vercel-style) with Route Handlers.</li><li><strong>Persistence:</strong> PostgreSQL via Drizzle ORM.</li><li><strong>Auth:</strong> Better Auth with Google OAuth and credential flows.</li><li><strong>State:</strong> Redux Toolkit for cart, wishlist, quick view, product-details UI.</li><li><strong>Intelligence:</strong> Google Gemini and/or OpenRouter-backed flows with catalog grounding.</li></ul>
+  </section>
+  <section class="chapter" id="ch-2">
+    <div class="chapter-kicker">Chapter 2</div>
+    <h2>Vision, positioning, and conception</h2>
+    <p>Vitrina targets a modern, mobile-first storefront with editorial polish: large imagery, confident typography, and fast interaction patterns (quick view, sticky assistant, expressive product pages). Conception emphasized three pillars: <em>trust</em> (clear pricing modes, policies, reviews), <em>speed</em> (client caching patterns, optimistic UI), and <em>insight</em> (shopping sequences + assistant telemetry).</p>
+      <p>The name and visual language evoke warmth and energy—orange accents on deep navy—while keeping commerce flows conventional so new shoppers remain oriented.</p>
+      <blockquote>Design principle: progressive disclosure. Advanced modes (jomla pricing, assistant) enhance the core journey without blocking basic browse-to-buy.</blockquote>
+  </section>
+  <section class="chapter" id="ch-3">
+    <div class="chapter-kicker">Chapter 3</div>
+    <h2>Stakeholders and personas</h2>
+    <p><strong>Guests</strong> discover the catalog, compare prices, and may purchase depending on checkout configuration. <strong>Registered users</strong> retain wishlists, reviews, and personalized surfaces. <strong>Operators</strong> monitor sequences and assistant metrics. <strong>Developers</strong> extend Drizzle models, API routes, and UI modules within the App Router structure.</p>
+  </section>
+  <section class="chapter" id="ch-4">
+    <div class="chapter-kicker">Chapter 4</div>
+    <h2>Functional scope overview</h2>
+    <p>Major domains include catalog browsing, product detail, cart, checkout + payment, wishlist, authentication, blogs and static content, feedback and reviews, admin sequence analytics, and AI assistants (global + product-scoped).</p>
+  </section>
+  <section class="chapter" id="ch-5">
+    <div class="chapter-kicker">Chapter 5</div>
+    <h2>Quality attributes (non-functional requirements)</h2>
+    <table class="data"><thead><tr><th>Attribute</th><th>Target behavior</th><th>Implementation notes</th></tr></thead><tbody>
+      <tr><td>Performance</td><td>Fast TTFB on static segments; responsive interactions</td><td>Next.js streaming, image optimization, minimal client JS on content pages</td></tr>
+      <tr><td>Security</td><td>Session integrity; server-side payment creation</td><td>Better Auth, server-only secrets, Chargily server API</td></tr>
+      <tr><td>Maintainability</td><td>Typed end-to-end</td><td>TypeScript, Drizzle schema as source of truth</td></tr>
+      <tr><td>Observability</td><td>Funnel and assistant metrics</td><td>shopping_sequence + assistant_search_telemetry tables</td></tr>
+      <tr><td>i18n readiness</td><td>Assistant speaks ar/fr/en/dz</td><td>Locale heuristics + template banks in route handler</td></tr>
+      </tbody></table>
+  </section>
+  <section class="chapter" id="ch-6">
+    <div class="chapter-kicker">Chapter 6</div>
+    <h2>Solution architecture</h2>
+    <p>The system follows a modular monolith pattern: a single deployable Next.js application containing UI, API routes, and server libraries. External systems are limited to well-bounded integrations (payments, LLM providers, OAuth).</p>
+      
+  <figure class="diagram">
+    <figcaption>Figure 1 — System context (C4 Level 1)</figcaption>
+    <pre class="ascii">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              VITRINA STORE (Next.js)                           │
+│  ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌────────────────┐ │
+│  │ App Router  │   │ Redux client │   │ Better Auth │   │ Smart Assistant│ │
+│  │ pages + RSC │   │ cart/wishlist│   │ sessions    │   │ Gemini / OR    │ │
+│  └──────┬──────┘   └──────┬───────┘   └──────┬──────┘   └───────┬────────┘ │
+│         │                 │                 │                  │            │
+│         └────────────────┬┴─────────────────┴──────────────────┘            │
+│                          │                                                  │
+│                   Server Actions / Route Handlers                           │
+└───────────────────────────┼──────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼────────────────────┐
+        ▼                   ▼                    ▼
+ ┌─────────────┐    ┌──────────────┐     ┌───────────────┐
+ │ PostgreSQL │    │ Chargily Pay │     │ Google OAuth │
+ │ (Drizzle)  │    │ (hosted)     │     │ (identity)   │
+ └─────────────┘    └──────────────┘     └───────────────┘
+  </pre>
+  </figure>
+      <p><strong>Edge vs Node:</strong> Middleware performs a narrow cookie presence check for matched paths; sensitive authorization should still occur in server components or route handlers per Better Auth guidance.</p>
+  </section>
+  <section class="chapter" id="ch-7">
+    <div class="chapter-kicker">Chapter 7</div>
+    <h2>Frontend architecture (App Router)</h2>
+    <p>Routes live under <code>src/app/(site)</code> with nested layouts supplying session, theme, Redux <code>Provider</code>, cart persistence, modals, and assistant shells. Pages remain mostly server components where feasible; interactive islands mount client components for cart, swiper carousels, and assistants.</p>
+      <ul class="tight"><li><strong>Layouts:</strong> shared chrome, fonts, analytics hooks (as present).</li><li><strong>Composition:</strong> <code>components/</code> tree mirrors domains: Shop, Checkout, Cart, Common.</li><li><strong>Styling:</strong> Tailwind CSS utility system with design tokens in tailwind config.</li></ul>
+  </section>
+  <section class="chapter" id="ch-8">
+    <div class="chapter-kicker">Chapter 8</div>
+    <h2>State management</h2>
+    <p>Redux Toolkit configures reducers for quick view, cart, wishlist, and product-details slices. Selectors are typed via <code>useAppSelector</code>. Cart persistence bridges storage and the store to avoid hydration mismatch and flicker.</p>
+  </section>
+  <section class="chapter" id="ch-9">
+    <div class="chapter-kicker">Chapter 9</div>
+    <h2>Authentication and sessions</h2>
+    <p>Better Auth is instantiated in <code>src/server/lib/auth.ts</code> with Drizzle adapter, custom session enrichment (e.g., phone, image lookups), Google provider, and trusted origins derived from environment. Client helpers live in <code>src/lib/auth-client.ts</code>.</p>
+  </section>
+  <section class="chapter" id="ch-10">
+    <div class="chapter-kicker">Chapter 10</div>
+    <h2>Commerce, pricing modes, and inventory</h2>
+    <p>Products carry list and optional promotional (<em>jomla</em>) prices with business rules documented in schema comments. Availability uses numeric stock representation suitable for extension to quantity-based fulfillment.</p>
+  </section>
+  <section class="chapter" id="ch-11">
+    <div class="chapter-kicker">Chapter 11</div>
+    <h2>Checkout, logistics fields, and payments</h2>
+    <p>Checkout captures Algerian administrative geography (wilaya, commune) and optional customer notes. Payment initiation occurs server-side through Chargily’s REST API; the browser is redirected to hosted checkout, minimizing PCI scope on Vitrina infrastructure.</p>
+      
+  <figure class="diagram">
+    <figcaption>Figure 2 — Checkout & payment sequence</figcaption>
+    <pre class="ascii">
+Customer          Browser (Next)              API Route                Chargily
+   │                  │                          │                        │
+   │──cart review────►│                          │                        │
+   │──checkout form──►│                          │                        │
+   │──submit─────────►│──POST checkout─────────►│                        │
+   │                  │                          │──create session──────►│
+   │◄──redirect URL───│◄─────────────────────────│                        │
+   │──hosted checkout─────────────────────────────────────────────────────►│
+   │◄──return / webhook (as configured)────────────────────────────────────│
+  </pre>
+  </figure>
+  </section>
+  <section class="chapter" id="ch-12">
+    <div class="chapter-kicker">Chapter 12</div>
+    <h2>AI assistants: behavior and safeguards</h2>
+    <p>The assistant route loads the in-repo catalog (<code>shopData</code>), normalizes queries (including transliteration), optionally calls Gemini 2.0 Flash and/or OpenRouter models, merges LLM scores with deterministic signals, caches hot responses for five minutes, and returns structured matches plus a natural-language summary. Missing API keys produce clear, localized guidance rather than opaque failures.</p>
+      <p>Telemetry captures request identifiers, provider metadata, cache status, matched identifiers, and click-through events for offline evaluation.</p>
+      
+  <figure class="diagram">
+    <figcaption>Figure 4 — Assistant request pipeline (conceptual)</figcaption>
+    <pre class="ascii">
+Browser (assistant UI)                API /api/assistant                    Providers
+        │                                      │                              │
+        │── POST { query, mode, context }──────►│── auth / session (optional)──┤
+        │                                      │── normalize + detect locale──►│
+        │                                      │── catalog retrieve / scores   │
+        │                                      │── LLM JSON (matches+summary)─►│ Gemini / OpenRouter
+        │                                      │── merge + cache (TTL 5m)        │
+        │◄── JSON matches + summary + meta─────│── telemetry row (async)────────►│ Postgres telemetry
+  </pre>
+  </figure>
+  </section>
+  <section class="chapter" id="ch-13">
+    <div class="chapter-kicker">Chapter 13</div>
+    <h2>Analytics: shopping sequences</h2>
+    <p>The <code>shopping_sequence</code> entity records session-keyed funnels with trigger labels, lifecycle status, and timestamps for product visits and endings. Admin APIs expose these rows for operational review.</p>
+  </section>
+  <section class="chapter" id="ch-14">
+    <div class="chapter-kicker">Chapter 14</div>
+    <h2>Data architecture and persistence</h2>
+    <p>PostgreSQL holds canonical commerce entities, Better Auth tables, reviews, feedback, sequences, and assistant telemetry. Drizzle migrations under <code>drizzle/</code> version additive changes.</p>
+      
+  <figure class="diagram">
+    <figcaption>Figure 3 — Core entity relationships (simplified)</figcaption>
+    <pre class="ascii">
+  ┌──────user──────┐       ┌────wishlist────┐     ┌────wishlist_to_product───┐
+  │ id (PK)       │◄──────│ userId (FK,U) │────►│ wishlistId + productId   │
+  │ email, phone… │       └───────────────┘     └───────────┬──────────────┘
+  └───────┬────────┘                                        │
+          │                                                 ▼
+          │                                      ┌────products────┐
+          ├─────────────────────────────────────►│ categoryId FK│
+          │                                      └────┬───────────┘
+          │                                           │
+          ▼                                           ▼
+  ┌────────costumer_order────────┐            ┌────image────┐
+  │ wilaya, commune, total, …    │            │ productId   │
+  └───────────┬──────────────────┘            └─────────────┘
+              │
+              ▼
+  ┌────────costumer_order_to_product────────┐
+  │ orderId + productId (composite PK)      │
+  └─────────────────────────────────────────┘
+  </pre>
+  </figure>
+  </section>
+  <section class="chapter" id="ch-15">
+    <div class="chapter-kicker">Chapter 15</div>
+    <h2>API surface (summary)</h2>
+    <p>Server routes are implemented as Next.js Route Handlers returning JSON or redirects. The appendix lists every discovered route file in this repository snapshot.</p>
+  </section>
+  <section class="chapter" id="ch-16">
+    <div class="chapter-kicker">Chapter 16</div>
+    <h2>Security, privacy, and compliance posture</h2>
+    <p>Secrets never ship to the client bundle. OAuth uses Google web client credentials. Payment secrets are server-only. Telemetry may contain search text—treat as sensitive operational data with retention controls.</p>
+  </section>
+  <section class="chapter" id="ch-17">
+    <div class="chapter-kicker">Chapter 17</div>
+    <h2>Deployment model</h2>
+    <p>Typical deployment targets Vercel or compatible platforms with environment variables mirroring <code>.env.example</code>. Database connectivity uses pooled Postgres URLs suitable for serverless drivers.</p>
+  </section>
+  <section class="chapter" id="ch-18">
+    <div class="chapter-kicker">Chapter 18</div>
+    <h2>Testing strategy (recommendations)</h2>
+    <p>Recommended layers: unit tests for pure utilities (price math, normalization), contract tests for Route Handlers with mocked Drizzle, Playwright smoke for checkout happy-path in staging, and periodic load tests on assistant endpoints.</p>
+      <p><strong>Regression matrix (starter).</strong> Cart persistence across reload; assistant with keys absent/present; OAuth callback on localhost vs production origin; Chargily redirect URLs with and without trailing slashes; sequence lifecycle when user opens multiple tabs; wishlist FK cascade on user delete.</p>
+      <p><strong>Test data hygiene.</strong> Use disposable Postgres schemas or docker-compose for CI, seed minimal categories/products, and rotate OAuth test users to avoid rate limits on Google’s consent screen during automated runs.</p>
+  </section>
+  <section class="chapter" id="ch-19">
+    <div class="chapter-kicker">Chapter 19</div>
+    <h2>Roadmap themes</h2>
+    <ol class="tight"><li>Hardening auth gates on admin paths</li><li>Inventory reservation service</li><li>Richer CMS for blogs</li><li>Assistant evaluation dashboard</li><li>Webhook-driven order fulfillment status</li></ol>
+      <p>Each theme should ship with measurable KPIs: e.g., assistant NDCG@k on held-out queries, checkout conversion rate by wilaya, median time-to-first-byte on PDP, and error budget for payment callbacks.</p>
+  </section>
+  <section class="chapter" id="ch-20">
+    <div class="chapter-kicker">Chapter 20</div>
+    <h2>Internationalization, locales, and assistant copy decks</h2>
+    <p>Vitrina’s customer-facing UI is predominantly French/Arabic/Darija-friendly in merchandising copy, while the assistant route codifies <strong>four response locales</strong>—Modern Standard Arabic, French, Algerian Darija (Latin), and English—selected by script detection, provider-reported language, and regex heuristics tuned for Maghrebi French and Darija markers.</p>
+      <p>Template banks centralize operational messages (missing API keys, rate limits, empty queries, catalog-only fallback). This pattern keeps UX consistent even when the LLM narrative varies, and simplifies legal review of deterministic strings.</p>
+      <p>Future i18n work could externalize UI strings into message catalogs (e.g., next-intl) while preserving assistant locale detection as a separate concern from static chrome translation.</p>
+  </section>
+  <section class="chapter" id="ch-21">
+    <div class="chapter-kicker">Chapter 21</div>
+    <h2>Repository layout and layering conventions</h2>
+    <p>The repository follows a pragmatic vertical slice: <code>src/app</code> for routing and route handlers, <code>src/components</code> for UI modules grouped by domain (Shop, Checkout, Cart, Common), <code>src/server</code> for auth/db/data-access, <code>src/redux</code> for client state, and <code>src/lib</code> for cross-cutting utilities. This mirrors how teams onboard: start at a route, descend into components, drop to server helpers when persistence is involved.</p>
+      <p>Keeping Drizzle schema centralized avoids drift between “types” and “truth”. Migrations in <code>drizzle/*.sql</code> should be treated as immutable history once applied to production.</p>
+  </section>
+  <section class="chapter" id="ch-22">
+    <div class="chapter-kicker">Chapter 22</div>
+    <h2>Catalog data model and shop presentation</h2>
+    <p>Products are relational rows with slugs for clean URLs, joined categories, and optional promotional pricing. The storefront also consumes curated <code>shopData</code> for deterministic assistant retrieval—an intentional dual path: relational data for transactional integrity, curated JSON for fast LLM grounding without N+1 queries at inference time.</p>
+      <p>Merchandising components emphasize photography, manufacturer, and category breadcrumbs to reduce uncertainty before add-to-cart.</p>
+  </section>
+  <section class="chapter" id="ch-23">
+    <div class="chapter-kicker">Chapter 23</div>
+    <h2>Product detail page: composition and assistants</h2>
+    <p>The PDP composes gallery, price modes, description, reviews, and contextual assistant entry points. Product-scoped assistant payloads include title, availability hints, and category to steer retrieval toward compatible substitutes and accessories.</p>
+      <p>Separating global assistant chrome from PDP assistant reduces accidental context leakage and improves relevance metrics in telemetry.</p>
+  </section>
+  <section class="chapter" id="ch-24">
+    <div class="chapter-kicker">Chapter 24</div>
+    <h2>Cart, persistence, and client state lifecycle</h2>
+    <p>Redux holds authoritative client cart state; persistence middleware writes through to storage after meaningful transitions. Hydration strategies must avoid double-counting during SSR handoff—Vitrina’s approach favors client reconciliation with stable keys to prevent flicker when session state and anonymous carts meet at login.</p>
+  </section>
+  <section class="chapter" id="ch-25">
+    <div class="chapter-kicker">Chapter 25</div>
+    <h2>Checkout UX: wilaya, commune, shipping presentation</h2>
+    <p>Algerian wilaya and commune fields align with last-mile carrier expectations. The checkout surface presents <strong>Yalidine Express</strong> branding in the shipping method presentation layer, signaling fulfillment partner intent to shoppers even when rate tables are simplified in early versions.</p>
+  </section>
+  <section class="chapter" id="ch-26">
+    <div class="chapter-kicker">Chapter 26</div>
+    <h2>Payments: Chargily integration principles</h2>
+    <p>Server-created checkout sessions ensure secrets never leave trusted compute. Amounts and success/failure URLs should be derived from trusted cart recomputation on the server, not from client-submitted totals alone. Idempotency keys for order creation pair naturally with payment intent identifiers.</p>
+  </section>
+  <section class="chapter" id="ch-27">
+    <div class="chapter-kicker">Chapter 27</div>
+    <h2>Wishlist domain model and UX</h2>
+    <p>Wishlists are modeled as one row per user with a join table for products, enabling efficient uniqueness constraints and cascade deletes. UX surfaces highlight saved items and nudge conversion through return visits.</p>
+  </section>
+  <section class="chapter" id="ch-28">
+    <div class="chapter-kicker">Chapter 28</div>
+    <h2>Reviews, ratings, and moderation considerations</h2>
+    <p>Reviews bind to users and carry integer ratings and free-text comments. Moderation policies (profanity filters, report button, admin quarantine) are organizational choices; technically the schema supports append-only consumer history suitable for audit.</p>
+  </section>
+  <section class="chapter" id="ch-29">
+    <div class="chapter-kicker">Chapter 29</div>
+    <h2>Site feedback instrument</h2>
+    <p>Holistic site feedback complements product reviews by capturing satisfaction with navigation, speed, and support. Aggregating feedback alongside assistant telemetry can explain macro conversion changes.</p>
+  </section>
+  <section class="chapter" id="ch-30">
+    <div class="chapter-kicker">Chapter 30</div>
+    <h2>Blog subsystem and editorial workflow</h2>
+    <p>Blog routes provide editorial grid/detail layouts with optional sidebars for long-form storytelling—useful for launches, lookbooks, and merchant education. A headless CMS integration would be a natural evolution without changing public URLs.</p>
+  </section>
+  <section class="chapter" id="ch-31">
+    <div class="chapter-kicker">Chapter 31</div>
+    <h2>Legal, trust, and policy surfaces</h2>
+    <p>Terms, privacy, and refund policies establish baseline consumer trust. These pages should be versioned in git with change logs when material terms shift (returns window, data retention, payment dispute flows).</p>
+  </section>
+  <section class="chapter" id="ch-32">
+    <div class="chapter-kicker">Chapter 32</div>
+    <h2>Performance engineering checklist</h2>
+    <ul class="tight"><li>Image formats and sizes for hero and PDP galleries</li><li>Defer non-critical assistant bundles until interaction</li><li>Memoize expensive selectors; avoid rerendering entire grids on cart tick</li><li>Prefer server components for static policy pages</li><li>Monitor API cold starts on Vercel for assistant route</li></ul>
+  </section>
+  <section class="chapter" id="ch-33">
+    <div class="chapter-kicker">Chapter 33</div>
+    <h2>Accessibility baseline</h2>
+    <p>Semantic landmarks, focus management for modals (quick view, assistant), sufficient color contrast on navy backgrounds, and keyboard operability for primary CTAs are baseline expectations. Automated checks (axe) plus manual screen reader passes on checkout are recommended before major releases.</p>
+  </section>
+  <section class="chapter" id="ch-34">
+    <div class="chapter-kicker">Chapter 34</div>
+    <h2>Engineering process: migrations, typing, and CI</h2>
+    <p>Adopt a migration-first workflow: local <code>drizzle-kit generate</code> after schema edits, peer review SQL, apply in staging, snapshot restore drills before production. TypeScript strictness should ratchet over time; new modules should avoid <code>any</code> in auth and payment boundaries.</p>
+  </section>
+  <section class="chapter" id="ch-35">
+    <div class="chapter-kicker">Chapter 35</div>
+    <h2>Glossary and extended definitions</h2>
+    <dl class="glossary">
+        <dt>App Router</dt><dd>Next.js file-system routing with layouts and nested loading boundaries.</dd>
+        <dt>Better Auth</dt><dd>Library handling sessions, OAuth, and credential storage with Drizzle adapter.</dd>
+        <dt>Chargily</dt><dd>Regional payment gateway integration used for hosted checkout.</dd>
+        <dt>Drizzle</dt><dd>Type-safe SQL builder and migration toolkit for Postgres.</dd>
+        <dt>jomla</dt><dd>Promotional price mode per Vitrina business rules.</dd>
+        <dt>Route Handler</dt><dd><code>route.ts</code> file exporting HTTP method functions in the App Router.</dd>
+        <dt>shopping_sequence</dt><dd>Funnel analytics entity keyed by session with lifecycle statuses.</dd>
+        <dt>telemetry</dt><dd>Assistant search and click events stored for offline evaluation.</dd>
+      </dl>
+  </section>
+
+    <section id="appendices" class="page-break-before">
+      <h2>Appendices</h2>
+      <p class="muted">Detailed tables and schema excerpts follow. These sections intentionally mirror repository structure to keep the report auditable against git history.</p>
+      
+  <section class="appendix-block">
+    <h3>Appendix A — Primary page routes</h3>
+    <table class="data"><thead><tr><th>Route</th><th>Description</th></tr></thead><tbody><tr><td>/</td><td>Marketing home, hero, categories, featured products</td></tr><tr><td>/signin</td><td>Better Auth sign-in (Google + credentials flows)</td></tr><tr><td>/signup</td><td>Account registration</td></tr><tr><td>/forgot-password</td><td>Password recovery entry</td></tr><tr><td>/shop-with-sidebar</td><td>Catalog grid with sidebar filters</td></tr><tr><td>/shop-without-sidebar</td><td>Catalog grid without sidebar</td></tr><tr><td>/shop-details</td><td>Product detail (query-driven)</td></tr><tr><td>/category/[slug]</td><td>Category landing with product listing</td></tr><tr><td>/cart</td><td>Cart review, line items, proceed to checkout</td></tr><tr><td>/checkout</td><td>Wilaya/commune, notes, Chargily payment handoff</td></tr><tr><td>/wishlist</td><td>Saved products (authenticated)</td></tr><tr><td>/my-account</td><td>Profile and account management</td></tr><tr><td>/recently-viewed</td><td>Session/history-based product recall</td></tr><tr><td>/contact</td><td>Contact form / store information</td></tr><tr><td>/faq</td><td>Frequently asked questions</td></tr><tr><td>/terms-of-use</td><td>Legal terms</td></tr><tr><td>/privacy-policy</td><td>Privacy policy</td></tr><tr><td>/refund-policy</td><td>Refund policy</td></tr><tr><td>/mail-success</td><td>Post-transaction confirmation</td></tr><tr><td>/error</td><td>Error boundary page</td></tr><tr><td>/sequence</td><td>Shopping sequence analytics (admin-style view)</td></tr><tr><td>/admin</td><td>Administrative tools (sequences, etc.)</td></tr><tr><td>/blogs/blog-grid</td><td>Blog index grid</td></tr><tr><td>/blogs/blog-grid-with-sidebar</td><td>Blog grid with sidebar</td></tr><tr><td>/blogs/blog-details</td><td>Single blog article</td></tr><tr><td>/blogs/blog-details-with-sidebar</td><td>Blog article with sidebar</td></tr></tbody></table>
+  </section>
+  <section class="appendix-block">
+    <h3>Appendix B — API route handlers (inventory)</h3>
+    <table class="data"><thead><tr><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>/api/auth/[...all]</td><td>Better Auth catch-all: session, OAuth callbacks</td></tr><tr><td>/api/assistant</td><td>POST: multilingual smart assistant (Gemini / OpenRouter), catalog + LLM ranking</td></tr><tr><td>/api/assistant/telemetry</td><td>Assistant search / click telemetry ingestion</td></tr><tr><td>/api/payments/chargily/checkout</td><td>Creates Chargily checkout session, redirects</td></tr><tr><td>/api/reviews</td><td>Product reviews CRUD / listing</td></tr><tr><td>/api/feedbacks</td><td>Site-wide feedback capture</td></tr><tr><td>/api/sequence/start</td><td>Starts shopping_sequence funnel row</td></tr><tr><td>/api/sequence/visit-product</td><td>Marks product visit within sequence</td></tr><tr><td>/api/sequence/end</td><td>Ends sequence (purchase or leave)</td></tr><tr><td>/api/admin/sequences</td><td>Admin listing / inspection of sequences</td></tr></tbody></table>
+  </section>
+  <section class="appendix-block">
+    <h3>Appendix C — Use case catalog</h3>
+    <table class="data"><thead><tr><th>ID</th><th>Name</th><th>Primary actor</th><th>Brief description</th></tr></thead><tbody><tr><td>UC-01</td><td>Visitor browses home</td><td>Guest</td><td>Views hero, categories, and featured products without signing in.</td></tr><tr><td>UC-02</td><td>Visitor opens shop grid</td><td>Guest</td><td>Navigates to shop-with-sidebar or shop-without-sidebar and scrolls catalog.</td></tr><tr><td>UC-03</td><td>Filter products by category</td><td>Guest</td><td>Uses category chips or category pages to narrow catalog.</td></tr><tr><td>UC-04</td><td>Open product detail</td><td>Guest</td><td>Clicks product card; loads shop-details with images, price modes, description.</td></tr><tr><td>UC-05</td><td>Toggle price mode (detail vs jomla)</td><td>Guest/User</td><td>Global PriceModeProvider switches how list prices are interpreted (reference vs promo).</td></tr><tr><td>UC-06</td><td>Add to cart</td><td>Guest/User</td><td>Dispatches Redux cart slice; toast feedback; cart badge updates.</td></tr><tr><td>UC-07</td><td>Adjust quantity in cart</td><td>Guest/User</td><td>Updates line quantities with validation against stock fields.</td></tr><tr><td>UC-08</td><td>Remove from cart</td><td>Guest/User</td><td>Removes line item; persists via CartPersistence.</td></tr><tr><td>UC-09</td><td>Persist cart across reload</td><td>Guest/User</td><td>CartPersistence hydrates Redux from storage without flicker.</td></tr><tr><td>UC-10</td><td>Open quick view modal</td><td>Guest/User</td><td>QuickView slice drives modal with product summary.</td></tr><tr><td>UC-11</td><td>Add to wishlist</td><td>User</td><td>Requires session; wishlist tables in Postgres.</td></tr><tr><td>UC-12</td><td>View wishlist</td><td>User</td><td>Dedicated wishlist page lists saved SKUs.</td></tr><tr><td>UC-13</td><td>Sign in with Google</td><td>Guest</td><td>Better Auth + Google OAuth; profile hydrated.</td></tr><tr><td>UC-14</td><td>Sign in with email/password</td><td>Guest</td><td>Credential provider via Better Auth.</td></tr><tr><td>UC-15</td><td>Sign up</td><td>Guest</td><td>Creates user row, verification flags per configuration.</td></tr><tr><td>UC-16</td><td>Forgot password</td><td>Guest</td><td>Initiates recovery flow (provider-dependent).</td></tr><tr><td>UC-17</td><td>View my account</td><td>User</td><td>Profile, orders history hooks (as implemented).</td></tr><tr><td>UC-18</td><td>Start checkout</td><td>User/Guest</td><td>Checkout form: wilaya, commune, optional note.</td></tr><tr><td>UC-19</td><td>Pay with Chargily</td><td>User/Guest</td><td>Server creates Chargily session; browser redirects to hosted checkout.</td></tr><tr><td>UC-20</td><td>Return from payment</td><td>User/Guest</td><td>Redirect URLs use NEXT_PUBLIC_APP_URL; order persisted.</td></tr><tr><td>UC-21</td><td>Submit product review</td><td>User</td><td>Reviews API + product_review table.</td></tr><tr><td>UC-22</td><td>Read reviews on product</td><td>Guest/User</td><td>Rendered list with ratings aggregate.</td></tr><tr><td>UC-23</td><td>Submit site feedback</td><td>User</td><td>site_feedback table via API.</td></tr><tr><td>UC-24</td><td>Contact store</td><td>Guest/User</td><td>Contact page messaging (implementation-specific).</td></tr><tr><td>UC-25</td><td>Read policies</td><td>Guest/User</td><td>Static legal pages: terms, privacy, refund.</td></tr><tr><td>UC-26</td><td>Browse blog</td><td>Guest/User</td><td>Marketing / content pages under /blogs/*.</td></tr><tr><td>UC-27</td><td>FAQ self-service</td><td>Guest/User</td><td>FAQ page reduces support load.</td></tr><tr><td>UC-28</td><td>Recently viewed products</td><td>Guest/User</td><td>recently-viewed page surfaces local/session history.</td></tr><tr><td>UC-29</td><td>Smart shopping assistant (global)</td><td>Guest/User</td><td>Floating assistant; POST /api/assistant; multilingual replies.</td></tr><tr><td>UC-30</td><td>Product page assistant</td><td>Guest/User</td><td>Contextual assistant with on-page product metadata.</td></tr><tr><td>UC-31</td><td>Assistant telemetry — search</td><td>System</td><td>Logs normalized query, provider, model, cache, counts.</td></tr><tr><td>UC-32</td><td>Assistant telemetry — click</td><td>User</td><td>Logs clicked recommendation position for tuning.</td></tr><tr><td>UC-33</td><td>Sequence start</td><td>System</td><td>sequence/start records funnel with trigger metadata.</td></tr><tr><td>UC-34</td><td>Sequence product visit</td><td>System</td><td>visit-product stamps product_visited_at.</td></tr><tr><td>UC-35</td><td>Sequence end purchase</td><td>System</td><td>end marks purchase outcome.</td></tr><tr><td>UC-36</td><td>Sequence end abandon</td><td>System</td><td>end marks left / superseded states.</td></tr><tr><td>UC-37</td><td>Admin inspect sequences</td><td>Admin</td><td>admin/sequences API + UI page.</td></tr><tr><td>UC-38</td><td>Middleware session cookie check</td><td>System</td><td>middleware.ts optimistic redirect for /dashboard matcher.</td></tr><tr><td>UC-39</td><td>Session provider (client)</td><td>Guest/User</td><td>React session context from Better Auth client.</td></tr><tr><td>UC-40</td><td>Image gallery on product</td><td>Guest/User</td><td>Additional images from image table / UI carousel.</td></tr><tr><td>UC-41</td><td>Stock / availability messaging</td><td>Guest/User</td><td>instock field drives availability copy.</td></tr><tr><td>UC-42</td><td>Manufacturer &amp; category display</td><td>Guest/User</td><td>Schema fields rendered in PDP.</td></tr><tr><td>UC-43</td><td>Search normalization (assistant)</td><td>System</td><td>Transliteration + language heuristics before retrieval.</td></tr><tr><td>UC-44</td><td>LLM provider fallback chain</td><td>System</td><td>Gemini primary; OpenRouter configurable; graceful degradation.</td></tr><tr><td>UC-45</td><td>Rate limit user messaging</td><td>Guest/User</td><td>Localized strings when providers throttled.</td></tr><tr><td>UC-46</td><td>Mail success confirmation</td><td>User</td><td>Post-checkout positive acknowledgment page.</td></tr><tr><td>UC-47</td><td>Error page navigation</td><td>Guest/User</td><td>Centralized error UX.</td></tr><tr><td>UC-48</td><td>SEO / metadata per layout</td><td>Guest/User</td><td>Next.js metadata API on routes (as configured).</td></tr><tr><td>UC-49</td><td>Redux DevTools (dev)</td><td>Developer</td><td>RTK store exposes standard tooling in development.</td></tr><tr><td>UC-50</td><td>Production deploy on Vercel</td><td>Operator</td><td>Serverless functions for API routes; env secrets in project settings.</td></tr><tr><td>UC-51</td><td>Theme toggle (light/dark)</td><td>Guest/User</td><td>next-themes integration where wired in layout.</td></tr><tr><td>UC-52</td><td>Swiper-based merchandising carousels</td><td>Guest/User</td><td>Marketing sliders for collections and promos.</td></tr><tr><td>UC-53</td><td>Category slug resolution</td><td>Guest/User</td><td>Dynamic segment category/[slug] hydrates listing.</td></tr><tr><td>UC-54</td><td>Order line composition</td><td>System</td><td>costumer_order_to_product rows mirror cart at checkout.</td></tr><tr><td>UC-55</td><td>Product images secondary gallery</td><td>Guest/User</td><td>imageTable joins power additional PDP media.</td></tr><tr><td>UC-56</td><td>Phone uniqueness enforcement</td><td>System</td><td>user.phone unique constraint supports support desk lookups.</td></tr><tr><td>UC-57</td><td>Role field on user</td><td>System</td><td>Default user role; extensible for admin elevation.</td></tr><tr><td>UC-58</td><td>Session expiry handling</td><td>User</td><td>Better Auth session rows with expires_at semantics.</td></tr><tr><td>UC-59</td><td>OAuth account linkage</td><td>User</td><td>account table stores provider tokens per Better Auth model.</td></tr><tr><td>UC-60</td><td>Email verification flags</td><td>User</td><td>email_verified boolean on user as per adapter mapping.</td></tr><tr><td>UC-61</td><td>Verification tokens</td><td>System</td><td>verification table for magic links / OTP flows.</td></tr><tr><td>UC-62</td><td>Assistant detail vs jomla mode</td><td>Guest/User</td><td>mode flag steers catalog matching and pricing context.</td></tr><tr><td>UC-63</td><td>Assistant empty-query guard</td><td>Guest/User</td><td>Localized prompt when query blank.</td></tr><tr><td>UC-64</td><td>Assistant catalog fallback</td><td>System</td><td>Deterministic retrieval when LLM unavailable.</td></tr><tr><td>UC-65</td><td>Assistant response cache</td><td>System</td><td>In-memory TTL map keyed by normalized query.</td></tr><tr><td>UC-66</td><td>Sequence superseded state</td><td>System</td><td>New funnel run marks prior rows superseded.</td></tr><tr><td>UC-67</td><td>Sequence trigger taxonomy</td><td>Operator</td><td>trigger_type + trigger_label explain entry points.</td></tr><tr><td>UC-68</td><td>Admin sequences JSON export mindset</td><td>Admin</td><td>Rows consumable by BI pipelines (future).</td></tr><tr><td>UC-69</td><td>Checkout shipping method display</td><td>Guest/User</td><td>Yalidine Express branding in ShippingMethod UI.</td></tr><tr><td>UC-70</td><td>Hydration-safe cart badge</td><td>Guest/User</td><td>Client-only counts after persistence hydration.</td></tr><tr><td>UC-71</td><td>Product local id in reviews</td><td>System</td><td>Legacy/local id field aligns reviews with catalog rows.</td></tr><tr><td>UC-72</td><td>Strikethrough reference pricing</td><td>Guest/User</td><td>When jomlaPrice set, UI shows reference + promo story.</td></tr><tr><td>UC-73</td><td>Manufacturer trust signal</td><td>Guest/User</td><td>manufacturer field displayed on PDP.</td></tr><tr><td>UC-74</td><td>Low-stock edge messaging</td><td>Guest/User</td><td>instock thresholds can inform urgency copy.</td></tr><tr><td>UC-75</td><td>404 / error recovery</td><td>Guest/User</td><td>Dedicated error page route.</td></tr><tr><td>UC-76</td><td>Mail success analytics hook</td><td>Operator</td><td>Confirmation page can attach conversion pixels.</td></tr><tr><td>UC-77</td><td>Contact lead capture</td><td>Guest/User</td><td>Inbound inquiries for B2B or support.</td></tr><tr><td>UC-78</td><td>FAQ reduces tickets</td><td>Guest/User</td><td>Self-serve answers before human support.</td></tr><tr><td>UC-79</td><td>Blog SEO landing</td><td>Guest/User</td><td>Long-form content attracts organic traffic.</td></tr><tr><td>UC-80</td><td>Policy audit trail</td><td>Compliance</td><td>Static pages demonstrate consumer disclosures.</td></tr></tbody></table>
+  </section>
+  <section class="appendix-block">
+    <h3>Appendix D — Risk register (excerpt)</h3>
+    <table class="data"><thead><tr><th>ID</th><th>Area</th><th>Description</th><th>Severity</th><th>Mitigation</th></tr></thead><tbody><tr><td>R-01</td><td>Payment integration</td><td>Third-party Chargily availability and webhook timing must be monitored.</td><td>High</td><td>Retries, idempotent order writes, alerting</td></tr><tr><td>R-02</td><td>LLM cost &amp; abuse</td><td>Assistant endpoints can incur token cost; prompt injection surface.</td><td>Medium</td><td>Rate limits, max tokens, query sanitization</td></tr><tr><td>R-03</td><td>Auth middleware comment</td><td>Code notes cookie check is optimistic; routes must re-validate.</td><td>Medium</td><td>Central requireAuth helper for sensitive APIs</td></tr><tr><td>R-04</td><td>PII in telemetry</td><td>Assistant telemetry stores queries; retention policy needed.</td><td>Medium</td><td>TTL cleanup, anonymization</td></tr><tr><td>R-05</td><td>Stock oversell</td><td>Race between cart and checkout vs inventory.</td><td>Medium</td><td>Transactional stock decrement</td></tr><tr><td>R-06</td><td>Env misconfiguration</td><td>Missing GOOGLE_API_KEY / OPENROUTER degrades assistant.</td><td>Low</td><td>Health check + UI copy</td></tr><tr><td>R-07</td><td>Database migrations</td><td>Drift between drizzle and production schema.</td><td>Medium</td><td>CI migration gate</td></tr><tr><td>R-08</td><td>Third-party LLM availability</td><td>Provider outages affect assistant quality.</td><td>Medium</td><td>Multi-provider fallback, cached fallbacks</td></tr><tr><td>R-09</td><td>Client bundle size</td><td>Heavy client islands can regress LCP.</td><td>Low</td><td>Code-split assistants, lazy modals</td></tr></tbody></table>
+  </section><section class="appendix-block"><h3>Appendix E — Environment template (<code>.env.example</code>)</h3><pre class="code">DATABASE_URL='postgres://role:password@localhost:5432/db-name'
+BETTER_AUTH_SECRET=&quot;Random value used by the library for encryption and generating hashes. you can use something like openssl&quot;
+BETTER_AUTH_URL=http://localhost:3000 #Base URL of your app
+GOOGLE_CLIENT_ID=&quot;&quot; # Google OAuth Web Client ID
+GOOGLE_CLIENT_SECRET=&quot;&quot; # Google OAuth Web Client Secret
+CHARGILY_SECRET_KEY=&quot;&quot; # Chargily secret key (test or live)
+CHARGILY_API_BASE_URL=&quot;https://pay.chargily.net/test/api/v2&quot; # Test mode base URL
+NEXT_PUBLIC_APP_URL=&quot;http://localhost:3000&quot; # Public app URL for payment redirects</pre></section><section class="appendix-block page-break-before"><h3>Appendix F — Drizzle schema excerpts (generated)</h3><p class="muted">Column bodies are copied from <code>src/server/db/schema.ts</code> for audit traceability. Composite keys and references appear as declared in source.</p>
+    <section class="schema-table">
+      <h4>Table <code>user</code> <span class="muted">(user)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  name: text(&quot;name&quot;).notNull(),
+  lastname: text(&quot;last_name&quot;).notNull(),
+  phone: varchar(&quot;phone&quot;, { length: 10 }).notNull().unique(),
+  role: text(&quot;role&quot;).notNull().default(&quot;user&quot;),
+  email: text(&quot;email&quot;).notNull().unique(),
+  emailVerified: boolean(&quot;email_verified&quot;)
+    .$defaultFn(() =&gt; false)
+    .notNull(),
+  image: text(&quot;image&quot;),
+  createdAt: timestamp(&quot;created_at&quot;)
+    .$defaultFn(() =&gt; /* @__PURE__ */ new Date())
+    .notNull(),
+  updatedAt: timestamp(&quot;updated_at&quot;)
+    .$defaultFn(() =&gt; /* @__PURE__ */ new Date())
+    .notNull(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>session</code> <span class="muted">(session)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  expiresAt: timestamp(&quot;expires_at&quot;).notNull(),
+  token: text(&quot;token&quot;).notNull().unique(),
+  createdAt: timestamp(&quot;created_at&quot;).notNull(),
+  updatedAt: timestamp(&quot;updated_at&quot;).notNull(),
+  ipAddress: text(&quot;ip_address&quot;),
+  userAgent: text(&quot;user_agent&quot;),
+  userId: text(&quot;user_id&quot;)
+    .notNull()
+    .references(() =&gt; user.id, { onDelete: &quot;cascade&quot; }),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>account</code> <span class="muted">(account)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  accountId: text(&quot;account_id&quot;).notNull(),
+  providerId: text(&quot;provider_id&quot;).notNull(),
+  userId: text(&quot;user_id&quot;)
+    .notNull()
+    .references(() =&gt; user.id, { onDelete: &quot;cascade&quot; }),
+  accessToken: text(&quot;access_token&quot;),
+  refreshToken: text(&quot;refresh_token&quot;),
+  idToken: text(&quot;id_token&quot;),
+  accessTokenExpiresAt: timestamp(&quot;access_token_expires_at&quot;),
+  refreshTokenExpiresAt: timestamp(&quot;refresh_token_expires_at&quot;),
+  scope: text(&quot;scope&quot;),
+  password: text(&quot;password&quot;),
+  createdAt: timestamp(&quot;created_at&quot;).notNull(),
+  updatedAt: timestamp(&quot;updated_at&quot;).notNull(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>verification</code> <span class="muted">(verification)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  identifier: text(&quot;identifier&quot;).notNull(),
+  value: text(&quot;value&quot;).notNull(),
+  expiresAt: timestamp(&quot;expires_at&quot;).notNull(),
+  createdAt: timestamp(&quot;created_at&quot;).$defaultFn(
+    () =&gt; /* @__PURE__ */ new Date()
+  ),
+  updatedAt: timestamp(&quot;updated_at&quot;).$defaultFn(
+    () =&gt; /* @__PURE__ */ new Date()
+  ),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>wishlist</code> <span class="muted">(wishlistTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  // one wishlist has one user
+  userId: text()
+    .references(() =&gt; user.id, { onDelete: &quot;cascade&quot; })
+    .unique(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>products</code> <span class="muted">(productsTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  slug: varchar({ length: 255 }).notNull().unique(),
+  title: varchar({ length: 255 }).notNull(),
+  mainimage: varchar({ length: 255 }).notNull(),
+  /** Shown as strikethrough “standard” when jomlaPrice is set; otherwise the sole list price */
+  price: integer().notNull().default(0),
+  /** Vitrina (promo) price — when set, customer pays this and price is +20% reference */
+  jomlaPrice: integer(&quot;jomla_price&quot;),
+  rating: integer().notNull().default(0),
+  description: varchar({ length: 255 }).notNull(),
+  manufacturer: varchar({ length: 255 }).notNull(),
+  // in stock attribute for normal ecommerce but for the project with w4t3r
+  // replace it with quantity till the product is ordered from the store
+  instock: integer().notNull().default(1),
+  categoryId: uuid()
+    .references(() =&gt; categoryTable.id, { onDelete: &quot;cascade&quot; })
+    .notNull(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>wishlist_to_product</code> <span class="muted">(wishlist_to_productTable)</span></h4>
+      <pre class="code">wishlistId: uuid()
+      .references(() =&gt; wishlistTable.id)
+      .notNull(),
+    productId: uuid()
+      .references(() =&gt; productsTable.id)
+      .notNull(),
+    addedAt: timestamp({ mode: &quot;date&quot; }).notNull().defaultNow(),
+  }</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>image</code> <span class="muted">(imageTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  productId: uuid()
+    .references(() =&gt; productsTable.id)
+    .notNull(),
+  image: varchar({ length: 255 }).notNull(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>category</code> <span class="muted">(categoryTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  name: varchar({ length: 255 }).notNull(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>shopping_sequence</code> <span class="muted">(shoppingSequenceTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  sessionKey: varchar(&quot;session_key&quot;, { length: 64 }).notNull(),
+  userId: text(&quot;user_id&quot;).references(() =&gt; user.id, { onDelete: &quot;set null&quot; }),
+  triggerType: varchar(&quot;trigger_type&quot;, { length: 32 }).notNull(),
+  triggerLabel: text(&quot;trigger_label&quot;).notNull(),
+  /** active | superseded | ended_left | ended_purchase */
+  status: varchar(&quot;status&quot;, { length: 32 }).notNull().default(&quot;active&quot;),
+  productVisitedAt: timestamp(&quot;product_visited_at&quot;, { mode: &quot;date&quot; }),
+  startedAt: timestamp(&quot;started_at&quot;, { mode: &quot;date&quot; }).notNull().defaultNow(),
+  endedAt: timestamp(&quot;ended_at&quot;, { mode: &quot;date&quot; }),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>costumer_order</code> <span class="muted">(costumer_orderTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  userId: text()
+    .references(() =&gt; user.id)
+    .notNull(),
+  wilaya: varchar({ length: 255 }).notNull(),
+  commune: varchar({ length: 255 }).notNull(),
+  note: varchar({ length: 255 }),
+  datetime: timestamp({ mode: &quot;date&quot; }).notNull().defaultNow(),
+  total: integer().notNull().default(0),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>costumer_order_to_product</code> <span class="muted">(costumer_order_to_productTable)</span></h4>
+      <pre class="code">orderId: uuid()
+      .references(() =&gt; costumer_orderTable.id)
+      .notNull(),
+    productId: uuid()
+      .references(() =&gt; productsTable.id)
+      .notNull(),
+    quantity: integer().notNull().default(1),
+  }</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>product_review</code> <span class="muted">(productReviewTable)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  productLocalId: integer(&quot;product_local_id&quot;).notNull(),
+  productTitle: text(&quot;product_title&quot;).notNull(),
+  userId: text(&quot;user_id&quot;)
+    .notNull()
+    .references(() =&gt; user.id, { onDelete: &quot;cascade&quot; }),
+  rating: integer(&quot;rating&quot;).notNull(),
+  comment: text(&quot;comment&quot;).notNull(),
+  createdAt: timestamp(&quot;created_at&quot;, { mode: &quot;date&quot; }).notNull().defaultNow(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>site_feedback</code> <span class="muted">(siteFeedbackTable)</span></h4>
+      <pre class="code">id: text(&quot;id&quot;).primaryKey(),
+  userId: text(&quot;user_id&quot;)
+    .notNull()
+    .references(() =&gt; user.id, { onDelete: &quot;cascade&quot; }),
+  rating: integer(&quot;rating&quot;).notNull(),
+  comment: text(&quot;comment&quot;).notNull(),
+  createdAt: timestamp(&quot;created_at&quot;, { mode: &quot;date&quot; }).notNull().defaultNow(),
+}</pre>
+    </section>
+
+    <section class="schema-table">
+      <h4>Table <code>assistant_search_telemetry</code> <span class="muted">(assistantSearchTelemetryTable)</span></h4>
+      <pre class="code">id: uuid().primaryKey().defaultRandom(),
+  eventType: varchar(&quot;event_type&quot;, { length: 32 }).notNull(),
+  requestId: varchar(&quot;request_id&quot;, { length: 64 }).notNull(),
+  sessionKey: varchar(&quot;session_key&quot;, { length: 64 }),
+  userId: text(&quot;user_id&quot;).references(() =&gt; user.id, { onDelete: &quot;set null&quot; }),
+  mode: varchar(&quot;mode&quot;, { length: 16 }).notNull().default(&quot;detail&quot;),
+  rawQuery: text(&quot;raw_query&quot;),
+  normalizedQuery: text(&quot;normalized_query&quot;),
+  detectedLanguage: varchar(&quot;detected_language&quot;, { length: 64 }),
+  provider: varchar(&quot;provider&quot;, { length: 64 }),
+  model: varchar(&quot;model&quot;, { length: 128 }),
+  error: text(&quot;error&quot;),
+  cacheStatus: varchar(&quot;cache_status&quot;, { length: 16 }),
+  resultCount: integer(&quot;result_count&quot;).notNull().default(0),
+  matchedIdsJson: text(&quot;matched_ids_json&quot;),
+  clickedProductId: integer(&quot;clicked_product_id&quot;),
+  clickedPosition: integer(&quot;clicked_position&quot;),
+  createdAt: timestamp(&quot;created_at&quot;, { mode: &quot;date&quot; }).notNull().defaultNow(),
+}</pre>
+    </section></section>
+  <section class="appendix-block">
+    <h3>Appendix G — Source file index (generated from disk)</h3>
+    <table class="data data--compact"><thead><tr><th>Path (under repo)</th><th>Classification</th></tr></thead><tbody><tr><td>src/app/(site)/(pages)/admin/AdminPanels.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/admin/EditProductModal.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/admin/actions.ts</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/admin/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/admin/product-form-ui.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/cart/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/category/[slug]/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/checkout/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/contact/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/error/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/faq/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/forgot-password/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/mail-success/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/my-account/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/privacy-policy/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/recently-viewed/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/refund-policy/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/sequence/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/shop-details/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/shop-with-sidebar/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/shop-without-sidebar/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/signin/action.ts</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/signin/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/signin/signin-form.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/signup/action.ts</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/signup/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/signup/signup-form.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/(site)/(pages)/terms-of-use/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/(pages)/wishlist/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/blogs/blog-details-with-sidebar/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/blogs/blog-details/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/blogs/blog-grid-with-sidebar/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/blogs/blog-grid/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/(site)/layout.tsx</td><td>App Router layout</td></tr><tr><td>src/app/(site)/page.tsx</td><td>App Router page</td></tr><tr><td>src/app/api/admin/sequences/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/assistant/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/assistant/telemetry/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/auth/[...all]/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/feedbacks/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/payments/chargily/checkout/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/reviews/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/sequence/_cookie.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/sequence/end/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/sequence/start/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/api/sequence/visit-product/route.ts</td><td>Route Handler (API)</td></tr><tr><td>src/app/context/CartSidebarModalContext.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/context/PreviewSliderContext.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/context/PriceModeContext.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/context/QuickViewModalContext.tsx</td><td>TypeScript module</td></tr><tr><td>src/app/context/SessionProvider.tsx</td><td>TypeScript module</td></tr><tr><td>src/components/Admin/SequencesLiveTable.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Auth/Signin/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Auth/Signup/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Blog/BlogItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Blog/Categories.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Blog/LatestPosts.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Blog/LatestProducts.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Blog/SearchForm.tsx</td><td>React component / UI</td></tr><tr><td>src/components/BlogDetails/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/BlogDetailsWithSidebar/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/BlogGrid/blogData.ts</td><td>React component / UI</td></tr><tr><td>src/components/BlogGrid/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/BlogGridWithSidebar/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Cart/Discount.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Cart/OrderSummary.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Cart/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Cart/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Category/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/Billing.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/Coupon.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/Login.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/Notes.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/OrderList.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/PaymentMethod.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/Shipping.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/ShippingMethod.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Checkout/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/Breadcrumb.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/CartPersistence.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/CartSidebarModal/EmptyCart.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/CartSidebarModal/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/CartSidebarModal/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/Newsletter.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/PreLoader.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/PreviewSlider.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/ProductItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/QuickViewModal.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/ScrollToTop.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/SequenceRouteWatcher.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/SmartShoppingAssistant.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Common/Spinner.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Contact/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Error/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Footer/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Header/CustomSelect.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Header/Dropdown.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Header/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Header/menuData.ts</td><td>React component / UI</td></tr><tr><td>src/components/Home/BestSeller/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/BestSeller/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Categories/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Categories/categoryData.ts</td><td>React component / UI</td></tr><tr><td>src/components/Home/Categories/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Countdown/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Hero/HeroCarousel.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Hero/HeroFeature.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Hero/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/NewArrivals/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/PromoBanner/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Testimonials/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Testimonials/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Home/Testimonials/testimonialsData.ts</td><td>React component / UI</td></tr><tr><td>src/components/Home/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/MailSuccess/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/MyAccount/AddressModal.tsx</td><td>React component / UI</td></tr><tr><td>src/components/MyAccount/action.ts</td><td>React component / UI</td></tr><tr><td>src/components/MyAccount/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/MyAccount/tabsData.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/EditOrder.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/OrderActions.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/OrderDetails.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/OrderModal.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/SingleOrder.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Orders/ordersData.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Shop/SingleGridItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Shop/SingleListItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Shop/shopData.ts</td><td>React component / UI</td></tr><tr><td>src/components/ShopDetails/ProductPageAssistant.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopDetails/RecentlyViewd/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopDetails/ReviewsTab.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopDetails/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/CategoryDropdown.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/ColorsDropdwon.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/CustomSelect.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/GenderDropdown.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/PriceDropdown.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/Progress.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/SizeDropdown.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithSidebar/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ShopWithoutSidebar/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Wishlist/SingleItem.tsx</td><td>React component / UI</td></tr><tr><td>src/components/Wishlist/index.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ui/form.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ui/input.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ui/label.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ui/skeleton.tsx</td><td>React component / UI</td></tr><tr><td>src/components/ui/sonner.tsx</td><td>React component / UI</td></tr><tr><td>src/lib/auth-client.ts</td><td>Client or shared library</td></tr><tr><td>src/lib/price-mode.ts</td><td>Client or shared library</td></tr><tr><td>src/lib/product-content.ts</td><td>Client or shared library</td></tr><tr><td>src/lib/sequence-client.ts</td><td>Client or shared library</td></tr><tr><td>src/lib/utils.ts</td><td>Client or shared library</td></tr><tr><td>src/redux/features/cart-slice.ts</td><td>Redux slice or store</td></tr><tr><td>src/redux/features/product-details.ts</td><td>Redux slice or store</td></tr><tr><td>src/redux/features/quickView-slice.ts</td><td>Redux slice or store</td></tr><tr><td>src/redux/features/wishlist-slice.ts</td><td>Redux slice or store</td></tr><tr><td>src/redux/provider.tsx</td><td>Redux slice or store</td></tr><tr><td>src/redux/store.ts</td><td>Redux slice or store</td></tr><tr><td>src/server/assistant/telemetry-db.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/data-access/product-catalog.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/data-access/user.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/db/index.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/db/schema.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/lib/action-helpers.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/lib/auth.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/reviews/reviews-db.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/server/sequence/sequence-db.ts</td><td>Server, auth, or data access</td></tr><tr><td>src/types/Menu.ts</td><td>Type definitions</td></tr><tr><td>src/types/auth.ts</td><td>Type definitions</td></tr><tr><td>src/types/blogItem.ts</td><td>Type definitions</td></tr><tr><td>src/types/category.ts</td><td>Type definitions</td></tr><tr><td>src/types/product.ts</td><td>Type definitions</td></tr><tr><td>src/types/shopping-sequence.ts</td><td>Type definitions</td></tr><tr><td>src/types/testimonial.ts</td><td>Type definitions</td></tr><tr><td>src/types/user.ts</td><td>Type definitions</td></tr><tr><td>src/use-cases/user.ts</td><td>Application use case</td></tr></tbody></table>
+  </section>
+    </section>
+
+    <section class="colophon">
+      <p><strong>Colophon.</strong> Typography pairs DM Sans (headings, UI) with Source Serif 4 (body). Diagrams are ASCII for universal PDF fidelity. To regenerate: <code>node scripts/build-vitrina-application-report.mjs</code> then <code>node scripts/build-vitrina-application-report.mjs --pdf</code> with Playwright installed.</p>
+    </section>
+  </main>
+</body>
+</html>

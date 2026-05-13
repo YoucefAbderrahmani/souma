@@ -14,6 +14,7 @@ import { ProgressBar, TrafficChart } from "./charts";
 import { AiRecommendationsContent, AlertsContent, UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
 import { SecurityTabContent } from "./security-tab";
+import { TimelineContent } from "./timeline-tab";
 import { SELLER_HELPER_NAV, SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
 import {
   sellerAccentStrip,
@@ -313,6 +314,7 @@ export default function SellerHelperDashboard({
     actionMessage,
     dismissAlert,
     dismissRecommendation,
+    dismissVitrinaAfterQuickFix,
   } = useConceptionAdminData(initialData, initialError);
 
   const trafficSeries = overview?.trafficHourlyNormalized ?? [];
@@ -373,7 +375,7 @@ export default function SellerHelperDashboard({
                 disabled={analyzeBusy}
                 className={sellerPrimaryButton}
               >
-                {analyzeBusy ? "Analyzing…" : "Run analysis"}
+                {analyzeBusy ? "Analyzing…" : "Analyze now"}
               </button>
             </div>
           </div>
@@ -419,6 +421,7 @@ export default function SellerHelperDashboard({
         {activeNav === "Dashboard" && (
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
         )}
+        {activeNav === "Timeline" && <TimelineContent />}
         {activeNav === "User Behavior" && (
           <UserBehaviorContent
             behavior={overview?.userBehavior ?? null}
@@ -427,7 +430,10 @@ export default function SellerHelperDashboard({
         )}
         {activeNav === "Conversion Funnel" && <ConversionFunnelContent overview={overview} />}
         {activeNav === "Vitrina Recommendation" && (
-          <VitrinaRecommendationsContent recommendations={vitrinaRecommendations} />
+          <VitrinaRecommendationsContent
+            recommendations={vitrinaRecommendations}
+            onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
+          />
         )}
         {activeNav === "AI Recommendations" && (
           <AiRecommendationsContent
