@@ -11,7 +11,7 @@ import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/featur
 import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
 import { useRouter, useSearchParams } from "next/navigation";
-import { parseProductContent } from "@/lib/product-content";
+import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
@@ -27,6 +27,10 @@ import {
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
 import { getVitrinaMerchandisingFromAdditionalInfo, isVitrinaMerchandisingKey } from "@/lib/vitrina-merchandising";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import {
+  PRODUCT_PDP_HERO_IMAGE_SIZES,
+  PRODUCT_PDP_THUMB_IMAGE_SIZES,
+} from "@/lib/product-image-sizes";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 import { ProductTrendingCountdown } from "@/components/Common/ProductTrendingCountdown";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
@@ -159,6 +163,33 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     [colorOptions]
   );
 
+  const gallerySlots = useMemo((): { colorName: string; url: string }[] | null => {
+    if (product.colorImageSlots && product.colorImageSlots.length > 0) {
+      return product.colorImageSlots;
+    }
+    if (!isStructuredProductContent(product.description)) return null;
+    const base = product.imgs?.previews?.[0] ?? "";
+    if (!colorOptions.length) return null;
+    return colorOptions.map((c) => ({
+      colorName: c.name,
+      url: c.imageUrl?.trim() || base,
+    }));
+  }, [product.colorImageSlots, product.description, colorOptions, product.imgs?.previews]);
+
+  const displayGalleryUrls = useMemo(() => {
+    if (gallerySlots && gallerySlots.length > 0) return gallerySlots.map((s) => s.url);
+    const thumbs = product.imgs?.thumbnails ?? [];
+    const previews = product.imgs?.previews ?? [];
+    return previews.length > 0 ? previews : thumbs;
+  }, [gallerySlots, product.imgs?.previews, product.imgs?.thumbnails]);
+
+  useEffect(() => {
+    setPreviewImg((i) => {
+      const max = Math.max(0, displayGalleryUrls.length - 1);
+      return Math.min(Math.max(0, i), max);
+    });
+  }, [displayGalleryUrls.length, product.id]);
+
   const baseDetailPrice = product.detailPrice ?? 0;
   const jomlaPrice = product.jomlaPrice;
   const { instock: liveInstock } = useLiveProductInventory(
@@ -240,8 +271,15 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
 
   useEffect(() => {
     const preferredColor = colorOptions.find((color) => color.inStock !== false) ?? colorOptions[0];
-    setActiveColor(preferredColor?.name ?? "blue");
-  }, [product.id, colorSignature, colorOptions]);
+    const name = preferredColor?.name ?? "blue";
+    setActiveColor(name);
+    if (gallerySlots && gallerySlots.length > 0) {
+      const idx = gallerySlots.findIndex((s) => s.colorName === name);
+      setPreviewImg(idx >= 0 ? idx : 0);
+    } else {
+      setPreviewImg(0);
+    }
+  }, [product.id, colorSignature, colorOptions, gallerySlots]);
 
   useEffect(() => {
     setQuantity(1);
@@ -376,19 +414,22 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         </svg>
                       </button>
 
-                      {product.imgs?.previews?.[previewImg] ?
+                      {displayGalleryUrls[previewImg] ?
                         <ProductCatalogImageWithMerch
                           product={product}
-                          src={product.imgs.previews[previewImg]}
+                          src={displayGalleryUrls[previewImg]}
                           alt="products-details"
                           width={400}
                           height={400}
+                          sizes={PRODUCT_PDP_HERO_IMAGE_SIZES}
+                          priority={previewImg === 0}
                           heroReviewSnippet={vitrinaMerchandising.heroReviewSnippet ?? null}
                           showHeroReviewOverlay
                           showPromoLabels={false}
+                          deferHeroReviewFetch={false}
                         />
                       : null}
-                      {product.imgs?.previews?.[previewImg] ?
+                      {displayGalleryUrls[previewImg] ?
                         <ProductCardPromoLayer product={product} className="z-[55]" />
                       : null}
                     </div>
@@ -396,11 +437,14 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
 
                   {/* ?  &apos;border-blue &apos; :  &apos;border-transparent&apos; */}
                   <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
-                    {product.imgs?.thumbnails.map((item, key) => (
+                    {displayGalleryUrls.map((item, key) => (
                       <button
                         onClick={() => {
                           pa.onThumbnailSelect(key);
                           setPreviewImg(key);
+                          if (gallerySlots?.[key]) {
+                            setActiveColor(gallerySlots[key].colorName);
+                          }
                         }}
                         key={key}
                         className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${
@@ -414,6 +458,9 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           height={50}
                           src={item}
                           alt="thumbnail"
+                          sizes={PRODUCT_PDP_THUMB_IMAGE_SIZES}
+                          loading="lazy"
+                          decoding="async"
                         />
                       </button>
                     ))}
@@ -668,6 +715,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                                       return;
                                     }
                                     setActiveColor(color.name);
+                                    if (gallerySlots && gallerySlots.length > 0) {
+                                      const idx = gallerySlots.findIndex((s) => s.colorName === color.name);
+                                      if (idx >= 0) setPreviewImg(idx);
+                                    }
                                   }}
                                 />
                                 <div

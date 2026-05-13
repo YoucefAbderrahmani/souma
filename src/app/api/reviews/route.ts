@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
 import { createProductReview, listProductReviews } from "@/server/reviews/reviews-db";
+import {
+  isNeonDataTransferQuotaError,
+  noteDatabaseOutage,
+} from "@/server/db-degraded";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 
 export async function GET(req: NextRequest) {
   const productId = Number(req.nextUrl.searchParams.get("productId") ?? NaN);
@@ -11,15 +15,19 @@ export async function GET(req: NextRequest) {
   try {
     const reviews = await listProductReviews(productId);
     return NextResponse.json({ reviews });
-  } catch {
+  } catch (e) {
+    if (isNeonDataTransferQuotaError(e)) {
+      noteDatabaseOutage();
+      return NextResponse.json({ reviews: [], offline: true });
+    }
     return NextResponse.json({ error: "Failed to load reviews." }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user?.id) {
+    const userId = await tryResolveUserIdFromBetterAuthCookieCache(req);
+    if (!userId) {
       return NextResponse.json({ error: "Please sign in to post a review." }, { status: 401 });
     }
 
@@ -53,7 +61,7 @@ export async function POST(req: NextRequest) {
     await createProductReview({
       productLocalId,
       productTitle,
-      userId: session.user.id,
+      userId,
       rating,
       comment,
     });

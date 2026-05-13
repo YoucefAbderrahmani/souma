@@ -10,6 +10,8 @@
     "db:ensure-conception-security-block": "node scripts/ensure-conception-security-block.mjs",
     "db:ensure-seller-helper-applied-action": "node scripts/ensure-seller-helper-applied-action.mjs",
     "db:seed-products": "tsx scripts/seed-premade-products.ts",
+    "db:simulate-traffic": "tsx scripts/simulate-storefront-analytics.ts",
+    "db:bulk-7d-activity": "tsx scripts/bulk-simulate-7d-high-activity.ts",
     "db:trigger-security-alerts": "tsx scripts/trigger-security-alerts.ts",
     "start": "next start",
     "lint": "next lint",

@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
 import { createSiteFeedback, listSiteFeedbacks } from "@/server/reviews/reviews-db";
+import {
+  isNeonDataTransferQuotaError,
+  noteDatabaseOutage,
+} from "@/server/db-degraded";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 
 export async function GET() {
   try {
     const feedbacks = await listSiteFeedbacks(30);
     return NextResponse.json({ feedbacks });
-  } catch {
+  } catch (e) {
+    if (isNeonDataTransferQuotaError(e)) {
+      noteDatabaseOutage();
+      return NextResponse.json({ feedbacks: [], offline: true });
+    }
     return NextResponse.json({ error: "Failed to load feedbacks." }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user?.id) {
+    const userId = await tryResolveUserIdFromBetterAuthCookieCache(req);
+    if (!userId) {
       return NextResponse.json({ error: "Please sign in to share feedback." }, { status: 401 });
     }
 
@@ -38,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     await createSiteFeedback({
-      userId: session.user.id,
+      userId,
       rating,
       comment,
     });

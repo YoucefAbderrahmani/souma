@@ -6,20 +6,17 @@ export const VITRINA_MERCH_KEYS = {
   heroReview: "Merch: Hero review",
 } as const;
 
-const HERO_REVIEW_QUOTES = [
-  "Even better than expected",
-  "Customer favorite",
-  "Worth it — would buy again",
-] as const;
-
 export function isVitrinaMerchandisingKey(key: string): boolean {
   return key === VITRINA_MERCH_KEYS.trendingCountdown || key === VITRINA_MERCH_KEYS.heroReview;
 }
 
-export function buildDefaultHeroReviewSnippet(rating: number): string {
-  const score = rating > 0 ? rating.toFixed(1) : "4.9";
-  const quote = HERO_REVIEW_QUOTES[Math.abs(Math.round(rating * 10)) % HERO_REVIEW_QUOTES.length];
-  return `⭐ ${score} — "${quote}"`;
+/** One-line hero strip from a real verified storefront review (no scripted marketing copy). */
+export function buildHeroReviewSnippetFromVerifiedReview(review: { rating: number; comment: string }): string {
+  const stars = Math.max(1, Math.min(5, Math.round(review.rating)));
+  const oneLine = review.comment.replace(/\s+/g, " ").replace(/["”“]/g, "'").trim();
+  const max = 96;
+  const body = oneLine.length > max ? `${oneLine.slice(0, max - 1)}…` : oneLine;
+  return `⭐ ${stars}/5 — “${body}”`;
 }
 
 export function readTrendingCountdownEnd(value?: string | null): Date | null {

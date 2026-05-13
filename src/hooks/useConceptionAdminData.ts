@@ -14,7 +14,7 @@ import {
   writeCachedVitrinaRecommendations,
   filterOutQuickFixAppliedRecommendations,
   clearVitrinaQuickFixAppliedProductIds,
-  addVitrinaQuickFixAppliedProductId,
+  removeVitrinaQuickFixAppliedProductId,
 } from "@/lib/vitrina-recommendations-cache";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 
@@ -330,12 +330,25 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
-  const dismissVitrinaAfterQuickFix = useCallback((productId: string) => {
-    addVitrinaQuickFixAppliedProductId(productId);
-    setState((s) => ({
-      ...s,
-      vitrinaRecommendations: s.vitrinaRecommendations.filter((p) => String(p.productId) !== String(productId)),
-    }));
+  const dismissVitrinaAfterQuickFix = useCallback(async (productId: string) => {
+    removeVitrinaQuickFixAppliedProductId(productId);
+    try {
+      const res = await fetch("/api/admin/conception/vitrina-recommendations", fetchOptions);
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        recommendations?: VitrinaProductMarketingRecommendation[];
+      }>(res, "Vitrina recommendations API");
+      if (!res.ok) return;
+      const recommendations = Array.isArray(body.recommendations) ? body.recommendations : [];
+      setState((s) => ({
+        ...s,
+        vitrinaRecommendations: filterOutQuickFixAppliedRecommendations(recommendations),
+      }));
+      writeCachedVitrinaRecommendations(recommendations);
+    } catch {
+      /* keep current list if refetch fails */
+    }
   }, []);
 
   return {

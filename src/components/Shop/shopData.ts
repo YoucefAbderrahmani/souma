@@ -152,7 +152,7 @@ const shopData: Product[] = [
       ],
       previews: [
         "/images/products/product-8-bg-1.png",
-        "/images/products/product-8-bg-2.png",
+        "/images/products/product-8-bg-1.png",
       ],
     },
   },

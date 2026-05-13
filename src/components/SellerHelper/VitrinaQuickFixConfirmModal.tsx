@@ -14,7 +14,7 @@ const initialState: ApplyVitrinaQuickFixesState = {};
 type Props = {
   product: VitrinaProductMarketingRecommendation;
   onClose: () => void;
-  onApplied?: (productId: string) => void;
+  onApplied?: (productId: string) => void | Promise<void>;
 };
 
 export default function VitrinaQuickFixConfirmModal({ product, onClose, onApplied }: Props) {

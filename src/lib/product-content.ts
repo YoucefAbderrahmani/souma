@@ -18,6 +18,8 @@ export type ProductStructuredContent = {
   colors: Array<{
     name: string;
     price?: number;
+    /** Public URL (e.g. `/uploads/products/...`) for this variant’s hero image. */
+    imageUrl?: string;
     /** When false, selection is blocked and `out_of_stock_click` is tracked. */
     inStock?: boolean;
   }>;
@@ -27,6 +29,10 @@ export type ProductStructuredContent = {
 };
 
 const MARKER = "[[PRODUCT_CONTENT_V1]]";
+
+export function isStructuredProductContent(raw?: string | null): boolean {
+  return String(raw ?? "").trim().startsWith(MARKER);
+}
 
 export function serializeProductContent(content: ProductStructuredContent): string {
   return `${MARKER}\n${JSON.stringify(content)}`;
@@ -78,16 +84,20 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
         ? parsedColors.map((name) => ({ name: String(name) }))
         : parsedColors
             .map((item) => {
-              const raw = item as { name?: string; price?: unknown; inStock?: unknown };
+              const raw = item as { name?: string; price?: unknown; inStock?: unknown; imageUrl?: unknown };
               let inStock: boolean | undefined;
               if (raw.inStock !== undefined) {
                 const v = raw.inStock;
                 if (v === false || v === "false" || v === 0) inStock = false;
                 else if (v === true || v === "true" || v === 1) inStock = true;
               }
+              const imageUrlRaw = raw.imageUrl;
+              const imageUrl =
+                typeof imageUrlRaw === "string" && imageUrlRaw.trim() ? imageUrlRaw.trim() : undefined;
               return {
                 name: String(raw?.name ?? "").trim(),
                 price: typeof raw.price === "number" ? Number(raw.price) : undefined,
+                ...(imageUrl ? { imageUrl } : {}),
                 ...(inStock === undefined ? {} : { inStock }),
               };
             })

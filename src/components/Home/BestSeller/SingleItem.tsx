@@ -13,6 +13,7 @@ import { sequenceStartProduct } from "@/lib/sequence-client";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
 import { productDetailsHref } from "@/lib/product-page-link";
+import { PRODUCT_CARD_IMAGE_SIZES } from "@/lib/product-image-sizes";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -150,7 +151,16 @@ const SingleItem = ({ item }: { item: Product }) => {
           aria-label={`Quick view ${item.title}`}
           className="flex w-full justify-center"
         >
-          <Image src={item.imgs.previews[0]} alt="" width={280} height={280} className="rounded-b-lg" />
+          <Image
+            src={item.imgs.previews[0]}
+            alt=""
+            width={280}
+            height={280}
+            className="rounded-b-lg"
+            sizes={PRODUCT_CARD_IMAGE_SIZES}
+            loading="lazy"
+            decoding="async"
+          />
         </button>
 
         <div className="absolute right-0 bottom-0 z-20 flex translate-x-full flex-col gap-2 p-5.5 transition-transform duration-300 ease-linear delay-0 group-hover:translate-x-0 group-hover:delay-150">

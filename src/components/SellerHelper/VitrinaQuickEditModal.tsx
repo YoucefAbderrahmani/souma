@@ -17,6 +17,7 @@ const fieldClass =
 type ColorRow = {
   name: string;
   price: string;
+  imageUrl?: string;
 };
 
 function buildInitialColorRows(colors: ReturnType<typeof parseProductContent>["colors"]): ColorRow[] {
@@ -24,27 +25,30 @@ function buildInitialColorRows(colors: ReturnType<typeof parseProductContent>["c
     .map((color) => ({
       name: color.name,
       price: color.price != null && !Number.isNaN(color.price) ? String(color.price) : "",
+      imageUrl: color.imageUrl?.trim() ?? "",
     }))
     .filter((color) => color.name.trim());
 
-  return rows.length > 0 ? rows : [{ name: "", price: "" }];
+  return rows.length > 0 ? rows : [{ name: "", price: "", imageUrl: "" }];
 }
 
 function buildColorsPayload(rows: ColorRow[], defaultColorName: string, colorHasPriceOverride: boolean) {
-  const normalized = rows
-    .map((row) => ({
+  const enriched = rows
+    .map((row, rowIndex) => ({
+      rowIndex,
       name: row.name.trim(),
       price: colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
+      ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
     }))
     .filter((row) => row.name);
 
-  if (normalized.length === 0) return [];
+  if (enriched.length === 0) return [];
 
-  const resolvedDefaultName = defaultColorName.trim() || normalized[0].name;
-  const defaultIndex = normalized.findIndex((row) => row.name === resolvedDefaultName);
-  if (defaultIndex <= 0) return normalized;
+  const resolvedDefaultName = defaultColorName.trim() || enriched[0].name;
+  const defaultIndex = enriched.findIndex((row) => row.name === resolvedDefaultName);
+  if (defaultIndex <= 0) return enriched;
 
-  const reordered = [...normalized];
+  const reordered = [...enriched];
   const [defaultColor] = reordered.splice(defaultIndex, 1);
   return [defaultColor, ...reordered];
 }
@@ -274,7 +278,7 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setColorRows((previous) => [...previous, { name: "", price: "" }])}
+                    onClick={() => setColorRows((previous) => [...previous, { name: "", price: "", imageUrl: "" }])}
                     className={sellerSecondaryButton}
                   >
                     Add a color
@@ -334,6 +338,15 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                           }
                           className={`${fieldClass} disabled:bg-gray-1`}
                         />
+                        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-dark-4 sm:max-w-[200px]">
+                          <span className="text-custom-sm font-medium text-dark-3">Variant photo</span>
+                          <input
+                            type="file"
+                            name={`colorImage_${index}`}
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="block w-full text-custom-sm text-dark-4 file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
+                          />
+                        </label>
                         <label className="inline-flex shrink-0 items-center gap-2 text-custom-sm text-dark-3">
                           <input
                             type="radio"
@@ -348,7 +361,7 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                           type="button"
                           onClick={() =>
                             setColorRows((previous) => {
-                              if (previous.length === 1) return [{ name: "", price: "" }];
+                              if (previous.length === 1) return [{ name: "", price: "", imageUrl: "" }];
                               const next = previous.filter((_, itemIndex) => itemIndex !== index);
                               if (defaultColorName === row.name.trim()) {
                                 setDefaultColorName(next[0]?.name.trim() ?? "");

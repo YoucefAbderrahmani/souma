@@ -43,7 +43,7 @@ export default function EditProductModal({ product, onClose }: Props) {
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState([{ name: "", price: "" }]);
+  const [colorRows, setColorRows] = useState([{ name: "", price: "", imageUrl: "" }]);
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editVitrinaMode, setEditVitrinaMode] = useState(false);
   const [editPriceInput, setEditPriceInput] = useState("");
@@ -56,8 +56,9 @@ export default function EditProductModal({ product, onClose }: Props) {
       ? parsed.colors.map((c) => ({
           name: c.name,
           price: c.price != null && !Number.isNaN(c.price) ? String(c.price) : "",
+          imageUrl: c.imageUrl?.trim() ?? "",
         }))
-      : [{ name: "", price: "" }];
+      : [{ name: "", price: "", imageUrl: "" }];
     setColorRows(colors);
     if (parsed.specifications?.length) {
       setSpecRows(
@@ -322,11 +323,13 @@ export default function EditProductModal({ product, onClose }: Props) {
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-stone-800">Color options</p>
-                        <p className="text-xs text-dark-4">Enable per-color pricing only if prices differ.</p>
+                        <p className="text-xs text-dark-4">
+                          Upload a photo per color so the product page swaps images with the selected variant.
+                        </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "" }])}
+                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "", imageUrl: "" }])}
                         className={pf.btnAccent}
                       >
                         + Add color
@@ -345,33 +348,65 @@ export default function EditProductModal({ product, onClose }: Props) {
                       {colorRows.map((row, index) => (
                         <div
                           key={index}
-                          className="flex flex-col gap-2 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:items-center"
+                          className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
                         >
-                          <input
-                            type="text"
-                            placeholder="Color name"
-                            value={row.name}
-                            onChange={(event) =>
-                              setColorRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
-                              )
-                            }
-                            className={pf.input}
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            disabled={!colorHasPriceOverride}
-                            placeholder="Price"
-                            value={row.price}
-                            onChange={(event) =>
-                              setColorRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
-                              )
-                            }
-                            className={`${pf.input} disabled:bg-stone-100`}
-                          />
+                          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                            <label className="flex flex-col gap-1 text-xs text-stone-600">
+                              <span className="font-medium text-stone-800">Color name</span>
+                              <input
+                                type="text"
+                                placeholder="Color name"
+                                value={row.name}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
+                                  )
+                                }
+                                className={pf.input}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-stone-600">
+                              <span className="font-medium text-stone-800">Price (DZD)</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                disabled={!colorHasPriceOverride}
+                                placeholder="Price"
+                                value={row.price}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
+                                  )
+                                }
+                                className={`${pf.input} disabled:bg-stone-100`}
+                              />
+                            </label>
+                            <div className="sm:col-span-2">
+                              {row.imageUrl ?
+                                <p className="mb-1 text-[11px] text-dark-4">
+                                  Current variant image:{" "}
+                                  <a href={row.imageUrl} className="text-blue underline" target="_blank" rel="noreferrer">
+                                    view
+                                  </a>
+                                  . Upload a new file below to replace it.
+                                </p>
+                              : (
+                                <p className="mb-1 text-[11px] text-dark-4">
+                                  No variant image yet — optional; the main product image is used until you upload one.
+                                </p>
+                              )}
+                              <label className="flex flex-col gap-1 text-xs text-stone-600">
+                                <span className="font-medium text-stone-800">Photo for this color</span>
+                                <input
+                                  type="file"
+                                  name={`colorImage_${index}`}
+                                  accept="image/jpeg,image/png,image/webp,image/gif"
+                                  className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
+                                />
+                              </label>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={() =>
@@ -389,10 +424,12 @@ export default function EditProductModal({ product, onClose }: Props) {
                       name="colors"
                       value={JSON.stringify(
                         colorRows
-                          .map((row) => ({
+                          .map((row, rowIndex) => ({
+                            rowIndex,
                             name: row.name.trim(),
                             price:
                               colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
+                            ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
                           }))
                           .filter((row) => row.name)
                       )}

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
+import {
+  isNeonDataTransferQuotaError,
+  noteDatabaseOutage,
+} from "@/server/db-degraded";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 import { insertSalesMicroEvents } from "@/server/sales-analyst/micro-events-db";
 import { isPaEventName } from "@/lib/pa-whitelist";
 import { getDisabledPaEventNames } from "@/server/product-analytics/tracking-config";
@@ -65,13 +69,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Too many events." }, { status: 400 });
     }
 
-    let userId: string | null = null;
-    try {
-      const session = await auth.api.getSession({ headers: req.headers });
-      userId = session?.user?.id ?? null;
-    } catch {
-      userId = null;
-    }
+    const userId = await tryResolveUserIdFromBetterAuthCookieCache(req);
 
     const productLocalId =
       typeof body.productId === "number" && Number.isFinite(body.productId)
@@ -121,7 +119,8 @@ export async function POST(req: NextRequest) {
 
     await insertSalesMicroEvents(rows);
     return NextResponse.json({ ok: true, inserted: rows.length });
-  } catch {
+  } catch (e) {
+    if (isNeonDataTransferQuotaError(e)) noteDatabaseOutage();
     return NextResponse.json({ ok: true, inserted: 0 });
   }
 }

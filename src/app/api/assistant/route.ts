@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import shopData from "@/components/Shop/shopData";
 import path from "path";
 import { transliterate } from "transliteration";
-import { auth } from "@/server/lib/auth";
 import { resolveSequenceKeyMaybe } from "@/app/api/sequence/_cookie";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
 
 type AssistantRequest = {
@@ -757,13 +757,7 @@ async function logSearchTelemetrySafely(input: {
 export async function POST(req: NextRequest) {
   const requestId = randomUUID();
   const sessionKey = resolveSequenceKeyMaybe(req);
-  let userId: string | null = null;
-  try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    userId = session?.user?.id ?? null;
-  } catch {
-    userId = null;
-  }
+  const userId = await tryResolveUserIdFromBetterAuthCookieCache(req);
 
   try {
     const body = (await req.json()) as AssistantRequest;

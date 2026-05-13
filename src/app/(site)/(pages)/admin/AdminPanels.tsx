@@ -60,7 +60,7 @@ export default function AdminPanels({ users, products }: Props) {
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState([{ name: "red", price: "" }]);
+  const [colorRows, setColorRows] = useState([{ name: "red", price: "", imageUrl: "" }]);
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
@@ -399,11 +399,14 @@ export default function AdminPanels({ users, products }: Props) {
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-stone-800">Color options</p>
-                        <p className="text-xs text-dark-4">Names only unless you enable per-color pricing.</p>
+                        <p className="text-xs text-dark-4">
+                          Add a name for each variant. Upload a photo per color so the storefront swaps the main image
+                          when shoppers pick a color (optional; falls back to the main product image).
+                        </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "" }])}
+                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "", imageUrl: "" }])}
                         className={pf.btnAccent}
                       >
                         + Add color
@@ -419,38 +422,59 @@ export default function AdminPanels({ users, products }: Props) {
                       Different price per color
                     </label>
                     <div className="space-y-2">
-                      <div className="hidden gap-2 text-xs font-medium uppercase tracking-wide text-dark-4 md:grid md:grid-cols-[1fr_1fr_auto]">
-                        <span>Color name</span>
-                        <span>{colorHasPriceOverride ? "Price (DZD)" : "—"}</span>
-                        <span className="text-right"> </span>
-                      </div>
                       {colorRows.map((row, index) => (
-                        <div key={index} className="flex flex-col gap-2 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:items-center">
-                          <input
-                            type="text"
-                            placeholder="e.g. Midnight blue"
-                            value={row.name}
-                            onChange={(event) =>
-                              setColorRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
-                              )
-                            }
-                            className={pf.input}
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            disabled={!colorHasPriceOverride}
-                            placeholder={colorHasPriceOverride ? "Price" : "—"}
-                            value={row.price}
-                            onChange={(event) =>
-                              setColorRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
-                              )
-                            }
-                            className={`${pf.input} disabled:bg-stone-100 disabled:text-dark-4`}
-                          />
+                        <div
+                          key={index}
+                          className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
+                        >
+                          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                            <label className="flex flex-col gap-1 text-xs text-stone-600">
+                              <span className="font-medium text-stone-800">Color name</span>
+                              <input
+                                type="text"
+                                placeholder="e.g. Midnight blue"
+                                value={row.name}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
+                                  )
+                                }
+                                className={pf.input}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-stone-600">
+                              <span className="font-medium text-stone-800">
+                                {colorHasPriceOverride ? "Price (DZD)" : "Price"}
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                disabled={!colorHasPriceOverride}
+                                placeholder={colorHasPriceOverride ? "Price" : "—"}
+                                value={row.price}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
+                                  )
+                                }
+                                className={`${pf.input} disabled:bg-stone-100 disabled:text-dark-4`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
+                              <span className="font-medium text-stone-800">Photo for this color</span>
+                              <span className="text-[11px] text-dark-4">
+                                Recommended when the product looks different in this color — shoppers will see this
+                                image when they select it.
+                              </span>
+                              <input
+                                type="file"
+                                name={`colorImage_${index}`}
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
+                              />
+                            </label>
+                          </div>
                           <button
                             type="button"
                             onClick={() =>
@@ -468,10 +492,12 @@ export default function AdminPanels({ users, products }: Props) {
                       name="colors"
                       value={JSON.stringify(
                         colorRows
-                          .map((row) => ({
+                          .map((row, rowIndex) => ({
+                            rowIndex,
                             name: row.name.trim(),
                             price:
                               colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
+                            ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
                           }))
                           .filter((row) => row.name)
                       )}

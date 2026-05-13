@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
 import { resolveSequenceKey } from "@/app/api/sequence/_cookie";
+import { isNeonDataTransferQuotaError, noteDatabaseOutage } from "@/server/db-degraded";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 import {
   supersedeActiveAndInsertSequence,
   type SequenceTriggerType,
@@ -26,15 +27,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    const session = await auth.api.getSession({ headers: req.headers });
-    const userId = session?.user?.id ?? null;
+    const userId = await tryResolveUserIdFromBetterAuthCookieCache(req);
 
-    await supersedeActiveAndInsertSequence({
-      sessionKey,
-      userId,
-      triggerType,
-      triggerLabel,
-    });
+    try {
+      await supersedeActiveAndInsertSequence({
+        sessionKey,
+        userId,
+        triggerType,
+        triggerLabel,
+      });
+    } catch (e) {
+      if (isNeonDataTransferQuotaError(e)) {
+        noteDatabaseOutage();
+        return NextResponse.json(
+          { ok: true, offline: true },
+          { status: 200, headers: res.headers }
+        );
+      }
+      throw e;
+    }
 
     return res;
   } catch {

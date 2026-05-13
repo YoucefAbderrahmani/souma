@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import {
-  buildDefaultHeroReviewSnippet,
+  buildHeroReviewSnippetFromVerifiedReview,
   buildTrendingCountdownEnd,
   VITRINA_MERCH_KEYS,
 } from "@/lib/vitrina-merchandising";
@@ -9,6 +9,8 @@ import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
+import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
+import { getBestProductReviewForMerch } from "@/server/reviews/reviews-db";
 import type { VitrinaQuickFixId, VitrinaQuickFixOption } from "@/types/vitrina-product-recommendations";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
 
@@ -35,7 +37,7 @@ function upsertAdditionalInfo(
 }
 
 function reorderDefaultColor(
-  colors: Array<{ name: string; price?: number; inStock?: boolean }>,
+  colors: Array<{ name: string; price?: number; inStock?: boolean; imageUrl?: string }>,
   colorName: string
 ) {
   const normalized = colorName.trim().toLowerCase();
@@ -47,6 +49,21 @@ function reorderDefaultColor(
   const reordered = [...colors];
   const [match] = reordered.splice(index, 1);
   return [match, ...reordered];
+}
+
+async function heroSnippetFromBestVerifiedReview(
+  productDbId: string,
+  productTitle: string
+): Promise<string | null> {
+  const localId = resolveStorefrontProductId(productTitle, productDbId);
+  if (!localId || localId <= 0) return null;
+  try {
+    const best = await getBestProductReviewForMerch(localId);
+    if (!best?.comment?.trim()) return null;
+    return buildHeroReviewSnippetFromVerifiedReview(best);
+  } catch {
+    return null;
+  }
 }
 
 function isQuickFixId(value: unknown): value is VitrinaQuickFixId {
@@ -230,13 +247,21 @@ export async function applyVitrinaQuickFixes(
         product.rating > 0 ?
           `Customer rating ${product.rating.toFixed(1)}/5 — review quality before you buy.`
         : "Check customer reviews and product details before you buy.";
-      const existing = nextAdditionalInfo.find((entry) => entry.key === QUALITY_KEY);
-      if (existing?.value === ratingLabel) {
-        applied.push(fix.summary);
-        continue;
+      const existingQuality = nextAdditionalInfo.find((entry) => entry.key === QUALITY_KEY);
+      if (existingQuality?.value !== ratingLabel) {
+        nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, QUALITY_KEY, ratingLabel);
+        contentChanged = true;
       }
-      nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, QUALITY_KEY, ratingLabel);
-      contentChanged = true;
+
+      const heroSnippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
+      if (heroSnippet) {
+        const existingHero = nextAdditionalInfo.find((entry) => entry.key === VITRINA_MERCH_KEYS.heroReview);
+        if (existingHero?.value !== heroSnippet) {
+          nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, VITRINA_MERCH_KEYS.heroReview, heroSnippet);
+          contentChanged = true;
+        }
+      }
+
       applied.push(fix.summary);
       continue;
     }
@@ -259,7 +284,11 @@ export async function applyVitrinaQuickFixes(
     }
 
     if (fix.id === "hero_review_snippet") {
-      const snippet = buildDefaultHeroReviewSnippet(product.rating);
+      const snippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
+      if (!snippet) {
+        applied.push("Hero review overlay skipped — add a written storefront review first.");
+        continue;
+      }
       const existing = nextAdditionalInfo.find((entry) => entry.key === VITRINA_MERCH_KEYS.heroReview);
       if (existing?.value === snippet) {
         applied.push(fix.summary);
@@ -323,6 +352,8 @@ export async function applyVitrinaQuickFixes(
       contentChanged,
     },
   });
+
+  await refreshVitrinaRecommendationInCache(productId);
 
   return { applied };
 }

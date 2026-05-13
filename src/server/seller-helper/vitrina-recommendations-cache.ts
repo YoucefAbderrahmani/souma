@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 
 type VitrinaRecommendationsCachePayload = {
@@ -58,4 +59,16 @@ export async function writeVitrinaRecommendationsCache(
   } catch (error) {
     console.error("[vitrina-recommendations-cache] write failed", error);
   }
+}
+
+/** Recompute one row from live product + signals and merge into the on-disk / in-memory list (e.g. after quick fixes). */
+export async function refreshVitrinaRecommendationInCache(productId: string): Promise<void> {
+  const updated = await getVitrinaProductMarketingRecommendationByProductId(productId);
+  if (!updated) return;
+
+  const current = await readVitrinaRecommendationsCache();
+  const id = String(productId);
+  const idx = current.findIndex((r) => String(r.productId) === id);
+  const next = idx === -1 ? [...current, updated] : current.map((row, i) => (i === idx ? updated : row));
+  await writeVitrinaRecommendationsCache(next);
 }

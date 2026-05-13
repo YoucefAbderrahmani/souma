@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
+import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
   parseSubmittedSecurityQuickFixes,
@@ -54,6 +55,78 @@ function parseAdminPriceFields(formData: FormData): { price: number; jomlaPrice:
     return { price: standardPrice, jomlaPrice: entered };
   }
   return { price: entered, jomlaPrice: null };
+};
+
+type ParsedColorRow = {
+  rowIndex?: number;
+  name: string;
+  price?: number;
+  imageUrl?: string;
+};
+
+async function resolveColorVariantsFromForm(params: {
+  formData: FormData;
+  slug: string;
+  colorsJson: string;
+  existingDescription?: string | null;
+}): Promise<
+  | { colors: Array<{ name: string; price?: number; imageUrl?: string; inStock?: boolean }> }
+  | { error: string }
+> {
+  let parsedRows: ParsedColorRow[];
+  try {
+    parsedRows = JSON.parse(params.colorsJson) as ParsedColorRow[];
+  } catch {
+    return { error: "Invalid colors payload." };
+  }
+  if (!Array.isArray(parsedRows)) {
+    return { error: "Invalid colors payload." };
+  }
+
+  const prevColors =
+    params.existingDescription != null ?
+      parseProductContent(params.existingDescription).colors
+    : [];
+
+  const out: Array<{ name: string; price?: number; imageUrl?: string; inStock?: boolean }> = [];
+
+  for (const entry of parsedRows) {
+    const name = String(entry?.name ?? "").trim();
+    if (!name) continue;
+
+    const inherited = prevColors.find((c) => c.name.trim().toLowerCase() === name.toLowerCase());
+    let imageUrl = typeof entry.imageUrl === "string" && entry.imageUrl.trim() ? entry.imageUrl.trim() : undefined;
+
+    const rowIndex = entry.rowIndex;
+    const file =
+      typeof rowIndex === "number" && Number.isFinite(rowIndex) ?
+        params.formData.get(`colorImage_${Math.trunc(rowIndex)}`)
+      : null;
+
+    if (file instanceof File && file.size > 0) {
+      const written = await saveProductVariantImageFile({
+        slug: params.slug,
+        uniqueKey: `${Math.trunc(rowIndex as number)}-${Date.now()}`,
+        file,
+      });
+      if ("error" in written) return { error: written.error };
+      imageUrl = written.url;
+    } else if (!imageUrl && inherited?.imageUrl) {
+      imageUrl = inherited.imageUrl;
+    }
+
+    const row: { name: string; price?: number; imageUrl?: string; inStock?: boolean } = { name };
+    if (typeof entry.price === "number" && !Number.isNaN(entry.price)) {
+      row.price = entry.price;
+    } else if (typeof inherited?.price === "number" && !Number.isNaN(inherited.price)) {
+      row.price = inherited.price;
+    }
+    if (imageUrl) row.imageUrl = imageUrl;
+    if (inherited?.inStock !== undefined) row.inStock = inherited.inStock;
+    out.push(row);
+  }
+
+  return { colors: out };
 }
 
 export async function createProductAction(
@@ -73,10 +146,7 @@ export async function createProductAction(
     const { price, jomlaPrice } = parsedPrice;
     const instock = Number(formData.get("instock") ?? 0);
     const image = formData.get("image");
-    const colors = JSON.parse(String(formData.get("colors") ?? "[]")) as Array<{
-      name: string;
-      price?: number;
-    }>;
+    const colorsJson = String(formData.get("colors") ?? "[]");
     const colorHasPriceOverride = String(formData.get("colorHasPriceOverride") ?? "false") === "true";
     const specifications = JSON.parse(
       String(formData.get("specifications") ?? "[]")
@@ -132,10 +202,21 @@ export async function createProductAction(
 
     const slugBase = slugify(title) || "product";
     const slug = `${slugBase}-${Date.now()}`;
+
+    const resolvedColors = await resolveColorVariantsFromForm({
+      formData,
+      slug,
+      colorsJson,
+      existingDescription: null,
+    });
+    if ("error" in resolvedColors) {
+      return { error: resolvedColors.error };
+    }
+
     const structuredDescription = serializeProductContent({
       description,
       careMaintenance,
-      colors: Array.isArray(colors) ? colors : [],
+      colors: resolvedColors.colors,
       colorHasPriceOverride,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
@@ -394,10 +475,7 @@ export async function updateProductFullAction(
     const instock = Number(formData.get("instock") ?? 0);
     const rating = Math.round(Number(formData.get("rating") ?? 0));
     const image = formData.get("image");
-    const colors = JSON.parse(String(formData.get("colors") ?? "[]")) as Array<{
-      name: string;
-      price?: number;
-    }>;
+    const colorsJson = String(formData.get("colors") ?? "[]");
     const colorHasPriceOverride = String(formData.get("colorHasPriceOverride") ?? "false") === "true";
     const specifications = JSON.parse(
       String(formData.get("specifications") ?? "[]")
@@ -423,7 +501,11 @@ export async function updateProductFullAction(
     }
 
     const existingRow = await db
-      .select({ slug: productsTable.slug, mainimage: productsTable.mainimage })
+      .select({
+        slug: productsTable.slug,
+        mainimage: productsTable.mainimage,
+        description: productsTable.description,
+      })
       .from(productsTable)
       .where(eq(productsTable.id, productId))
       .limit(1);
@@ -473,10 +555,20 @@ export async function updateProductFullAction(
 
     if (!categoryId) return { error: "Failed to resolve product category." };
 
+    const resolvedColors = await resolveColorVariantsFromForm({
+      formData,
+      slug: existingRow[0].slug,
+      colorsJson,
+      existingDescription: existingRow[0].description,
+    });
+    if ("error" in resolvedColors) {
+      return { error: resolvedColors.error };
+    }
+
     const structuredDescription = serializeProductContent({
       description,
       careMaintenance,
-      colors: Array.isArray(colors) ? colors : [],
+      colors: resolvedColors.colors,
       colorHasPriceOverride,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],

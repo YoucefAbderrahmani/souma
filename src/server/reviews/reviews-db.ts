@@ -101,6 +101,46 @@ export async function listProductReviews(productLocalId: number): Promise<Produc
   }));
 }
 
+/**
+ * Best written review for storefront hero merchandising: highest star rating first,
+ * then longer comments, then newest (tie-breakers among top ratings).
+ */
+export async function getBestProductReviewForMerch(
+  productLocalId: number
+): Promise<{ rating: number; comment: string } | null> {
+  await ensureReviewTables();
+  if (!Number.isFinite(productLocalId) || productLocalId <= 0) return null;
+
+  const rows = await db
+    .select({
+      rating: productReviewTable.rating,
+      comment: productReviewTable.comment,
+      createdAt: productReviewTable.createdAt,
+    })
+    .from(productReviewTable)
+    .where(eq(productReviewTable.productLocalId, productLocalId))
+    .orderBy(desc(productReviewTable.rating), desc(productReviewTable.createdAt))
+    .limit(60);
+
+  const withBody = rows
+    .map((r) => ({
+      rating: r.rating,
+      comment: r.comment.trim(),
+      createdAt: r.createdAt.getTime(),
+    }))
+    .filter((r) => r.comment.length > 0);
+  if (withBody.length === 0) return null;
+
+  withBody.sort((a, b) => {
+    if (b.rating !== a.rating) return b.rating - a.rating;
+    if (b.comment.length !== a.comment.length) return b.comment.length - a.comment.length;
+    return b.createdAt - a.createdAt;
+  });
+
+  const best = withBody[0];
+  return { rating: best.rating, comment: best.comment };
+}
+
 export async function createProductReview(input: {
   productLocalId: number;
   productTitle: string;

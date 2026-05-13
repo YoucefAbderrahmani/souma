@@ -45,10 +45,36 @@ const COLOR_WORDS = [
 const PRICE_IN_TITLE = /(\d[\d\s.,]*\s*(da|dzd|dinar|€|\$))|(\b(prix|promo|solde)\b)/i;
 const DEFAULT_VITRINA_CATALOG_LIMIT = 500;
 const PROMPT_TOP_RECOMMENDATIONS = 3;
-const MAX_VISIBLE_PRODUCT_TIPS = 1;
 const MAX_QUICK_FIXES = 4;
 const SIGNAL_WINDOW_DAYS = 7;
 const MS_DAY = 86_400_000;
+
+/**
+ * Vitrina “Price” tip thresholds (rolling `SIGNAL_WINDOW_DAYS` window).
+ * Calibrated for typical catalogue behaviour: many stores see ~1–6% view→add-to-cart;
+ * we require enough traffic before calling friction, and we separate “promo works”
+ * from “list price only / weak promo”.
+ */
+const PRICE_MIN_VIEWS = 28;
+const PRICE_MIN_VIEWS_STRONG_READ = 48;
+
+/** Below this view→add-to-cart %, treat as likely price/offer friction. */
+const VIEW_TO_CART_PCT_FRICTION = 3.25;
+/** With jomla on, at or above this % the promo is doing meaningful work. */
+const VIEW_TO_CART_PCT_HEALTHY_WITH_PROMO = 5.25;
+/** Strong conversion — reinforce visible promo value. */
+const VIEW_TO_CART_PCT_STRONG = 9.0;
+
+/** Price-area curiosity vs views (lower third of card / price band). */
+const PRICE_ZONE_CLICKS_MIN = 6;
+const PRICE_ZONE_CLICKS_PER_VIEW = 0.14;
+
+const PRICE_CLICKS_MIN = 7;
+const CLICK_TO_CART_STICKY_MAX = 0.18;
+
+/** List→promo discount %: below this, nudge “sharpen the offer”; above solid, focus on visibility. */
+const PROMO_DISCOUNT_PCT_WEAK = 6.5;
+const PROMO_DISCOUNT_PCT_SOLID = 14;
 
 type ProductRow = {
   id: string;
@@ -178,6 +204,12 @@ function buildDisplaySnapshot(product: ProductRow): VitrinaDisplaySnapshot {
   };
 }
 
+/** List → Vitrina promo discount as a percentage (null if no promo or invalid). */
+function listToPromoDiscountPct(listPrice: number, jomla: number | null): number | null {
+  if (jomla == null || listPrice <= 0 || jomla >= listPrice) return null;
+  return ((listPrice - jomla) / listPrice) * 100;
+}
+
 function buildInteractionSnapshot(aggregate: SignalAggregate): VitrinaInteractionSnapshot {
   const views = aggregate.views;
   const clicks = aggregate.clicks;
@@ -211,30 +243,66 @@ function buildTips(
   aggregate: SignalAggregate
 ): VitrinaProductMarketingTip[] {
   const tips: VitrinaProductMarketingTip[] = [];
+  const views = interaction.views;
   const viewToCartPct =
     interaction.viewToCartRate != null ? interaction.viewToCartRate * 100 : null;
+  const discountPct = listToPromoDiscountPct(product.price, product.jomlaPrice);
+
+  const priceZoneEngaged =
+    views >= PRICE_MIN_VIEWS &&
+    aggregate.priceZoneClicks >= PRICE_ZONE_CLICKS_MIN &&
+    aggregate.priceZoneClicks / views >= PRICE_ZONE_CLICKS_PER_VIEW;
+
+  const clickToCartLooksSticky =
+    views >= PRICE_MIN_VIEWS &&
+    interaction.clicks >= PRICE_CLICKS_MIN &&
+    interaction.addToCarts <= Math.floor(interaction.clicks * CLICK_TO_CART_STICKY_MAX);
+
+  const viewToCartFriction =
+    views >= PRICE_MIN_VIEWS && viewToCartPct != null && viewToCartPct < VIEW_TO_CART_PCT_FRICTION;
+
   const priceSensitive =
-    interaction.views >= 6 &&
-    ((viewToCartPct != null && viewToCartPct < 10) ||
-      (aggregate.priceZoneClicks >= 3 && interaction.addToCarts <= Math.max(1, Math.round(interaction.clicks * 0.2))));
+    viewToCartFriction || (priceZoneEngaged && clickToCartLooksSticky);
+
   const wellPriced =
     product.jomlaPrice != null &&
-    interaction.views >= 6 &&
+    views >= PRICE_MIN_VIEWS_STRONG_READ &&
     viewToCartPct != null &&
-    viewToCartPct >= 10;
+    (viewToCartPct >= VIEW_TO_CART_PCT_STRONG ||
+      (viewToCartPct >= VIEW_TO_CART_PCT_HEALTHY_WITH_PROMO && discountPct != null && discountPct >= PROMO_DISCOUNT_PCT_SOLID));
 
-  if (priceSensitive || wellPriced || interaction.views >= 5) {
+  const showGenericPriceHygiene =
+    views >= Math.max(18, Math.floor(PRICE_MIN_VIEWS * 0.55)) &&
+    !priceSensitive &&
+    !wellPriced &&
+    (!display.titleHasPriceHint || product.jomlaPrice == null);
+
+  if (priceSensitive || wellPriced || showGenericPriceHygiene) {
+    const frictionLine =
+      viewToCartPct != null ?
+        `In the last ${SIGNAL_WINDOW_DAYS} days, only about ${viewToCartPct.toFixed(1)}% of product views became add-to-carts — under the ~${VIEW_TO_CART_PCT_FRICTION}% band where we usually see healthy traction on catalogue items.`
+      : "Shoppers interact near the price strip but add-to-cart stays flat — typical when the offer or the visible price is unclear.";
+
+    const discountLine =
+      discountPct == null ?
+        ""
+      : discountPct < PROMO_DISCOUNT_PCT_WEAK ?
+        ` The current promo is only ~${discountPct.toFixed(0)}% below list — shoppers often need at least ~${PROMO_DISCOUNT_PCT_WEAK.toFixed(0)}–${PROMO_DISCOUNT_PCT_SOLID.toFixed(0)}% off (or a clearer “was / now” story) to notice the deal.`
+      : discountPct >= PROMO_DISCOUNT_PCT_SOLID ?
+        ` The ~${discountPct.toFixed(0)}% promo is meaningful; focus on showing the selling price on the thumbnail and above the fold so the saving is obvious before they bounce.`
+      : "";
+
     tips.push({
       label: "Price",
       action:
         priceSensitive ?
-          viewToCartPct != null ?
-            `Shoppers check the price but only ${viewToCartPct.toFixed(1)}% of recent views add to cart. Show the selling price on the thumbnail and switch to the Vitrina promo price when the offer is competitive.`
-          : "Shoppers click the price area but rarely add to cart. Surface the selling price above the fold and test a Vitrina promo price."
+          viewToCartFriction ?
+            `${frictionLine}${discountLine} Show the DA selling price on the thumbnail and tighten the Vitrina promo when the maths still underperforms.`
+          : `${frictionLine} Surface the DA price above the fold and test a clearer Vitrina promo or bundle cue — price-area taps are high but carts are not following.`
         : wellPriced ?
-          "The Vitrina promo price is attracting attention. Keep the promo price visible on the thumbnail and reinforce the value in the title."
-        : "Make the selling price obvious on the catalog card so shoppers know the offer before they open the product page.",
-      priority: priceSensitive ? "high" : "medium",
+          `Promo is on and conversion sits around ${viewToCartPct?.toFixed(1)}% view→cart — at or above the ~${VIEW_TO_CART_PCT_HEALTHY_WITH_PROMO}% “healthy with promo” line. Keep the Vitrina price on the thumbnail and reinforce value in the title.`
+        : `Make the DA list and promo prices obvious on the catalog card (${!display.titleHasPriceHint ? "title still hides a numeric price — " : ""}helps shoppers self-select before opening the page).`,
+      priority: priceSensitive ? "high" : wellPriced ? "high" : "medium",
       quickFixId: product.jomlaPrice == null && priceSensitive ? "promo_price" : undefined,
     });
   }
@@ -257,17 +325,35 @@ function buildTips(
     });
   }
 
-  const qualityConcern =
+  const qualityReviewSignal =
     aggregate.reviewInteractions >= 3 ||
-    (product.rating > 0 && product.rating < 3.5 && interaction.views >= 5);
-  if (qualityConcern) {
+    (product.rating > 0 && product.rating < 3.5 && interaction.views >= 5) ||
+    (product.rating >= 4 && interaction.views >= 5) ||
+    (product.rating > 0 && aggregate.imageViews >= 4 && interaction.views >= 6) ||
+    (product.rating >= 3.5 && aggregate.reviewInteractions >= 2);
+
+  if (qualityReviewSignal) {
+    const priorityHigh =
+      aggregate.reviewInteractions >= 5 ||
+      (product.rating > 0 && product.rating < 3.5 && interaction.views >= 8) ||
+      aggregate.imageViews >= 6 ||
+      product.rating >= 4.5;
+
+    const concern =
+      aggregate.reviewInteractions >= 3 ||
+      (product.rating > 0 && product.rating < 3.5 && interaction.views >= 5);
+    const action = concern ?
+      aggregate.reviewInteractions >= 3 && product.rating > 0 && product.rating < 3.5 ?
+        "Shoppers keep opening reviews and the catalog rating looks soft. Add a clear Quality reassurance row in the details, then surface your best real customer review (highest stars with a written comment) as a short line on the main product photo — no scripted marketing quotes."
+      : aggregate.reviewInteractions >= 3 ?
+        "The reviews area gets heavy traffic — shoppers are validating quality. Reinforce trust with a Quality line in additional info and pin your top verified review on the hero image."
+      : "The catalog rating is below what shoppers usually trust. Strengthen proof with a Quality note and your strongest real review excerpt on the hero photo."
+    : "Shoppers linger on imagery and ratings. Add a Quality reassurance row and feature your best verified written review on the main photo so the first impression matches real buyer voices.";
+
     tips.push({
-      label: "Quality concern",
-      action:
-        aggregate.reviewInteractions >= 3 ?
-          "The reviews section is opened often, which suggests shoppers are checking quality before buying. Highlight rating proof and reassurance near the price and add-to-cart area."
-        : "The rating is below shopper expectations. Surface stronger visual proof and customer reassurance before checkout.",
-      priority: aggregate.reviewInteractions >= 5 ? "high" : "medium",
+      label: "Quality & reviews",
+      action,
+      priority: priorityHigh ? "high" : "medium",
       quickFixId: "quality_highlight",
     });
   }
@@ -288,23 +374,6 @@ function buildTips(
       priority:
         interaction.views >= 12 || interaction.clicks >= 10 || interaction.addToCarts >= 3 ? "high" : "medium",
       quickFixId: "trending_countdown",
-    });
-  }
-
-  const heroReviewOpportunity =
-    (product.rating >= 4 && interaction.views >= 5) ||
-    (product.rating > 0 && aggregate.imageViews >= 4 && interaction.views >= 6) ||
-    (product.rating >= 3.5 && aggregate.reviewInteractions >= 2);
-  if (heroReviewOpportunity) {
-    tips.push({
-      label: "Mini review on hero image",
-      action:
-        product.rating > 0 ?
-          `Shoppers study the imagery before they buy. Overlay a one-liner on the main photo such as ⭐ ${product.rating.toFixed(1)} — "Even better than expected" to add trust at first glance.`
-        : "Shoppers open the gallery often. Overlay a short customer-style line on the main image so the first impression feels proven.",
-      priority:
-        aggregate.imageViews >= 6 || product.rating >= 4.5 ? "high" : "medium",
-      quickFixId: "hero_review_snippet",
     });
   }
 
@@ -333,9 +402,7 @@ function buildTips(
     });
   }
 
-  return tips
-    .sort((left, right) => compareImportanceTiers(left.priority, right.priority))
-    .slice(0, MAX_VISIBLE_PRODUCT_TIPS);
+  return tips.sort((left, right) => compareImportanceTiers(left.priority, right.priority));
 }
 
 function buildQuickFixes(
@@ -383,11 +450,9 @@ function buildQuickFixes(
     if (tip.quickFixId === "quality_highlight") {
       pushFix({
         id: "quality_highlight",
-        label: "Quality reassurance",
+        label: "Quality & best review on hero",
         summary:
-          product.rating > 0 ?
-            `Add a customer-rating highlight (${product.rating.toFixed(1)}/5) to the product details.`
-          : "Add a quality reassurance note to the product details.",
+          "Add the Quality reassurance row and pin your highest-rated written customer review on the main product image (real review text, not a template).",
       });
     }
     if (tip.quickFixId === "trending_countdown") {
@@ -396,16 +461,6 @@ function buildQuickFixes(
         label: "Trending countdown",
         summary:
           "Add a This deal ends in... countdown on the product hero area for this trending item.",
-      });
-    }
-    if (tip.quickFixId === "hero_review_snippet") {
-      pushFix({
-        id: "hero_review_snippet",
-        label: "Hero review snippet",
-        summary:
-          product.rating > 0 ?
-            `Overlay ⭐ ${product.rating.toFixed(1)} — "Even better than expected" on the main product image.`
-          : "Overlay a short customer-style review line on the main product image.",
       });
     }
   }
@@ -420,8 +475,8 @@ function opportunityScore(
   const priorityWeight = tips.reduce((sum, tip) => sum + (4 - IMPORTANCE_RANKS[tip.priority]), 0);
   const trafficWeight = Math.min(12, Math.log2(interaction.views + 2) * 2);
   const frictionWeight =
-    interaction.viewToCartRate != null && interaction.viewToCartRate < 0.1 ?
-      (0.1 - interaction.viewToCartRate) * 40
+    interaction.viewToCartRate != null && interaction.viewToCartRate * 100 < VIEW_TO_CART_PCT_FRICTION ?
+      (VIEW_TO_CART_PCT_FRICTION / 100 - interaction.viewToCartRate) * 45
     : 0;
   return priorityWeight + trafficWeight + frictionWeight;
 }

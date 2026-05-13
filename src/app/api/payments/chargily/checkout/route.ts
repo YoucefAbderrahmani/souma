@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
 import { ChargilyClient } from "@chargily/chargily-pay";
 import { validateInventoryForPurchase } from "@/server/data-access/product-inventory";
+import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 
 type CheckoutItemInput = {
   id: number;
@@ -125,7 +125,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: inventoryCheck.error, code: "INVENTORY_UNAVAILABLE" }, { status: 409 });
     }
 
-    const session = await auth.api.getSession({ headers: req.headers });
+    const loggedInUserId = await tryResolveUserIdFromBetterAuthCookieCache(req);
+
     const origin = detectAppOrigin(req);
     const successUrl = `${origin}/checkout?payment=success`;
     const failureUrl = `${origin}/checkout?payment=failed`;
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
       description: `Vitrina Store order (${items.length} item${items.length > 1 ? "s" : ""})`,
       metadata: toFlatMetadata({
         source: "vitrina-store",
-        userId: session?.user?.id ?? null,
+        userId: loggedInUserId,
         customerName,
         customerEmail: sanitizeText(body.email, 200),
         customerPhone: sanitizeText(body.phone, 40),

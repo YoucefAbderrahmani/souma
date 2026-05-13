@@ -2,6 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { cn } from "@/lib/utils";
+import { PRODUCT_CARD_IMAGE_SIZES } from "@/lib/product-image-sizes";
 import type { Product } from "@/types/product";
 import { ProductDemoPromoLabels } from "@/components/Common/ProductDemoPromoLabels";
 import { ProductHeroReviewOverlay } from "@/components/Common/ProductHeroReviewOverlay";
@@ -25,6 +26,13 @@ type Props = {
   /** When false, promo pills are omitted here (e.g. rendered in `ProductCardPromoLayer` above hover). */
   showPromoLabels?: boolean;
   priority?: boolean;
+  /** Passed to `next/image` so the optimizer requests a sensible width (critical for card grids). */
+  sizes?: string;
+  /**
+   * When true (default), hero merchandising fetch waits until the image is near the viewport
+   * so grids do not fire dozens of API calls on first paint.
+   */
+  deferHeroReviewFetch?: boolean;
 };
 
 /**
@@ -43,6 +51,8 @@ export function ProductCatalogImageWithMerch({
   showHeroReviewOverlay = false,
   showPromoLabels = true,
   priority,
+  sizes = PRODUCT_CARD_IMAGE_SIZES,
+  deferHeroReviewFetch = true,
 }: Props) {
   const snippet = heroReviewSnippet?.trim() ?? "";
 
@@ -58,7 +68,11 @@ export function ProductCatalogImageWithMerch({
         alt={alt}
         width={width}
         height={height}
+        sizes={sizes}
         priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "low"}
         className={cn("block h-auto w-full rounded-lg object-cover align-middle", imageClassName)}
       />
 
@@ -69,6 +83,7 @@ export function ProductCatalogImageWithMerch({
           productId={product.id}
           description={product.description}
           variant="storefront"
+          deferUntilVisible={deferHeroReviewFetch}
         />
       : null}
 

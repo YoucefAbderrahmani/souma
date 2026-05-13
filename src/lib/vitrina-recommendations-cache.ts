@@ -41,7 +41,7 @@ export function writeCachedVitrinaRecommendations(
   }
 }
 
-/** Product IDs hidden from Seller Helper Vitrina list after quick fixes apply; cleared on next analysis. */
+/** Product IDs optionally hidden from Seller Helper Vitrina list (legacy); cleared on Analyze. Prefer removeVitrinaQuickFixAppliedProductId after a successful apply. */
 const QUICK_FIX_APPLIED_IDS_KEY = "seller_helper_vitrina_quick_fix_applied_ids";
 
 function readQuickFixAppliedProductIds(): Set<string> {
@@ -57,6 +57,7 @@ function readQuickFixAppliedProductIds(): Set<string> {
   }
 }
 
+/** @deprecated No longer used — products stay listed after quick fixes; use removeVitrinaQuickFixAppliedProductId if needed. */
 export function addVitrinaQuickFixAppliedProductId(productId: string): void {
   if (typeof window === "undefined") return;
   const next = readQuickFixAppliedProductIds();
@@ -72,6 +73,17 @@ export function clearVitrinaQuickFixAppliedProductIds(): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.removeItem(QUICK_FIX_APPLIED_IDS_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function removeVitrinaQuickFixAppliedProductId(productId: string): void {
+  if (typeof window === "undefined") return;
+  const next = readQuickFixAppliedProductIds();
+  next.delete(String(productId));
+  try {
+    window.sessionStorage.setItem(QUICK_FIX_APPLIED_IDS_KEY, JSON.stringify(Array.from(next)));
   } catch {
     /* ignore */
   }

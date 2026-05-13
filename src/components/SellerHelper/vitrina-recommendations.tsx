@@ -135,7 +135,7 @@ function interleaveFeaturedHighlights(
   return ordered;
 }
 
-const MAX_VISIBLE_TIPS = 1;
+const MAX_VISIBLE_TIPS = 3;
 
 function VitrinaProductCard({
   item,
@@ -226,7 +226,7 @@ export function VitrinaRecommendationsContent({
   onVitrinaQuickFixApplied,
 }: {
   recommendations: VitrinaProductMarketingRecommendation[];
-  onVitrinaQuickFixApplied?: (productId: string) => void;
+  onVitrinaQuickFixApplied?: (productId: string) => void | Promise<void>;
 }) {
   const [editingProduct, setEditingProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [quickFixProduct, setQuickFixProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);

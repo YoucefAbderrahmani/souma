@@ -14,4 +14,6 @@ export type Product = {
     thumbnails: string[];
     previews: string[];
   };
+  /** When set (structured DB products), gallery index maps to this color name for two-way sync. */
+  colorImageSlots?: Array<{ colorName: string; url: string }>;
 };

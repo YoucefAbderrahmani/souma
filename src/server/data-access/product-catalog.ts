@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
-import { parseProductContent } from "@/lib/product-content";
+import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
 import { getVitrinaMerchandisingFromAdditionalInfo } from "@/lib/vitrina-merchandising";
 import { Product } from "@/types/product";
 
@@ -15,12 +15,43 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const toNumericId = (id: string) =>
-  id.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 7);
+const PG_INT_MAX = 2_147_483_647;
+
+/** Legacy UUID→int hash (unsigned 32-bit); can exceed PostgreSQL `integer` range — do not use in SQL `integer` columns. */
+function legacyUnsignedHashFromUuid(databaseId: string): number {
+  return databaseId.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 7);
+}
+
+/** Stable positive id in `1..PG_INT_MAX` for `sales_micro_event.product_local_id` (PostgreSQL `integer`). */
+function toNumericId(databaseId: string): number {
+  const u = legacyUnsignedHashFromUuid(databaseId);
+  const masked = u & 0x7fffffff;
+  return masked === 0 ? 1 : masked;
+}
 
 export function resolveStorefrontProductId(title: string, databaseId: string) {
   const matchedStatic = shopData.find((item) => normalize(item.title) === normalize(title));
   return matchedStatic ? matchedStatic.id : toNumericId(databaseId);
+}
+
+function buildCatalogProductImages(
+  mainimage: string,
+  description: string | null | undefined
+): { thumbnails: string[]; previews: string[]; colorImageSlots?: { colorName: string; url: string }[] } {
+  if (!isStructuredProductContent(description)) {
+    return { thumbnails: [mainimage, mainimage], previews: [mainimage, mainimage] };
+  }
+  const parsed = parseProductContent(description);
+  const colors = parsed.colors?.filter((c) => c.name.trim()) ?? [];
+  if (colors.length === 0) {
+    return { thumbnails: [mainimage, mainimage], previews: [mainimage, mainimage] };
+  }
+  const slots = colors.map((c) => ({
+    colorName: c.name,
+    url: (c.imageUrl?.trim() || mainimage) as string,
+  }));
+  const urls = slots.map((s) => s.url);
+  return { thumbnails: urls, previews: urls, colorImageSlots: slots };
 }
 
 const mapCategoryNameToSlug = (categoryName: string) => {
@@ -68,20 +99,21 @@ export async function getCatalogProducts(): Promise<Product[]> {
       .from(productsTable)
       .innerJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id));
 
-    const mappedDbProducts: Product[] = dbProducts.map((item) => ({
-      id: resolveStorefrontProductId(item.title, item.id),
-      title: item.title,
-      description: item.description,
-      reviews: item.rating ?? 0,
-      detailPrice: item.price,
-      jomlaPrice: item.jomlaPrice != null ? item.jomlaPrice : undefined,
-      instock: item.instock,
-      category: mapCategoryNameToSlug(item.categoryName),
-      imgs: {
-        thumbnails: [item.mainimage, item.mainimage],
-        previews: [item.mainimage, item.mainimage],
-      },
-    }));
+    const mappedDbProducts: Product[] = dbProducts.map((item) => {
+      const imgs = buildCatalogProductImages(item.mainimage, item.description);
+      return {
+        id: resolveStorefrontProductId(item.title, item.id),
+        title: item.title,
+        description: item.description,
+        reviews: item.rating ?? 0,
+        detailPrice: item.price,
+        jomlaPrice: item.jomlaPrice != null ? item.jomlaPrice : undefined,
+        instock: item.instock,
+        category: mapCategoryNameToSlug(item.categoryName),
+        imgs: { thumbnails: imgs.thumbnails, previews: imgs.previews },
+        ...(imgs.colorImageSlots ? { colorImageSlots: imgs.colorImageSlots } : {}),
+      };
+    });
 
     return mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts);
   } catch {
@@ -110,7 +142,9 @@ export async function getCatalogProductByRequestedId(requestedId: number): Promi
       .from(productsTable);
 
     for (const row of dbProducts) {
-      if (toNumericId(row.id) !== requestedId) continue;
+      const clamped = toNumericId(row.id);
+      const raw = legacyUnsignedHashFromUuid(row.id);
+      if (clamped !== requestedId && raw !== requestedId) continue;
       return products.find((item) => normalize(item.title) === normalize(row.title)) ?? null;
     }
   } catch {
@@ -124,11 +158,19 @@ export async function getCatalogProductAliasIds(productId: number): Promise<numb
   if (!Number.isFinite(productId) || productId <= 0) return [];
 
   const products = await getCatalogProducts();
-  const ids = new Set<number>([Math.trunc(productId)]);
-  const product = products.find((item) => item.id === productId);
-  if (product) {
-    const legacy = shopData.find((item) => normalize(item.title) === normalize(product.title));
-    if (legacy) ids.add(legacy.id);
+  const ids = new Set<number>();
+
+  const addSafe = (n: number) => {
+    if (!Number.isFinite(n) || n <= 0) return;
+    const t = Math.trunc(n);
+    if (t <= PG_INT_MAX) ids.add(t);
+  };
+
+  addSafe(productId);
+
+  let product = products.find((item) => item.id === productId);
+
+  if (!product) {
     try {
       const dbProducts = await db
         .select({
@@ -136,19 +178,52 @@ export async function getCatalogProductAliasIds(productId: number): Promise<numb
           title: productsTable.title,
         })
         .from(productsTable);
+
       for (const row of dbProducts) {
-        if (normalize(row.title) !== normalize(product.title)) continue;
-        ids.add(toNumericId(row.id));
+        const clamped = toNumericId(row.id);
+        const raw = legacyUnsignedHashFromUuid(row.id);
+        if (productId !== clamped && productId !== raw) continue;
+        product = products.find((item) => normalize(item.title) === normalize(row.title)) ?? null;
+        break;
       }
     } catch {
       /* ignore */
     }
   }
 
-  const legacy = shopData.find((item) => item.id === productId);
-  if (legacy) {
-    const match = products.find((item) => normalize(item.title) === normalize(legacy.title));
-    if (match) ids.add(match.id);
+  if (!product) {
+    const legacy = shopData.find((item) => item.id === productId);
+    if (legacy) {
+      const match = products.find((item) => normalize(item.title) === normalize(legacy.title));
+      if (match) {
+        addSafe(match.id);
+        addSafe(legacy.id);
+      }
+    }
+    return Array.from(ids);
+  }
+
+  addSafe(product.id);
+
+  const legacy = shopData.find((item) => normalize(item.title) === normalize(product.title));
+  if (legacy) addSafe(legacy.id);
+
+  try {
+    const dbProducts = await db
+      .select({
+        id: productsTable.id,
+        title: productsTable.title,
+      })
+      .from(productsTable);
+    for (const row of dbProducts) {
+      if (normalize(row.title) !== normalize(product.title)) continue;
+      const clamped = toNumericId(row.id);
+      const raw = legacyUnsignedHashFromUuid(row.id);
+      addSafe(clamped);
+      if (raw !== clamped) addSafe(raw);
+    }
+  } catch {
+    /* ignore */
   }
 
   return Array.from(ids);
