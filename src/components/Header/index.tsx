@@ -110,8 +110,10 @@ const Header = () => {
   };
 
   useEffect(() => {
-    window.addEventListener("scroll", handleStickyMenu);
-  });
+    handleStickyMenu();
+    window.addEventListener("scroll", handleStickyMenu, { passive: true });
+    return () => window.removeEventListener("scroll", handleStickyMenu);
+  }, []);
 
   useEffect(() => {
     const onOutsideClick = (event: MouseEvent) => {
@@ -138,11 +140,11 @@ const Header = () => {
 
   return (
     <header
-      className={`fixed left-0 top-0 w-full z-9999 bg-white transition-all ease-in-out duration-300 ${
+      className={`fixed left-0 top-0 z-9999 w-full min-w-0 bg-white transition-all ease-in-out duration-300 ${
         stickyMenu && "shadow"
       }`}
     >
-      <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
+      <div className="mx-auto min-w-0 max-w-[1170px] px-4 sm:px-7.5 xl:px-0">
         {/* <!-- header top start --> */}
         <div
           className={`flex flex-col lg:flex-row gap-5 items-end lg:items-center xl:justify-between ease-out duration-200 ${
@@ -161,14 +163,14 @@ const Header = () => {
               />
             </Link>
 
-            <div className="max-w-[475px] w-full">
+            <div className="max-w-[475px] w-full min-w-0">
               <form onSubmit={handleSearchSubmit}>
-                <div className="flex items-center">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0">
                   <CustomSelect options={options} />
 
                   <div
                     ref={searchContainerRef}
-                    className="relative max-w-[333px] sm:min-w-[333px] w-full"
+                    className="relative min-w-0 w-full flex-1 sm:max-w-[333px]"
                   >
                     {/* <!-- divider --> */}
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 inline-block w-px h-5.5 bg-gray-4"></span>
@@ -430,7 +432,7 @@ const Header = () => {
                     <span className="block text-2xs text-dark-4 uppercase">
                       cart
                     </span>
-                    <p className="font-medium text-custom-sm text-dark whitespace-nowrap">
+                <p className="max-w-full font-medium text-custom-sm text-dark sm:whitespace-nowrap">
                       {totalPrice} DA
                     </p>
                   </div>
@@ -484,13 +486,13 @@ const Header = () => {
       </div>
 
       <div className="border-t border-gray-3">
-        <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
-          <div className="flex items-center justify-between">
+        <div className="max-w-[1170px] mx-auto min-w-0 px-4 sm:px-7.5 xl:px-0">
+          <div className="flex min-w-0 items-center justify-between">
             {/* <!--=== Main Nav Start ===--> */}
             <div
-              className={`w-[288px] absolute right-4 top-full xl:static xl:w-auto h-0 xl:h-auto invisible xl:visible xl:flex items-center justify-between ${
+              className={`pointer-events-none absolute left-3 right-3 top-full z-[10040] w-auto max-h-0 overflow-hidden opacity-0 transition-[max-height,opacity] duration-200 ease-out xl:pointer-events-auto xl:static xl:z-auto xl:max-h-none xl:w-auto xl:overflow-visible xl:opacity-100 xl:transition-none xl:flex xl:items-center xl:justify-between ${
                 navigationOpen &&
-                `!visible bg-white shadow-lg border border-gray-3 !h-auto max-h-[400px] overflow-y-scroll rounded-md p-5`
+                `pointer-events-auto !max-h-[min(70vh,28rem)] !overflow-y-auto !opacity-100 rounded-md border border-gray-3 bg-white p-5 shadow-lg`
               }`}
             >
               {/* <!-- Main Nav Start --> */}

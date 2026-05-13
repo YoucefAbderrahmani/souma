@@ -24,7 +24,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Header />
-      {children}
+      <div className="min-w-0">{children}</div>
       <CartSidebarModal />
       <PreviewSliderModal />
       <SmartShoppingAssistant />

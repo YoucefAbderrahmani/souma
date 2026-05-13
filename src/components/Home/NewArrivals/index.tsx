@@ -14,7 +14,7 @@ const NewArrival = () => {
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
         {/* <!-- section title --> */}
-        <div className="mb-7 flex items-center justify-between">
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="flex items-center gap-2.5 font-medium text-dark mb-1.5">
               <svg

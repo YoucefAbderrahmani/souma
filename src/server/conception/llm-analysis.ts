@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { buildConceptionAnalyzeSignals, buildConceptionOverview } from "@/server/conception/metrics";
+import { buildCatalogSnapshotForConceptionLlm } from "@/server/conception/llm-catalog-snapshot";
 import { extractJsonObject } from "@/lib/llm-json";
 import {
   getOpenRouterApiKey,
@@ -58,10 +59,12 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
-function dayFingerprint(prefix: string, title: string) {
+/** One row per title per UTC hour so repeated Analyze runs can persist new LLM rows. */
+function utcHourFingerprint(prefix: string, title: string) {
   const d = new Date();
   const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  return `${prefix}-${slugify(title) || "item"}-${day}`;
+  const hour = String(d.getUTCHours()).padStart(2, "0");
+  return `${prefix}-${slugify(title) || "item"}-${day}h${hour}`;
 }
 
 const GEMINI_MODEL = "gemini-2.0-flash";
@@ -83,7 +86,11 @@ function conceptionGeminiModel() {
 }
 
 async function buildConceptionLlmContext() {
-  const [overview, signals] = await Promise.all([buildConceptionOverview(), buildConceptionAnalyzeSignals()]);
+  const [overview, signals, catalogProducts] = await Promise.all([
+    buildConceptionOverview(),
+    buildConceptionAnalyzeSignals(),
+    buildCatalogSnapshotForConceptionLlm(28),
+  ]);
 
   return {
     computedAt: overview.computedAt,
@@ -98,6 +105,7 @@ async function buildConceptionLlmContext() {
     devices: overview.devices,
     security: overview.security,
     signals,
+    catalogProducts,
   };
 }
 
@@ -127,7 +135,7 @@ function formatProviderFailure(label: string, message: string) {
 
 function buildSystemPrompt() {
   return `You are a senior ecommerce analytics consultant for Vitrina Store.
-Analyze only the telemetry JSON provided by the user.
+Analyze only the JSON provided by the user. It merges (1) live telemetry from the database (events, funnel, KPIs, signals) and (2) catalogProducts: real products currently in the catalogue (titles, categories, prices in DZD, stock levels). Use both sources together.
 Return one JSON object only with exactly these top-level keys: summary, alerts, recommendations.
 summary must be a plain French string, never an object.
 alerts must be an array. recommendations must be an array.
@@ -135,8 +143,8 @@ severity must be exactly one of: critical, high, medium, low.
 priority must be exactly one of: critical, high, medium, low.
 confidence must be an integer from 0 to 100.
 Write summary, titles, descriptions, analysis, and recommendation fields in French.
-Do not invent metrics that are absent from the payload.
-Prefer actionable merchandising, conversion, checkout, performance, and security insights.
+Do not invent metrics or products that are absent from the payload. When you cite a product, use a title that appears in catalogProducts or a metric that appears in telemetry.
+Prefer actionable merchandising, pricing, stock, conversion, checkout, performance, and security insights grounded in the supplied numbers.
 Each alert must include alertType (short snake_case code), severity, title, description, optional detail, optional affectedSessionsEstimate.
 Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, and optional revenueHint, implementationHint, roiHint.
 If event data is sparse, produce cautious recommendations and lower confidence instead of fabricating incidents.`;
@@ -162,7 +170,7 @@ function mapLlmOutput(
     detail: alert.detail ?? null,
     affectedSessionsEstimate: alert.affectedSessionsEstimate ?? null,
     metadataJson: JSON.stringify({ source, alertType: alert.alertType }),
-    fingerprint: dayFingerprint("LLM-ALERT", alert.title),
+    fingerprint: utcHourFingerprint("LLM-ALERT", alert.title),
   }));
 
   const recommendations = parsed.recommendations.map((recommendation) => ({
@@ -179,8 +187,9 @@ function mapLlmOutput(
       source,
       computedAt: context.computedAt,
       hasEventData: context.hasEventData,
+      catalogProductCount: context.catalogProducts.length,
     }),
-    fingerprint: dayFingerprint("LLM-REC", recommendation.title),
+    fingerprint: utcHourFingerprint("LLM-REC", recommendation.title),
   }));
 
   return {

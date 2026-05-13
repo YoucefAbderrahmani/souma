@@ -230,6 +230,38 @@ export function useConceptionAdminData(
     }
   }, []);
 
+  const clearAllRecommendations = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/recommendations", {
+        method: "DELETE",
+        ...fetchOptions,
+      });
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        deleted?: number;
+      }>(res, "Recommendations API");
+      if (!res.ok || body.error) throw new Error(body.message || body.error || "Clear failed");
+      const deleted = Number(body.deleted ?? 0);
+      setState((s) => ({
+        ...s,
+        recommendations: [],
+        actionMessage:
+          deleted > 0 ?
+            `Cleared ${deleted} stored recommendation(s). Run Analyze now to generate new ones.`
+          : "No stored recommendations were found.",
+      }));
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, []);
+
   const runAnalyze = useCallback(async () => {
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));
     try {
@@ -312,6 +344,7 @@ export function useConceptionAdminData(
     runAnalyze,
     dismissAlert,
     dismissRecommendation,
+    clearAllRecommendations,
     dismissVitrinaAfterQuickFix,
   };
 }

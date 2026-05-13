@@ -400,14 +400,17 @@ export function AiRecommendationsContent({
   overview,
   onNavigateSection,
   onDismissRecommendation,
+  onClearAllRecommendations,
 }: {
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
   onNavigateSection?: (section: SellerHelperNavItem) => void;
   onDismissRecommendation?: (id: string) => Promise<boolean>;
+  onClearAllRecommendations?: () => Promise<boolean>;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
 
   const recs = useMemo(
     () =>
@@ -453,12 +456,35 @@ export function AiRecommendationsContent({
     <div className={sellerHelperStack}>
       <SectionHeading
         title="AI Recommendations"
-        description="Rules engine plus micro-event data (extensible with LLM / ML)"
+        description="Saved recommendations from the last LLM analysis (OpenRouter / Gemini), grounded in live telemetry and your product catalogue from the database. Run Analyze now to refresh."
         icon={Lightbulb}
       />
+      {recommendations.length > 0 && onClearAllRecommendations ?
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            disabled={clearAllBusy}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Erase every AI recommendation stored in the database? You can run Analyze again to generate new cards."
+                )
+              ) {
+                return;
+              }
+              setClearAllBusy(true);
+              void onClearAllRecommendations().finally(() => setClearAllBusy(false));
+            }}
+            className={sellerGhostButton}
+          >
+            {clearAllBusy ? "Erasing…" : "Erase all recommendations"}
+          </button>
+        </div>
+      : null}
       {recommendations.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
-          Run analysis to generate recommendations from collected micro-events.
+          No recommendations yet. Click <strong>Analyze now</strong> above: the model reads your micro-events and
+          catalogue from the database and writes new cards here (requires API keys in production).
         </p>
       : null}
 

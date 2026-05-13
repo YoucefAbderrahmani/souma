@@ -33,8 +33,8 @@ const Hero = () => {
 
   return (
     <section className="overflow-hidden pb-10 lg:pb-12.5 xl:pb-15 pt-57.5 sm:pt-45 lg:pt-30 xl:pt-51.5 bg-[#FFF7F0]">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="flex flex-wrap gap-5">
+      <div className="mx-auto w-full min-w-0 max-w-[1170px] px-4 sm:px-8 xl:px-0">
+        <div className="flex min-w-0 flex-wrap gap-5">
           <div className="xl:max-w-[757px] w-full">
             <div className="relative z-1 rounded-[10px] bg-white overflow-hidden">
               {/* <!-- bg shapes --> */}
@@ -56,9 +56,9 @@ const Hero = () => {
                 className="w-full relative rounded-[10px] bg-white p-4 sm:p-7.5 cursor-pointer"
                 onClick={() => openDetails(topPhone)}
               >
-                <div className="flex items-center gap-14">
-                  <div>
-                    <h2 className="max-w-[153px] font-semibold text-dark text-xl mb-20">
+                <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-8 md:gap-14">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="mb-8 max-w-full font-semibold text-dark text-lg sm:mb-20 sm:max-w-[153px] sm:text-xl">
                       <button
                         type="button"
                         onClick={() => openDetails(topPhone)}
@@ -72,7 +72,7 @@ const Hero = () => {
                       <p className="font-medium text-dark-4 text-custom-sm mb-1.5">
                         limited time offer
                       </p>
-                      <span className="flex items-center gap-3">
+                      <span className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <span className="font-medium text-heading-5 text-red whitespace-nowrap">
                           699 DA
                         </span>
@@ -83,7 +83,7 @@ const Hero = () => {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="shrink-0">
                     <Image
                       src="/images/hero/hero-02.png"
                       alt="mobile image"
@@ -97,9 +97,9 @@ const Hero = () => {
                 className="w-full relative rounded-[10px] bg-white p-4 sm:p-7.5 cursor-pointer"
                 onClick={() => openDetails(topHeadphone)}
               >
-                <div className="flex items-center gap-14">
-                  <div>
-                    <h2 className="max-w-[153px] font-semibold text-dark text-xl mb-20">
+                <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-8 md:gap-14">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="mb-8 max-w-full font-semibold text-dark text-lg sm:mb-20 sm:max-w-[153px] sm:text-xl">
                       <button
                         type="button"
                         onClick={() => openDetails(topHeadphone)}
@@ -113,7 +113,7 @@ const Hero = () => {
                       <p className="font-medium text-dark-4 text-custom-sm mb-1.5">
                         limited time offer
                       </p>
-                      <span className="flex items-center gap-3">
+                      <span className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <span className="font-medium text-heading-5 text-red whitespace-nowrap">
                           699 DA
                         </span>
@@ -124,7 +124,7 @@ const Hero = () => {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="shrink-0">
                     <Image
                       src="/images/hero/hero-01.png"
                       alt="mobile image"

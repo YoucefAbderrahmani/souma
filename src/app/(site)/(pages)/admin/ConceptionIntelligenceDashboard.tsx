@@ -604,14 +604,17 @@ function AiRecommendationsContent({
   overview,
   onDismissRecommendation,
   onNavigateSection,
+  onClearAllRecommendations,
 }: {
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
   onDismissRecommendation?: (id: string) => Promise<boolean>;
   onNavigateSection?: (section: NavItem) => void;
+  onClearAllRecommendations?: () => Promise<boolean>;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
   const usingPlaceholderRecs = recommendations.length === 0;
   const recs =
     recommendations.length > 0 ?
@@ -675,6 +678,31 @@ function AiRecommendationsContent({
             Demo mode: placeholder recommendations shown until enough real signals are received.
           </p>
         ) : null}
+        {!usingPlaceholderRecs && onClearAllRecommendations ?
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              disabled={clearAllBusy}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "Erase every AI recommendation stored in the database? You can run Analyze again to generate new cards."
+                  )
+                ) {
+                  return;
+                }
+                setClearAllBusy(true);
+                void onClearAllRecommendations().finally(() => setClearAllBusy(false));
+              }}
+              className={cn(
+                conceptionNoFocusRing,
+                "rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:border-orange-400/50 hover:bg-zinc-800 hover:text-orange-200 disabled:opacity-50"
+              )}
+            >
+              {clearAllBusy ? "Erasing…" : "Erase all recommendations"}
+            </button>
+          </div>
+        : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1470,6 +1498,7 @@ export default function ConceptionIntelligenceDashboard() {
     actionMessage,
     dismissAlert,
     dismissRecommendation,
+    clearAllRecommendations,
   } = useConceptionAdminData();
   const trafficSeries = overview?.trafficHourlyNormalized?.length
     ? overview.trafficHourlyNormalized
@@ -1605,6 +1634,7 @@ export default function ConceptionIntelligenceDashboard() {
             overview={overview}
             onDismissRecommendation={dismissRecommendation}
             onNavigateSection={setActiveNav}
+            onClearAllRecommendations={clearAllRecommendations}
           />
         )}
         {activeNav === "Alerts" && (

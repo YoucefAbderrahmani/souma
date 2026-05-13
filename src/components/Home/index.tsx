@@ -10,7 +10,7 @@ import Newsletter from "../Common/Newsletter";
 
 const Home = () => {
   return (
-    <main>
+    <main className="min-w-0">
       <Hero />
       <Categories />
       <NewArrival />

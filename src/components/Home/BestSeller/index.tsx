@@ -14,7 +14,7 @@ const BestSeller = () => {
     <section className="overflow-hidden">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
         {/* <!-- section title --> */}
-        <div className="mb-10 flex items-center justify-between">
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <span className="flex items-center gap-2.5 font-medium text-dark mb-1.5">
               <Image

@@ -30,7 +30,7 @@ const CustomSelect = ({ options }) => {
   }, [isOpen]);
 
   return (
-    <div className="dropdown-content custom-select relative" style={{ width: "200px" }}>
+    <div className="dropdown-content custom-select relative w-full min-w-0 sm:w-[200px] sm:max-w-[200px] sm:shrink-0">
       <div
         className={`select-selected whitespace-nowrap ${
           isOpen ? "select-arrow-active" : ""
