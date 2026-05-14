@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Image from "next/image";
 import { Product } from "@/types/product";
 import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
@@ -19,6 +18,7 @@ import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPrice
 import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
+import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -182,40 +182,7 @@ const ProductItem = ({ item }: { item: Product }) => {
 
       <ProductCardStarsRowWithStock
         product={item}
-        stars={
-          <div className="flex items-center gap-1">
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={14}
-              height={14}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={14}
-              height={14}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={14}
-              height={14}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={14}
-              height={14}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={14}
-              height={14}
-            />
-          </div>
-        }
+        stars={<ProductRatingStars rating={item.averageRating} size={14} />}
         trailing={<p className="text-custom-sm">({item.reviews})</p>}
       />
 

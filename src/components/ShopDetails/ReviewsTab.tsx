@@ -34,9 +34,17 @@ type ReviewsTabProps = {
   salesTracking?: boolean;
   /** When the Reviews tab is selected (not merely mounted hidden). */
   reviewsTabActive?: boolean;
+  /** Sync PDP header / Redux when API returns aggregate summary (e.g. after load or new review). */
+  onReviewsSummaryChange?: (summary: { count: number; averageRating: number }) => void;
 };
 
-const ReviewsTab = ({ productId, productTitle, salesTracking, reviewsTabActive = false }: ReviewsTabProps) => {
+const ReviewsTab = ({
+  productId,
+  productTitle,
+  salesTracking,
+  reviewsTabActive = false,
+  onReviewsSummaryChange,
+}: ReviewsTabProps) => {
   const { session, isPending } = useSession();
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,14 +67,21 @@ const ReviewsTab = ({ productId, productTitle, salesTracking, reviewsTabActive =
     try {
       const response = await fetch(`/api/reviews?productId=${productId}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Failed to fetch reviews.");
-      const data = (await response.json()) as { reviews?: ProductReview[] };
+      const data = (await response.json()) as {
+        reviews?: ProductReview[];
+        summary?: { count: number; averageRating: number };
+        offline?: boolean;
+      };
       setReviews(Array.isArray(data.reviews) ? data.reviews : []);
+      if (!data.offline && data.summary && onReviewsSummaryChange) {
+        onReviewsSummaryChange(data.summary);
+      }
     } catch {
       toast.error("Unable to load reviews right now.");
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, onReviewsSummaryChange]);
 
   useEffect(() => {
     loadReviews();

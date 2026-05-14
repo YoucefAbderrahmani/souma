@@ -3,6 +3,7 @@ import {
   buildHeroReviewSnippetFromVerifiedReview,
   buildTrendingCountdownEnd,
   VITRINA_MERCH_KEYS,
+  VITRINA_QUICK_FIX_INFO_KEYS,
 } from "@/lib/vitrina-merchandising";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import { db } from "@/server/db";
@@ -12,14 +13,13 @@ import {
   resolveStorefrontProductId,
 } from "@/server/data-access/product-catalog";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
+import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 import { getBestProductReviewForMerch } from "@/server/reviews/reviews-db";
 import type { VitrinaQuickFixId, VitrinaQuickFixOption } from "@/types/vitrina-product-recommendations";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
 
 const VITRINA_STANDARD_MARKUP = 0.2;
-const AVAILABILITY_KEY = "Availability";
-const QUALITY_KEY = "Quality";
 const QUICK_FIX_IDS = new Set<VitrinaQuickFixId>([
   "default_color",
   "promo_price",
@@ -244,12 +244,16 @@ export async function applyVitrinaQuickFixes(
 
     if (fix.id === "availability_note" && product.instock > 0) {
       const availabilityValue = `In stock — ${product.instock} unit${product.instock === 1 ? "" : "s"} ready to ship.`;
-      const existing = nextAdditionalInfo.find((entry) => entry.key === AVAILABILITY_KEY);
+      const existing = nextAdditionalInfo.find((entry) => entry.key === VITRINA_QUICK_FIX_INFO_KEYS.availability);
       if (existing?.value === availabilityValue) {
         applied.push(fix.summary);
         continue;
       }
-      nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, AVAILABILITY_KEY, availabilityValue);
+      nextAdditionalInfo = upsertAdditionalInfo(
+        nextAdditionalInfo,
+        VITRINA_QUICK_FIX_INFO_KEYS.availability,
+        availabilityValue
+      );
       contentChanged = true;
       applied.push(fix.summary);
       continue;
@@ -260,9 +264,13 @@ export async function applyVitrinaQuickFixes(
         product.rating > 0 ?
           `Customer rating ${product.rating.toFixed(1)}/5 — review quality before you buy.`
         : "Check customer reviews and product details before you buy.";
-      const existingQuality = nextAdditionalInfo.find((entry) => entry.key === QUALITY_KEY);
+      const existingQuality = nextAdditionalInfo.find((entry) => entry.key === VITRINA_QUICK_FIX_INFO_KEYS.quality);
       if (existingQuality?.value !== ratingLabel) {
-        nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, QUALITY_KEY, ratingLabel);
+        nextAdditionalInfo = upsertAdditionalInfo(
+          nextAdditionalInfo,
+          VITRINA_QUICK_FIX_INFO_KEYS.quality,
+          ratingLabel
+        );
         contentChanged = true;
       }
 
@@ -327,7 +335,8 @@ export async function applyVitrinaQuickFixes(
     });
   }
 
-  if (contentChanged || priceChanged) {
+  const storefrontDataChanged = contentChanged || priceChanged;
+  if (storefrontDataChanged) {
     await db
       .update(productsTable)
       .set({
@@ -335,6 +344,7 @@ export async function applyVitrinaQuickFixes(
         ...(contentChanged ? { description: nextDescription } : {}),
       })
       .where(eq(productsTable.id, dbProductId));
+    revalidateStorefrontCatalogPaths();
   }
 
   const storefrontProductId = resolveStorefrontProductId(product.title, product.id);

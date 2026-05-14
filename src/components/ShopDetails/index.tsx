@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
@@ -34,6 +34,7 @@ import {
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 import { ProductTrendingCountdown } from "@/components/Common/ProductTrendingCountdown";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
+import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
 import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
 import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
@@ -114,6 +115,33 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   const product = useMemo(
     () => pickShopDetailsProduct(productFromRedux, cachedProduct, requestedProductId),
     [cachedProduct, productFromRedux, requestedProductId]
+  );
+  const productRef = useRef(product);
+  productRef.current = product;
+
+  const handleReviewsSummaryChange = useCallback(
+    (summary: { count: number; averageRating: number }) => {
+      const p = productRef.current;
+      if (!hasDisplayableProduct(p)) return;
+      const id = Math.trunc(Number(p.id));
+      if (!id) return;
+      const countOk = summary.count === (p.reviews ?? 0);
+      const avg = typeof p.averageRating === "number" ? p.averageRating : 0;
+      if (countOk && Math.abs(summary.averageRating - avg) < 0.001) return;
+      dispatch(
+        updateproductDetails({
+          ...p,
+          reviews: summary.count,
+          averageRating: summary.averageRating,
+        })
+      );
+      setCachedProduct((prev) =>
+        prev && sameProductId(prev.id, id)
+          ? { ...prev, reviews: summary.count, averageRating: summary.averageRating }
+          : prev
+      );
+    },
+    [dispatch]
   );
   const canRenderProduct =
     hasDisplayableProduct(product) &&
@@ -205,6 +233,47 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     if (!hasDisplayableProduct(product)) return;
     localStorage.setItem("productDetails", JSON.stringify(product));
   }, [product]);
+
+  useEffect(() => {
+    const targetId = Math.trunc(Number(product.id));
+    if (!targetId || !hasDisplayableProduct(product)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/reviews?productId=${targetId}`, { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          summary?: { count: number; averageRating: number };
+          offline?: boolean;
+        };
+        if (cancelled || data.offline || !data.summary) return;
+        const summary = data.summary;
+        const p = productRef.current;
+        if (!sameProductId(p.id, targetId)) return;
+        const countOk = summary.count === (p.reviews ?? 0);
+        const avg = typeof p.averageRating === "number" ? p.averageRating : 0;
+        const avgOk = Math.abs(summary.averageRating - avg) < 0.001;
+        if (countOk && avgOk) return;
+        dispatch(
+          updateproductDetails({
+            ...p,
+            reviews: summary.count,
+            averageRating: summary.averageRating,
+          })
+        );
+        setCachedProduct((prev) =>
+          prev && sameProductId(prev.id, targetId)
+            ? { ...prev, reviews: summary.count, averageRating: summary.averageRating }
+            : prev
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id, product.reviews, product.averageRating, dispatch]);
 
   useEffect(() => {
     setCatalogRequestResolved(false);
@@ -485,115 +554,16 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                   <ProductCardStarsRowWithStock
                     product={{ id: product.id, instock: product.instock }}
                     className="mb-4.5"
-                    stars={
-                      <div className="flex items-center gap-1">
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-                      </div>
+                    stars={<ProductRatingStars rating={product.averageRating} size={18} />}
+                    trailing={
+                      <button
+                        type="button"
+                        className="text-custom-sm text-dark-4 hover:text-blue"
+                        onClick={() => setActiveTab("tabThree")}
+                      >
+                        {product.reviews === 1 ? "1 review" : `${product.reviews} reviews`} — see Reviews tab
+                      </button>
                     }
-                    trailing={<span> (See Reviews tab) </span>}
                   />
 
                   {vitrinaMerchandising.trendingCountdownEndsAt ?
@@ -990,6 +960,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                   productTitle={product.title}
                   salesTracking
                   reviewsTabActive={activeTab === "tabThree"}
+                  onReviewsSummaryChange={handleReviewsSummaryChange}
                 />
               </div>
               {/* <!-- tab content three end --> */}

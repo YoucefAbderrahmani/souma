@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProductReview, listProductReviews } from "@/server/reviews/reviews-db";
+import { createProductReview, getProductReviewSummary, listProductReviews } from "@/server/reviews/reviews-db";
 import {
   isNeonDataTransferQuotaError,
   noteDatabaseOutage,
@@ -14,11 +14,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const reviews = await listProductReviews(productId);
-    return NextResponse.json({ reviews });
+    const summary = await getProductReviewSummary(productId);
+    return NextResponse.json({ reviews, summary });
   } catch (e) {
     if (isNeonDataTransferQuotaError(e)) {
       noteDatabaseOutage();
-      return NextResponse.json({ reviews: [], offline: true });
+      return NextResponse.json({ reviews: [], summary: { count: 0, averageRating: 0 }, offline: true });
     }
     return NextResponse.json({ error: "Failed to load reviews." }, { status: 500 });
   }

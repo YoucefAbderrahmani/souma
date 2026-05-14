@@ -4,7 +4,8 @@ import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
-import { getVitrinaMerchandisingFromAdditionalInfo } from "@/lib/vitrina-merchandising";
+import { getVitrinaMerchandisingFromAdditionalInfo, getStorefrontMerchHeroStripFromAdditionalInfo } from "@/lib/vitrina-merchandising";
+import { getProductReviewAggregatesByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
 const normalize = (value: string) => value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -115,12 +116,29 @@ function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProduct
   return [...staticOnly, ...dbDeduped];
 }
 
-function withHeroReviewSnippetFromDescription(product: Product): Product {
-  const heroReviewSnippet =
-    getVitrinaMerchandisingFromAdditionalInfo(parseProductContent(product.description).additionalInfo)
-      .heroReviewSnippet?.trim() ?? "";
-  if (!heroReviewSnippet) return product;
-  return { ...product, heroReviewSnippet };
+function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
+  const parsed = parseProductContent(product.description);
+  const additional = parsed.additionalInfo;
+  const strip = getStorefrontMerchHeroStripFromAdditionalInfo(additional);
+  const trending = getVitrinaMerchandisingFromAdditionalInfo(additional).trendingCountdownEndsAt;
+  return {
+    ...product,
+    ...(strip ? { heroReviewSnippet: strip } : {}),
+    ...(trending ? { trendingCountdownEndsAt: trending.toISOString() } : {}),
+  };
+}
+
+async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Product[]> {
+  if (products.length === 0) return products;
+  const aggMap = await getProductReviewAggregatesByLocalIds(products.map((p) => p.id));
+  return products.map((p) => {
+    const agg = aggMap.get(p.id) ?? { count: 0, averageRating: 0 };
+    return {
+      ...p,
+      reviews: agg.count,
+      averageRating: agg.averageRating,
+    };
+  });
 }
 
 export async function getCatalogProducts(): Promise<Product[]> {
@@ -146,7 +164,8 @@ export async function getCatalogProducts(): Promise<Product[]> {
         id: resolveStorefrontProductId(item.title, item.id),
         title: item.title,
         description: item.description,
-        reviews: item.rating ?? 0,
+        reviews: 0,
+        averageRating: 0,
         detailPrice: item.price,
         jomlaPrice: item.jomlaPrice != null ? item.jomlaPrice : undefined,
         instock: item.instock,
@@ -156,9 +175,12 @@ export async function getCatalogProducts(): Promise<Product[]> {
       };
     });
 
-    return mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withHeroReviewSnippetFromDescription);
+    const merged = mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withVitrinaStorefrontFieldsFromDescription);
+    return await withReviewAggregatesFromDatabase(merged);
   } catch {
-    return dedupeProductsByTitle(shopData).map(withHeroReviewSnippetFromDescription);
+    const deduped = dedupeProductsByTitle(shopData);
+    const merged = deduped.map(withVitrinaStorefrontFieldsFromDescription);
+    return await withReviewAggregatesFromDatabase(merged);
   }
 }
 
@@ -287,8 +309,7 @@ export async function getHeroReviewSnippetsByStorefrontIds(
     if (!uniqueIds.has(product.id)) continue;
     const snippet =
       product.heroReviewSnippet?.trim() ||
-      getVitrinaMerchandisingFromAdditionalInfo(parseProductContent(product.description).additionalInfo)
-        .heroReviewSnippet;
+      getStorefrontMerchHeroStripFromAdditionalInfo(parseProductContent(product.description).additionalInfo);
     if (snippet) {
       snippets[product.id] = snippet;
     }
@@ -335,7 +356,10 @@ export async function upsertShopDataProductIntoDatabase(item: Product): Promise<
     mainimage: mainImage,
     price: Math.round(Number(item.detailPrice ?? 0)),
     jomlaPrice: item.jomlaPrice != null ? Math.round(Number(item.jomlaPrice)) : null,
-    rating: toRatingFromReviewCount(item.reviews),
+    rating:
+      (item.reviews ?? 0) > 0 ?
+        Math.round(Math.min(5, Math.max(0, item.averageRating ?? 0)))
+      : toRatingFromReviewCount(item.reviews ?? 0),
     description: item.description?.trim() || item.title,
     manufacturer: "Vitrina",
     instock: Math.max(10, Math.min(999_999, item.instock ?? 100)),

@@ -6,7 +6,6 @@ import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
-import Image from "next/image";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
@@ -19,6 +18,7 @@ import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPrice
 import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
+import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 
 const SingleGridItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -177,40 +177,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
 
       <ProductCardStarsRowWithStock
         product={item}
-        stars={
-          <div className="flex items-center gap-1">
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={15}
-              height={15}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={15}
-              height={15}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={15}
-              height={15}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={15}
-              height={15}
-            />
-            <Image
-              src="/images/icons/icon-star.svg"
-              alt="star icon"
-              width={15}
-              height={15}
-            />
-          </div>
-        }
+        stars={<ProductRatingStars rating={item.averageRating} size={15} />}
         trailing={<p className="text-custom-sm">({item.reviews})</p>}
       />
 

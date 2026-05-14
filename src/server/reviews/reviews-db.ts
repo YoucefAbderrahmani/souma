@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, avg, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { productReviewTable, siteFeedbackTable, user } from "@/server/db/schema";
 
@@ -99,6 +99,53 @@ export async function listProductReviews(productLocalId: number): Promise<Produc
       image: row.userImage ?? null,
     },
   }));
+}
+
+export type ProductReviewAggregate = {
+  count: number;
+  averageRating: number;
+};
+
+/** Batch load review counts and average star rating per storefront `product_local_id`. */
+export async function getProductReviewAggregatesByLocalIds(
+  ids: number[]
+): Promise<Map<number, ProductReviewAggregate>> {
+  await ensureReviewTables();
+  const unique = Array.from(
+    new Set(ids.map((id) => Math.trunc(Number(id))).filter((id) => Number.isFinite(id) && id > 0))
+  );
+  const out = new Map<number, ProductReviewAggregate>();
+  if (unique.length === 0) {
+    return out;
+  }
+
+  const rows = await db
+    .select({
+      productLocalId: productReviewTable.productLocalId,
+      reviewCount: count().as("reviewCount"),
+      avgRating: avg(productReviewTable.rating).as("avgRating"),
+    })
+    .from(productReviewTable)
+    .where(inArray(productReviewTable.productLocalId, unique))
+    .groupBy(productReviewTable.productLocalId);
+
+  for (const id of unique) {
+    out.set(id, { count: 0, averageRating: 0 });
+  }
+
+  for (const row of rows) {
+    const c = Math.trunc(Number(row.reviewCount ?? 0));
+    const raw = row.avgRating != null ? Number(row.avgRating) : 0;
+    const averageRating = Number.isFinite(raw) ? Math.round(raw * 10) / 10 : 0;
+    out.set(row.productLocalId, { count: c, averageRating });
+  }
+
+  return out;
+}
+
+export async function getProductReviewSummary(productLocalId: number): Promise<ProductReviewAggregate> {
+  const map = await getProductReviewAggregatesByLocalIds([productLocalId]);
+  return map.get(Math.trunc(productLocalId)) ?? { count: 0, averageRating: 0 };
 }
 
 /**

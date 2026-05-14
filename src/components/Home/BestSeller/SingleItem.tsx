@@ -4,7 +4,7 @@ import { Product } from "@/types/product";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/features/cart-slice";
-import Image from "next/image";
+import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 import Link from "next/link";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
@@ -14,6 +14,8 @@ import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
 import { productDetailsHref } from "@/lib/product-page-link";
 import { PRODUCT_CARD_IMAGE_SIZES } from "@/lib/product-image-sizes";
+import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -88,39 +90,7 @@ const SingleItem = ({ item }: { item: Product }) => {
       <div className="relative overflow-hidden rounded-lg bg-[#F6F7FB] min-h-[403px]">
         <div className="text-center px-4 py-7.5">
           <div className="flex items-center justify-center gap-2.5 mb-2">
-            <div className="flex items-center gap-1">
-              <Image
-                src="/images/icons/icon-star.svg"
-                alt="star icon"
-                width={14}
-                height={14}
-              />
-              <Image
-                src="/images/icons/icon-star.svg"
-                alt="star icon"
-                width={14}
-                height={14}
-              />
-              <Image
-                src="/images/icons/icon-star.svg"
-                alt="star icon"
-                width={14}
-                height={14}
-              />
-              <Image
-                src="/images/icons/icon-star.svg"
-                alt="star icon"
-                width={14}
-                height={14}
-              />
-              <Image
-                src="/images/icons/icon-star.svg"
-                alt="star icon"
-                width={14}
-                height={14}
-              />
-            </div>
-
+            <ProductRatingStars rating={item.averageRating} size={14} />
             <p className="text-custom-sm">({item.reviews})</p>
           </div>
 
@@ -145,25 +115,31 @@ const SingleItem = ({ item }: { item: Product }) => {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenQuickView}
-          aria-label={`Quick view ${item.title}`}
-          className="flex w-full justify-center"
-        >
-          <Image
-            src={item.imgs.previews[0]}
-            alt=""
-            width={280}
-            height={280}
-            className="rounded-b-lg"
-            sizes={PRODUCT_CARD_IMAGE_SIZES}
-            loading="lazy"
-            decoding="async"
-          />
-        </button>
+        <div className="relative w-full">
+          <button
+            type="button"
+            onClick={handleOpenQuickView}
+            aria-label={`Quick view ${item.title}`}
+            className="flex w-full justify-center"
+          >
+            <span className="relative inline-block max-w-full overflow-hidden rounded-b-lg">
+              <ProductCatalogImageWithMerch
+                product={item}
+                src={item.imgs.previews[0]}
+                alt=""
+                width={280}
+                height={280}
+                className="rounded-b-lg"
+                imageClassName="rounded-b-lg"
+                heroReviewSnippet={item.heroReviewSnippet ?? null}
+                showHeroReviewOverlay
+                showPromoLabels={false}
+                sizes={PRODUCT_CARD_IMAGE_SIZES}
+              />
+            </span>
+          </button>
 
-        <div className="absolute right-0 bottom-0 z-20 flex translate-x-full flex-col gap-2 p-5.5 transition-transform duration-300 ease-linear delay-0 group-hover:translate-x-0 group-hover:delay-150">
+          <div className="absolute right-0 bottom-0 z-20 flex translate-x-full flex-col gap-2 p-5.5 transition-transform duration-300 ease-linear delay-0 group-hover:translate-x-0 group-hover:delay-150">
           <button
             onClick={handleOpenQuickView}
             aria-label="button for quick view"
@@ -252,6 +228,9 @@ const SingleItem = ({ item }: { item: Product }) => {
               />
             </svg>
           </button>
+        </div>
+
+        <ProductCardPromoLayer product={item} />
         </div>
       </div>
     </div>

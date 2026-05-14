@@ -1,6 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Category from "@/components/Category";
 import categories from "@/components/Home/Categories/categoryData";
 import { getCatalogProducts } from "@/server/data-access/product-catalog";
@@ -33,6 +34,7 @@ const CategoryPage = async ({ params }: CategoryPageProps) => {
     notFound();
   }
 
+  await connection();
   const products = await getCatalogProducts();
 
   return (

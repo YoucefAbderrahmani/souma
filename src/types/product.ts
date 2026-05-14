@@ -1,7 +1,10 @@
 export type Product = {
   title: string;
   description?: string;
+  /** Count of storefront `product_review` rows for this product id. */
   reviews: number;
+  /** Mean star rating 0–5 from real reviews; 0 when there are none. */
+  averageRating: number;
   // detail mode (retail) price
   detailPrice: number;
   // optional vitrina mode (wholesale) price
@@ -21,4 +24,6 @@ export type Product = {
    * Set in `getCatalogProducts` so grids show it without depending on client fetch + id alignment.
    */
   heroReviewSnippet?: string | null;
+  /** ISO 8601 end instant when Vitrina “trending countdown” quick fix is active (catalog cards + PDP). */
+  trendingCountdownEndsAt?: string | null;
 };

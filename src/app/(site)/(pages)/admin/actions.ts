@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
@@ -17,14 +18,6 @@ import {
   parseSubmittedVitrinaQuickFixes,
   resolveVitrinaQuickFixes,
 } from "@/server/seller-helper/apply-vitrina-quick-fixes";
-
-function revalidateStorefrontCatalogPaths() {
-  revalidatePath("/");
-  revalidatePath("/shop-with-sidebar");
-  revalidatePath("/shop-without-sidebar");
-  revalidatePath("/shop-details");
-  revalidatePath("/category", "layout");
-}
 
 export type CreateProductState = {
   success?: boolean;
@@ -463,7 +456,6 @@ export async function applyVitrinaQuickFixesAction(
 
     revalidatePath("/admin");
     revalidatePath("/seller-helper");
-    revalidateStorefrontCatalogPaths();
     return {
       success: true,
       applied: result.applied,

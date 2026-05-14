@@ -1,6 +1,7 @@
 import React from "react";
 import ShopWithoutSidebar from "@/components/ShopWithoutSidebar";
 import { getCatalogProducts } from "@/server/data-access/product-catalog";
+import { connection } from "next/server";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 const ShopWithoutSidebarPage = async () => {
+  await connection();
   const products = await getCatalogProducts();
 
   return (

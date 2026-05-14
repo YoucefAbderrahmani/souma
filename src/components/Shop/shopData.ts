@@ -5,6 +5,7 @@ const shopData: Product[] = [
     description:
       "Ergonomic USB gamepad with responsive buttons and dual analog sticks for smooth PC gaming sessions.",
     reviews: 15,
+    averageRating: 0,
     detailPrice: 59.0,
     jomlaPrice: 41.3,
     category: "games-videos",
@@ -25,6 +26,7 @@ const shopData: Product[] = [
     description:
       "Large-screen iPhone with 128GB storage, strong battery life, and excellent cameras for daily use.",
     reviews: 5,
+    averageRating: 0,
     detailPrice: 899.0,
     category: "mobile-tablets",
     id: 2,
@@ -44,6 +46,7 @@ const shopData: Product[] = [
     description:
       "24-inch all-in-one desktop powered by Apple M1, ideal for design, office work, and creative tasks.",
     reviews: 5,
+    averageRating: 0,
     detailPrice: 1299.0,
     category: "laptop-pc",
     id: 3,
@@ -63,6 +66,7 @@ const shopData: Product[] = [
     description:
       "Lightweight MacBook Air with M1 performance, 8GB memory, and 256GB SSD for work and study.",
     reviews: 6,
+    averageRating: 0,
     detailPrice: 999.0,
     category: "laptop-pc",
     id: 4,
@@ -82,6 +86,7 @@ const shopData: Product[] = [
     description:
       "Premium smart watch with durable build, advanced fitness tracking, and long battery for active users.",
     reviews: 3,
+    averageRating: 0,
     detailPrice: 799.0,
     jomlaPrice: 559.3,
     category: "watches",
@@ -102,6 +107,7 @@ const shopData: Product[] = [
     description:
       "High-precision wireless productivity mouse with comfortable shape, fast scrolling, and multi-device support.",
     reviews: 15,
+    averageRating: 0,
     detailPrice: 99.0,
     jomlaPrice: 69.3,
     category: "accessories",
@@ -122,6 +128,7 @@ const shopData: Product[] = [
     description:
       "Powerful and portable iPad Air with 64GB storage, perfect for entertainment, notes, and mobile creativity.",
     reviews: 15,
+    averageRating: 0,
     detailPrice: 599.0,
     category: "mobile-tablets",
     id: 7,
@@ -141,6 +148,7 @@ const shopData: Product[] = [
     description:
       "Dual-band Wi-Fi router delivering stable home coverage for streaming, gaming, and connected devices.",
     reviews: 15,
+    averageRating: 0,
     detailPrice: 149.0,
     jomlaPrice: 104.3,
     category: "home-appliances",
@@ -161,6 +169,7 @@ const shopData: Product[] = [
     description:
       "Over-ear wireless headphones with immersive sound and comfortable fit for music, calls, and travel.",
     reviews: 11,
+    averageRating: 0,
     detailPrice: 699.0,
     jomlaPrice: 489.3,
     category: "health-sports",
@@ -181,6 +190,7 @@ const shopData: Product[] = [
     description:
       "Soft everyday t-shirt with a relaxed fit, easy to pair with jeans or casual outfits.",
     reviews: 4,
+    averageRating: 0,
     detailPrice: 10.0,
     jomlaPrice: 7.0,
     category: "fashion",
@@ -195,6 +205,7 @@ const shopData: Product[] = [
     description:
       "Comfortable everyday pants with a clean cut, suitable for casual wear and daily movement.",
     reviews: 4,
+    averageRating: 0,
     detailPrice: 20.0,
     jomlaPrice: 14.0,
     category: "fashion",
@@ -209,6 +220,7 @@ const shopData: Product[] = [
     description:
       "Classic lightweight hat that adds style while helping protect from sun and light weather.",
     reviews: 4,
+    averageRating: 0,
     detailPrice: 15.0,
     jomlaPrice: 10.5,
     category: "fashion",
@@ -223,6 +235,7 @@ const shopData: Product[] = [
     description:
       "Premium wired gaming headset with clear detachable mic, balanced surround sound, and comfortable memory-foam ear cushions for long competitive sessions.",
     reviews: 9,
+    averageRating: 0,
     detailPrice: 130.0,
     jomlaPrice: 91.0,
     category: "health-sports",
@@ -243,6 +256,7 @@ const shopData: Product[] = [
     description:
       "Comfortable over-ear gaming headset with immersive audio, noise-reducing microphone, and durable build for daily gaming, calls, and multimedia use.",
     reviews: 12,
+    averageRating: 0,
     detailPrice: 90.0,
     jomlaPrice: 63.0,
     category: "health-sports",

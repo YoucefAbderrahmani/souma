@@ -9,6 +9,7 @@ const initialState = {
   value: {
     title: "",
     reviews: 0,
+    averageRating: 0,
     detailPrice: 0,
     jomlaPrice: 0,
     category: "",
