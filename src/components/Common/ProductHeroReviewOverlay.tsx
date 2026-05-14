@@ -26,21 +26,12 @@ export function ProductHeroReviewOverlay({
     return raw && raw.length > 0 ? raw : null;
   }, [description]);
 
-  if (fromDescription) {
-    return (
-      <ProductHeroReviewSnippet
-        snippet={fromDescription}
-        className={className}
-        variant={variant}
-      />
-    );
-  }
-
   const [snippet, setSnippet] = useState<string | null>(null);
   const [allowFetch, setAllowFetch] = useState(!deferUntilVisible);
   const sentinelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
+    if (fromDescription) return;
     if (allowFetch) return;
     const el = sentinelRef.current;
     if (!el) return;
@@ -55,9 +46,10 @@ export function ProductHeroReviewOverlay({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [allowFetch]);
+  }, [allowFetch, fromDescription]);
 
   useEffect(() => {
+    if (fromDescription) return;
     if (!allowFetch) return;
 
     let cancelled = false;
@@ -81,12 +73,20 @@ export function ProductHeroReviewOverlay({
     return () => {
       cancelled = true;
     };
-  }, [allowFetch, productId]);
+  }, [allowFetch, fromDescription, productId]);
+
+  if (fromDescription) {
+    return (
+      <ProductHeroReviewSnippet
+        snippet={fromDescription}
+        className={className}
+        variant={variant}
+      />
+    );
+  }
 
   if (snippet) {
-    return (
-      <ProductHeroReviewSnippet snippet={snippet} className={className} variant={variant} />
-    );
+    return <ProductHeroReviewSnippet snippet={snippet} className={className} variant={variant} />;
   }
 
   if (!deferUntilVisible || allowFetch) {
