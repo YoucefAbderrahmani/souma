@@ -4,8 +4,8 @@ import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
-import { getVitrinaMerchandisingFromAdditionalInfo, getStorefrontMerchHeroStripFromAdditionalInfo } from "@/lib/vitrina-merchandising";
-import { getProductReviewAggregatesByLocalIds } from "@/server/reviews/reviews-db";
+import { getVitrinaMerchandisingFromAdditionalInfo, getStorefrontMerchHeroStripFromAdditionalInfo, buildHeroReviewSnippetFromVerifiedReview } from "@/lib/vitrina-merchandising";
+import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
 const normalize = (value: string) => value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -141,6 +141,22 @@ async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Pr
   });
 }
 
+async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Promise<Product[]> {
+  const idsWithReviews = products
+    .filter((p) => (p.reviews ?? 0) > 0)
+    .map((p) => Math.trunc(Number(p.id)))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  if (idsWithReviews.length === 0) return products;
+
+  const bestById = await getBestProductReviewsForMerchByLocalIds(idsWithReviews);
+  return products.map((p) => {
+    const id = Math.trunc(Number(p.id));
+    const best = bestById.get(id);
+    if (!best) return p;
+    return { ...p, heroReviewSnippet: buildHeroReviewSnippetFromVerifiedReview(best) };
+  });
+}
+
 export async function getCatalogProducts(): Promise<Product[]> {
   try {
     const dbProducts = await db
@@ -176,11 +192,13 @@ export async function getCatalogProducts(): Promise<Product[]> {
     });
 
     const merged = mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withVitrinaStorefrontFieldsFromDescription);
-    return await withReviewAggregatesFromDatabase(merged);
+    const withAgg = await withReviewAggregatesFromDatabase(merged);
+    return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
   } catch {
     const deduped = dedupeProductsByTitle(shopData);
     const merged = deduped.map(withVitrinaStorefrontFieldsFromDescription);
-    return await withReviewAggregatesFromDatabase(merged);
+    const withAgg = await withReviewAggregatesFromDatabase(merged);
+    return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
   }
 }
 

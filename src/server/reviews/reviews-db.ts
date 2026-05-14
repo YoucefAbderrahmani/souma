@@ -148,31 +148,17 @@ export async function getProductReviewSummary(productLocalId: number): Promise<P
   return map.get(Math.trunc(productLocalId)) ?? { count: 0, averageRating: 0 };
 }
 
+type MerchReviewRow = { rating: number; comment: string; createdAt: Date };
+
 /**
- * Best written review for storefront hero merchandising: highest star rating first,
- * then longer comments, then newest (tie-breakers among top ratings).
+ * Picks the storefront hero review: **highest star rating first**, then **newest** among ties
+ * (non-empty trimmed comment only).
  */
-export async function getBestProductReviewForMerch(
-  productLocalId: number
-): Promise<{ rating: number; comment: string } | null> {
-  await ensureReviewTables();
-  if (!Number.isFinite(productLocalId) || productLocalId <= 0) return null;
-
-  const rows = await db
-    .select({
-      rating: productReviewTable.rating,
-      comment: productReviewTable.comment,
-      createdAt: productReviewTable.createdAt,
-    })
-    .from(productReviewTable)
-    .where(eq(productReviewTable.productLocalId, productLocalId))
-    .orderBy(desc(productReviewTable.rating), desc(productReviewTable.createdAt))
-    .limit(60);
-
+export function pickBestProductReviewForMerch(rows: MerchReviewRow[]): { rating: number; comment: string } | null {
   const withBody = rows
     .map((r) => ({
       rating: r.rating,
-      comment: r.comment.trim(),
+      comment: String(r.comment ?? "").trim(),
       createdAt: r.createdAt.getTime(),
     }))
     .filter((r) => r.comment.length > 0);
@@ -180,12 +166,65 @@ export async function getBestProductReviewForMerch(
 
   withBody.sort((a, b) => {
     if (b.rating !== a.rating) return b.rating - a.rating;
-    if (b.comment.length !== a.comment.length) return b.comment.length - a.comment.length;
     return b.createdAt - a.createdAt;
   });
 
   const best = withBody[0];
   return { rating: best.rating, comment: best.comment };
+}
+
+/**
+ * For each storefront `product_local_id`, the best review for hero merchandising (rating desc, then newest).
+ */
+export async function getBestProductReviewsForMerchByLocalIds(
+  ids: number[]
+): Promise<Map<number, { rating: number; comment: string }>> {
+  await ensureReviewTables();
+  const unique = Array.from(
+    new Set(ids.map((id) => Math.trunc(Number(id))).filter((id) => Number.isFinite(id) && id > 0))
+  );
+  const out = new Map<number, { rating: number; comment: string }>();
+  if (unique.length === 0) return out;
+
+  const rows = await db
+    .select({
+      productLocalId: productReviewTable.productLocalId,
+      rating: productReviewTable.rating,
+      comment: productReviewTable.comment,
+      createdAt: productReviewTable.createdAt,
+    })
+    .from(productReviewTable)
+    .where(inArray(productReviewTable.productLocalId, unique));
+
+  const grouped = new Map<number, MerchReviewRow[]>();
+  for (const row of rows) {
+    const id = Math.trunc(Number(row.productLocalId));
+    if (!Number.isFinite(id) || id <= 0) continue;
+    const list = grouped.get(id) ?? [];
+    list.push({
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: row.createdAt,
+    });
+    grouped.set(id, list);
+  }
+
+  for (const id of unique) {
+    const best = pickBestProductReviewForMerch(grouped.get(id) ?? []);
+    if (best) out.set(id, best);
+  }
+
+  return out;
+}
+
+/**
+ * Best written review for storefront hero merchandising: highest star rating, then newest among same rating.
+ */
+export async function getBestProductReviewForMerch(
+  productLocalId: number
+): Promise<{ rating: number; comment: string } | null> {
+  const map = await getBestProductReviewsForMerchByLocalIds([productLocalId]);
+  return map.get(Math.trunc(productLocalId)) ?? null;
 }
 
 export async function createProductReview(input: {
