@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/** Storefront: anchored to image frame; slides right + fades on `group` hover (see `ProductCatalogImageWithMerch`). */
 const STOREFRONT_SNIPPET_CLASS =
   "inset-x-0 bottom-0 z-20 rounded-none rounded-b-lg px-2 py-1 text-[10px] leading-tight opacity-100 transition-[transform,opacity] duration-150 ease-linear group-hover:translate-x-full group-hover:opacity-0 sm:inset-x-0 sm:bottom-0 sm:px-2 sm:py-1.5 sm:text-[11px]";
 

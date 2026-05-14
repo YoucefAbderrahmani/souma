@@ -24,11 +24,23 @@ export const signUpEmail = validatedAction(SignUpSchema, async (data) => {
     }
 
     return { success: true };
-  } catch (error: any) {
-    if (error?.message?.toLowerCase()?.includes("duplicate")) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error ?? "");
+    const lower = message.toLowerCase();
+    if (
+      lower.includes("exceeded the data transfer quota") ||
+      lower.includes("data transfer quota") ||
+      lower.includes("upgrade your plan to increase limits")
+    ) {
+      return {
+        error:
+          "Sign-up is unavailable: the database hit its transfer limit. Upgrade your Neon plan or try again after the quota resets.",
+      } as any;
+    }
+    if (lower.includes("duplicate")) {
       return { error: "Account already exists with this email or phone." };
     }
-    // Handle thrown errors (network, unexpected, etc.)
-    return { error: error?.message || "An unexpected error occurred" };
+    return { error: message || "An unexpected error occurred" } as any;
   }
 });

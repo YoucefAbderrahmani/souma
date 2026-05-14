@@ -6,14 +6,14 @@ import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 import CustomSelect from "../ShopWithSidebar/CustomSelect";
 
-import shopData from "../Shop/shopData";
+import type { Product } from "@/types/product";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 
-const ShopWithoutSidebar = () => {
+const ShopWithoutSidebar = ({ products }: { products: Product[] }) => {
   const [productStyle, setProductStyle] = useState("grid");
   const { mode } = usePriceMode();
-  const visibleProducts = getVisibleProductsForMode(shopData, mode);
+  const visibleProducts = getVisibleProductsForMode(products, mode);
 
   const options = [
     { label: "Latest Products", value: "0" },

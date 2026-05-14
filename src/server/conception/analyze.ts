@@ -211,8 +211,13 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     console.error("[conception/analyze][llm]", error);
   }
 
-  const vitrinaRecommendations = await listVitrinaProductMarketingRecommendations();
-  await writeVitrinaRecommendationsCache(vitrinaRecommendations);
+  let vitrinaRecommendations: VitrinaProductMarketingRecommendation[] = [];
+  try {
+    vitrinaRecommendations = await listVitrinaProductMarketingRecommendations({ limit: 200 });
+    await writeVitrinaRecommendationsCache(vitrinaRecommendations);
+  } catch (error) {
+    console.error("[conception/analyze][vitrina]", error);
+  }
 
   return {
     insertedAlerts,

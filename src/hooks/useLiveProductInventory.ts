@@ -13,7 +13,7 @@ type InventoryResponse = {
 };
 
 export function savePendingInventoryPurchase(
-  items: Array<{ id: number; quantity: number }>
+  items: Array<{ id: number; quantity: number; title?: string }>
 ) {
   if (typeof window === "undefined") return;
   const payload = items
@@ -21,6 +21,7 @@ export function savePendingInventoryPurchase(
     .map((item) => ({
       productId: Math.trunc(item.id),
       quantity: Math.max(1, Math.trunc(item.quantity)),
+      ...(typeof item.title === "string" && item.title.trim() ? { title: item.title.trim() } : {}),
     }));
   if (payload.length === 0) return;
   window.sessionStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(payload));
@@ -31,9 +32,9 @@ export async function commitPendingInventoryPurchase(): Promise<void> {
   const raw = window.sessionStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
   if (!raw) return;
 
-  let items: Array<{ productId: number; quantity: number }>;
+  let items: Array<{ productId: number; quantity: number; title?: string }>;
   try {
-    items = JSON.parse(raw) as Array<{ productId: number; quantity: number }>;
+    items = JSON.parse(raw) as Array<{ productId: number; quantity: number; title?: string }>;
   } catch {
     window.sessionStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
     return;

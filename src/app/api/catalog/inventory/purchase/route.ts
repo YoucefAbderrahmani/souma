@@ -4,7 +4,7 @@ import { applyPurchaseInventory } from "@/server/data-access/product-inventory";
 export const dynamic = "force-dynamic";
 
 type PurchaseBody = {
-  items?: Array<{ id?: unknown; productId?: unknown; quantity?: unknown }>;
+  items?: Array<{ id?: unknown; productId?: unknown; quantity?: unknown; title?: unknown }>;
 };
 
 export async function POST(req: Request) {
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
         .map((item) => ({
           productId: Number(item.productId ?? item.id),
           quantity: Math.max(1, Math.trunc(Number(item.quantity ?? 1))),
+          title: typeof item.title === "string" ? item.title : undefined,
         }))
         .filter((item) => Number.isFinite(item.productId) && item.productId > 0)
     : [];

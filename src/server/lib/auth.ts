@@ -6,6 +6,7 @@ import { db } from "../db/index"; // your drizzle instance
 import * as schema from "@/server/db/schema";
 import { fetchUserLastName } from "@/use-cases/user";
 import { getUserImageById, getUserPhoneById } from "../data-access/user";
+import { isDatabaseOutage } from "@/server/db-degraded";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -80,7 +81,9 @@ const trustedOrigins = Array.from(
       "http://127.0.0.1:3003",
       normalizeOrigin(process.env.BETTER_AUTH_URL),
       normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL),
+      normalizeOrigin(process.env.NEXT_PUBLIC_BETTER_AUTH_URL),
       normalizeOrigin(process.env.VERCEL_URL),
+      normalizeOrigin(process.env.VERCEL_BRANCH_URL),
       normalizeOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL),
       ...splitAndNormalizeOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
     ].filter((origin): origin is string => Boolean(origin))
@@ -91,6 +94,9 @@ const trustedOrigins = Array.from(
 const resolvedAuthBaseURL =
   normalizeOrigin(process.env.BETTER_AUTH_URL) ??
   normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
+  (process.env.VERCEL_BRANCH_URL?.trim()
+    ? normalizeOrigin(`https://${process.env.VERCEL_BRANCH_URL.trim()}`)
+    : null) ??
   (process.env.VERCEL_URL?.trim()
     ? normalizeOrigin(`https://${process.env.VERCEL_URL.trim()}`)
     : null) ??
@@ -123,10 +129,15 @@ export const auth = betterAuth({
                   Date.now()
               );
 
+              const picture = String(
+                (profile as unknown as Record<string, unknown>).picture ?? ""
+              ).trim();
+
               return {
                 name: firstName,
                 lastname: lastName,
                 phone: toTenDigitPhone(phoneSeed),
+                ...(picture ? { image: picture } : {}),
               };
             },
           },
@@ -157,21 +168,28 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    nextCookies(),
     customSession(async ({ user, session }) => {
-      // const roles = findUserRoles(session.session.userId);
-      const lastname = await fetchUserLastName(user.id);
-      const image = await getUserImageById(user.id);
-      const phone = await getUserPhoneById(user.id);
-      return {
-        user: {
-          ...user,
-          lastname,
-          image,
-          phone,
-        },
-        session,
-      };
+      if (isDatabaseOutage()) {
+        return { user: { ...user }, session };
+      }
+      try {
+        const lastname = await fetchUserLastName(user.id);
+        const image = await getUserImageById(user.id);
+        const phone = await getUserPhoneById(user.id);
+        return {
+          user: {
+            ...user,
+            lastname,
+            image,
+            phone,
+          },
+          session,
+        };
+      } catch {
+        return { user: { ...user }, session };
+      }
     }),
-  ], // make sure this is the last plugin in the array
+    // Must be last: applies Set-Cookie via Next `cookies()` when using server actions (email sign-in).
+    nextCookies(),
+  ],
 });

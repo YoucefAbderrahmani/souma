@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
       items.map((item) => ({
         productId: Math.trunc(Number(item.id)),
         quantity: Math.max(1, Math.trunc(Number(item.quantity ?? 1))),
+        title: typeof item.title === "string" ? item.title : undefined,
       }))
     );
     if (inventoryCheck.ok === false) {

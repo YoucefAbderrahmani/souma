@@ -5,10 +5,18 @@ import { Pool } from "pg";
 import shopData from "@/components/Shop/shopData";
 import categoryData from "@/components/Home/Categories/categoryData";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
+import { resolveDatabaseConnectionString } from "@/lib/database-url";
 
 dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connectionString = resolveDatabaseConnectionString();
+if (!connectionString) {
+  console.error("No database URL found. Set DATABASE_URL, POSTGRES_URL, or NEON_DATABASE_URL.");
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString });
 const db = drizzle(pool);
 
 const slugify = (value: string) =>
@@ -48,43 +56,60 @@ async function ensureCategoryId(categorySlug: string) {
 
 async function run() {
   let created = 0;
-  let skipped = 0;
+  let updated = 0;
 
   for (const product of shopData) {
     const slug = slugify(product.title);
 
-    const existingProduct = await db
+    const before = await db
       .select({ id: productsTable.id })
       .from(productsTable)
       .where(eq(productsTable.slug, slug))
       .limit(1);
 
-    if (existingProduct[0]?.id) {
-      skipped += 1;
-      continue;
-    }
-
     const categoryId = await ensureCategoryId(product.category);
     const mainImage = product.imgs?.previews?.[0] ?? product.imgs?.thumbnails?.[0] ?? "/images/products/product-1-bg-1.png";
 
-    const inserted = await db
+    const row = {
+      slug,
+      title: product.title,
+      mainimage: mainImage,
+      price: Math.round(Number(product.detailPrice ?? 0)),
+      jomlaPrice: product.jomlaPrice != null ? Math.round(Number(product.jomlaPrice)) : null,
+      rating: toRating(product.reviews),
+      description: product.description ?? product.title,
+      manufacturer: "Vitrina",
+      instock: Math.max(10, Math.min(999_999, product.instock ?? 100)),
+      categoryId,
+    };
+
+    const [result] = await db
       .insert(productsTable)
-      .values({
-        slug,
-        title: product.title,
-        mainimage: mainImage,
-        price: Number(product.detailPrice ?? 0),
-        jomlaPrice: product.jomlaPrice != null ? Math.round(Number(product.jomlaPrice)) : null,
-        rating: toRating(product.reviews),
-        description: product.description ?? product.title,
-        manufacturer: "Vitrina",
-        instock: 50,
-        categoryId,
+      .values(row)
+      .onConflictDoUpdate({
+        target: productsTable.slug,
+        set: {
+          title: row.title,
+          mainimage: row.mainimage,
+          price: row.price,
+          jomlaPrice: row.jomlaPrice,
+          rating: row.rating,
+          description: row.description,
+          manufacturer: row.manufacturer,
+          instock: row.instock,
+          categoryId: row.categoryId,
+        },
       })
       .returning({ id: productsTable.id });
 
-    const productId = inserted[0]?.id;
+    const productId = result?.id;
     if (!productId) continue;
+
+    if (before[0]?.id) {
+      updated += 1;
+    } else {
+      created += 1;
+    }
 
     const allImages = [...(product.imgs?.previews ?? []), ...(product.imgs?.thumbnails ?? [])];
     const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
@@ -103,19 +128,18 @@ async function run() {
         });
       }
     }
-
-    created += 1;
   }
 
   const total = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`count(*)::int` })
     .from(productsTable);
 
   console.log(
     JSON.stringify(
       {
-        created,
-        skipped,
+        shopItems: shopData.length,
+        inserted: created,
+        updatedBySlug: updated,
         totalProductsInDb: Number(total[0]?.count ?? 0),
       },
       null,

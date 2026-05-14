@@ -1,7 +1,9 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import categoryData from "@/components/Home/Categories/categoryData";
+import shopData from "@/components/Shop/shopData";
 import { compareImportanceTiers, IMPORTANCE_RANKS } from "@/lib/importance-ranking";
 import { parseProductContent } from "@/lib/product-content";
-import { getCatalogProducts } from "@/server/data-access/product-catalog";
+import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, salesMicroEventTable } from "@/server/db/schema";
 import {
@@ -11,12 +13,21 @@ import {
   type VitrinaRecommendationPromptPayload,
   type VitrinaRecommendationPromptProduct,
 } from "@/server/seller-helper/vitrina-recommendation-prompt";
+import type { Product } from "@/types/product";
 import type {
   VitrinaProductMarketingRecommendation,
   VitrinaProductMarketingTip,
   VitrinaQuickFixId,
   VitrinaQuickFixOption,
 } from "@/types/vitrina-product-recommendations";
+
+/** `products.id` is UUID; bundled storefront / Vitrina fallback uses numeric string ids (e.g. `"6"`). */
+const POSTGRES_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isPostgresUuid(value: string) {
+  return POSTGRES_UUID_RE.test(value.trim());
+}
 
 const COLOR_WORDS = [
   "noir",
@@ -111,10 +122,6 @@ type SignalAggregate = {
   priceZoneClicks: number;
 };
 
-function normalizeTitle(value: string) {
-  return value.toLowerCase().trim().replace(/\s+/g, " ");
-}
-
 function includesColorHint(title: string) {
   const normalized = title.toLowerCase();
   return COLOR_WORDS.some((word) => normalized.includes(word));
@@ -200,7 +207,9 @@ function buildDisplaySnapshot(product: ProductRow): VitrinaDisplaySnapshot {
     descriptionLength: product.description.trim().length,
     titleHasColorHint: includesColorHint(product.title),
     titleHasPriceHint: includesPriceHint(product.title),
-    titleHasBrandHint: product.title.toLowerCase().includes(product.manufacturer.toLowerCase()),
+    titleHasBrandHint:
+      product.manufacturer.trim().length > 0 &&
+      product.title.toLowerCase().includes(product.manufacturer.toLowerCase()),
   };
 }
 
@@ -402,6 +411,32 @@ function buildTips(
     });
   }
 
+  // Signal-driven tips need meaningful traffic (views, hovers, etc.). Without a cold-start path,
+  // every product would be filtered out and Seller Helper would show no Vitrina rows at all.
+  if (tips.length === 0) {
+    const windowLabel = `${SIGNAL_WINDOW_DAYS} days`;
+    let action: string;
+    if (views === 0) {
+      action = `No shopper micro-signals in the last ${windowLabel} yet — still tune the Vitrina card: a main image that reads at thumbnail size, numeric list and promo prices when you run a deal, and a title that states product and brand without keyword stuffing.`;
+    } else if (views < 6) {
+      action = `Very light traffic in the last ${windowLabel} (${views} view${views === 1 ? "" : "s"}). Sharpen the thumbnail, title, and visible pricing so early impressions convert once volume picks up.`;
+    } else {
+      action = `Signals are still too thin for automated price or social-proof nudges. Tighten the thumbnail, above-the-fold pricing, and a short benefits line so the listing works before traffic scales.`;
+    }
+    if (display.descriptionLength < 100) {
+      action +=
+        " Add richer detail (structured specs plus a short “why buy” line) — thin pages underperform in search.";
+    }
+    if (product.instock <= 0) {
+      action += " Update stock or pause the listing if this SKU is not available.";
+    }
+    tips.push({
+      label: "Catalog card",
+      action,
+      priority: "medium",
+    });
+  }
+
   return tips.sort((left, right) => compareImportanceTiers(left.priority, right.priority));
 }
 
@@ -486,40 +521,74 @@ function vitrinaProductImportanceRank(item: VitrinaProductMarketingRecommendatio
   return Math.min(...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority]));
 }
 
-async function loadProductRows(limit: number): Promise<ProductRow[]> {
-  const [rows, catalogProducts] = await Promise.all([
-    db
-      .select({
-        id: productsTable.id,
-        slug: productsTable.slug,
-        title: productsTable.title,
-        mainimage: productsTable.mainimage,
-        price: productsTable.price,
-        jomlaPrice: productsTable.jomlaPrice,
-        rating: productsTable.rating,
-        description: productsTable.description,
-        manufacturer: productsTable.manufacturer,
-        instock: productsTable.instock,
-        categoryName: categoryTable.name,
-      })
-      .from(productsTable)
-      .innerJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
-      .orderBy(desc(productsTable.id))
-      .limit(limit),
-    getCatalogProducts(),
-  ]);
-
-  const storefrontByTitle = new Map(
-    catalogProducts.map((product) => [normalizeTitle(product.title), product.id])
-  );
-
-  return rows
-    .map((row) => ({
-      ...row,
-      storefrontProductId: storefrontByTitle.get(normalizeTitle(row.title)) ?? 0,
-    }))
-    .filter((row) => row.storefrontProductId > 0);
+function slugifyCatalogTitle(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
+
+function categoryDisplayNameFromSlug(categorySlug: string) {
+  const match = categoryData.find((c) => c.slug === categorySlug);
+  return match?.title ?? categorySlug;
+}
+
+function mapShopItemToProductRow(item: Product): ProductRow {
+  const mainimage = item.imgs?.thumbnails?.[0]?.trim() || "/images/products/product-placeholder.png";
+  const slug = slugifyCatalogTitle(item.title) || `product-${item.id}`;
+  return {
+    id: String(item.id),
+    slug,
+    title: item.title,
+    mainimage,
+    price: item.detailPrice,
+    jomlaPrice: item.jomlaPrice ?? null,
+    rating: 0,
+    description: item.description ?? "",
+    manufacturer: "",
+    instock: item.instock ?? 24,
+    categoryName: categoryDisplayNameFromSlug(item.category),
+    storefrontProductId: item.id,
+  };
+}
+
+/** When Postgres has no `products` rows yet, still surface storefront-shaped cards from bundled shop data. */
+function staticCatalogProductRows(limit: number): ProductRow[] {
+  return shopData.slice(0, Math.max(0, limit)).map(mapShopItemToProductRow);
+}
+
+async function loadProductRows(limit: number): Promise<ProductRow[]> {
+  const rows = await db
+    .select({
+      id: productsTable.id,
+      slug: productsTable.slug,
+      title: productsTable.title,
+      mainimage: productsTable.mainimage,
+      price: productsTable.price,
+      jomlaPrice: productsTable.jomlaPrice,
+      rating: productsTable.rating,
+      description: productsTable.description,
+      manufacturer: productsTable.manufacturer,
+      instock: productsTable.instock,
+      categoryName: sql<string>`coalesce(${categoryTable.name}, 'Catalog')`.as("categoryName"),
+    })
+    .from(productsTable)
+    .leftJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
+    .orderBy(desc(productsTable.id))
+    .limit(limit);
+
+  if (rows.length === 0) {
+    return staticCatalogProductRows(limit);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    storefrontProductId: resolveStorefrontProductId(row.title, row.id),
+  }));
+}
+
+const SIGNAL_AGGREGATE_ID_CHUNK = 120;
 
 async function loadSignalAggregates(storefrontIds: number[], since: Date) {
   const aggregates = new Map<number, SignalAggregate>();
@@ -528,54 +597,65 @@ async function loadSignalAggregates(storefrontIds: number[], since: Date) {
   }
   if (storefrontIds.length === 0) return aggregates;
 
-  const countRows = await db.execute(sql`
-    SELECT
-      product_local_id::int AS product_id,
-      COUNT(*) FILTER (WHERE event_name = 'pa_product_view')::int AS views,
-      COUNT(*) FILTER (WHERE event_name = 'pa_pointer_hover')::int AS hovers,
-      COUNT(*) FILTER (WHERE event_name = 'pa_pointer_click')::int AS clicks,
-      COUNT(*) FILTER (WHERE event_name = 'pa_add_to_cart')::int AS add_to_carts,
-      COUNT(*) FILTER (WHERE event_name = 'pa_select_option')::int AS option_selects,
-      COUNT(*) FILTER (WHERE event_name = 'pa_image_view_time')::int AS image_views,
-      COUNT(*) FILTER (WHERE event_name = 'pa_specs_interaction')::int AS specs_interactions
-    FROM sales_micro_event
-    WHERE created_at >= ${since}
-      AND product_local_id IS NOT NULL
-      AND product_local_id::int IN (${sql.join(
-        storefrontIds.map((id) => sql`${id}`),
-        sql`, `
-      )})
-    GROUP BY product_local_id
-  `);
+  for (let i = 0; i < storefrontIds.length; i += SIGNAL_AGGREGATE_ID_CHUNK) {
+    const slice = storefrontIds.slice(i, i + SIGNAL_AGGREGATE_ID_CHUNK);
+    try {
+      const countRows = await db.execute(sql`
+        SELECT
+          product_local_id::int AS product_id,
+          COUNT(*) FILTER (WHERE event_name = 'pa_product_view')::int AS views,
+          COUNT(*) FILTER (WHERE event_name = 'pa_pointer_hover')::int AS hovers,
+          COUNT(*) FILTER (WHERE event_name = 'pa_pointer_click')::int AS clicks,
+          COUNT(*) FILTER (WHERE event_name = 'pa_add_to_cart')::int AS add_to_carts,
+          COUNT(*) FILTER (WHERE event_name = 'pa_select_option')::int AS option_selects,
+          COUNT(*) FILTER (WHERE event_name = 'pa_image_view_time')::int AS image_views,
+          COUNT(*) FILTER (WHERE event_name = 'pa_specs_interaction')::int AS specs_interactions
+        FROM sales_micro_event
+        WHERE created_at >= ${since}
+          AND product_local_id IS NOT NULL
+          AND product_local_id::text ~ '^-?[0-9]+$'
+          AND product_local_id::int IN (${sql.join(
+            slice.map((id) => sql`${id}`),
+            sql`, `
+          )})
+        GROUP BY product_local_id
+      `);
 
-  for (const row of countRows.rows as Array<Record<string, unknown>>) {
-    const productId = Number(row.product_id);
-    const aggregate = aggregates.get(productId);
-    if (!aggregate) continue;
-    aggregate.views = Number(row.views ?? 0);
-    aggregate.hovers = Number(row.hovers ?? 0);
-    aggregate.clicks = Number(row.clicks ?? 0);
-    aggregate.addToCarts = Number(row.add_to_carts ?? 0);
-    aggregate.optionSelects = Number(row.option_selects ?? 0);
-    aggregate.imageViews = Number(row.image_views ?? 0);
-    aggregate.specsInteractions = Number(row.specs_interactions ?? 0);
+      for (const row of countRows.rows as Array<Record<string, unknown>>) {
+        const productId = Number(row.product_id);
+        const aggregate = aggregates.get(productId);
+        if (!aggregate) continue;
+        aggregate.views = Number(row.views ?? 0);
+        aggregate.hovers = Number(row.hovers ?? 0);
+        aggregate.clicks = Number(row.clicks ?? 0);
+        aggregate.addToCarts = Number(row.add_to_carts ?? 0);
+        aggregate.optionSelects = Number(row.option_selects ?? 0);
+        aggregate.imageViews = Number(row.image_views ?? 0);
+        aggregate.specsInteractions = Number(row.specs_interactions ?? 0);
+      }
+    } catch (error) {
+      console.error("[vitrina] loadSignalAggregates count chunk failed", error);
+    }
   }
 
-  const detailRows = await db
-    .select({
-      productLocalId: salesMicroEventTable.productLocalId,
-      eventName: salesMicroEventTable.eventName,
-      payloadJson: salesMicroEventTable.payloadJson,
-    })
-    .from(salesMicroEventTable)
-    .where(
-      and(
-        inArray(salesMicroEventTable.productLocalId, storefrontIds),
-        gte(salesMicroEventTable.createdAt, since)
-      )
-    );
+  for (let i = 0; i < storefrontIds.length; i += SIGNAL_AGGREGATE_ID_CHUNK) {
+    const slice = storefrontIds.slice(i, i + SIGNAL_AGGREGATE_ID_CHUNK);
+    try {
+      const detailRows = await db
+        .select({
+          productLocalId: salesMicroEventTable.productLocalId,
+          eventName: salesMicroEventTable.eventName,
+          payloadJson: salesMicroEventTable.payloadJson,
+        })
+        .from(salesMicroEventTable)
+        .where(
+          and(
+            inArray(salesMicroEventTable.productLocalId, slice),
+            gte(salesMicroEventTable.createdAt, since)
+          )
+        );
 
-  for (const row of detailRows) {
+      for (const row of detailRows) {
     const productId = row.productLocalId;
     if (productId == null) continue;
     const aggregate = aggregates.get(productId);
@@ -637,6 +717,10 @@ async function loadSignalAggregates(storefrontIds: number[], since: Date) {
       if (color) {
         aggregate.colorCounts.set(color, (aggregate.colorCounts.get(color) ?? 0) + 1);
       }
+    }
+      }
+    } catch (error) {
+      console.error("[vitrina] loadSignalAggregates detail chunk failed", error);
     }
   }
 
@@ -721,43 +805,55 @@ export function buildVitrinaRecommendationPromptContext(
 export async function getVitrinaProductMarketingRecommendationByProductId(
   productId: string
 ): Promise<VitrinaProductMarketingRecommendation | null> {
-  const [row] = await db
-    .select({
-      id: productsTable.id,
-      slug: productsTable.slug,
-      title: productsTable.title,
-      mainimage: productsTable.mainimage,
-      price: productsTable.price,
-      jomlaPrice: productsTable.jomlaPrice,
-      rating: productsTable.rating,
-      description: productsTable.description,
-      manufacturer: productsTable.manufacturer,
-      instock: productsTable.instock,
-      categoryName: categoryTable.name,
-    })
-    .from(productsTable)
-    .innerJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
-    .where(eq(productsTable.id, productId))
-    .limit(1);
-
-  if (!row) {
+  const id = productId.trim();
+  if (!id) {
     return null;
   }
 
-  const catalogProducts = await getCatalogProducts();
-  const storefrontByTitle = new Map(
-    catalogProducts.map((product) => [normalizeTitle(product.title), product.id])
-  );
-  const storefrontProductId = storefrontByTitle.get(normalizeTitle(row.title)) ?? 0;
+  let product: ProductRow;
 
-  if (storefrontProductId <= 0) {
-    return null;
+  if (isPostgresUuid(id)) {
+    const [row] = await db
+      .select({
+        id: productsTable.id,
+        slug: productsTable.slug,
+        title: productsTable.title,
+        mainimage: productsTable.mainimage,
+        price: productsTable.price,
+        jomlaPrice: productsTable.jomlaPrice,
+        rating: productsTable.rating,
+        description: productsTable.description,
+        manufacturer: productsTable.manufacturer,
+        instock: productsTable.instock,
+        categoryName: sql<string>`coalesce(${categoryTable.name}, 'Catalog')`.as("categoryName"),
+      })
+      .from(productsTable)
+      .leftJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
+      .where(eq(productsTable.id, id))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    product = { ...row, storefrontProductId: resolveStorefrontProductId(row.title, row.id) };
+  } else {
+    const numeric = Number.parseInt(id, 10);
+    if (!Number.isFinite(numeric) || numeric <= 0 || String(numeric) !== id) {
+      return null;
+    }
+    const item = shopData.find((p) => p.id === numeric);
+    if (!item) {
+      return null;
+    }
+    product = mapShopItemToProductRow(item);
   }
+
+  const storefrontProductId = product.storefrontProductId;
 
   const since = new Date(Date.now() - SIGNAL_WINDOW_DAYS * MS_DAY);
   const aggregates = await loadSignalAggregates([storefrontProductId], since);
   const aggregate = aggregates.get(storefrontProductId) ?? createEmptySignalAggregate();
-  const product: ProductRow = { ...row, storefrontProductId };
   const display = buildDisplaySnapshot(product);
   const interaction = buildInteractionSnapshot(aggregate);
   const tips = buildTips(product, display, interaction, aggregate);

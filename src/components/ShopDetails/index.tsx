@@ -391,7 +391,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
               <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
                 <div className="lg:max-w-[570px] w-full">
                   <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
-                    <div className="relative">
+                    <div className="group relative">
                       <button
                         onClick={handlePreviewSlider}
                         aria-label="button for zoom"

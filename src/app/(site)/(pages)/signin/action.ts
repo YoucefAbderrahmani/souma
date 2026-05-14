@@ -8,25 +8,33 @@ export const loginEmail = validatedAction(LoginSchema, async (data) => {
   const { email, password } = data;
 
   try {
-    const result = await auth.api.signInEmail({
+    // Do not use `asResponse: true` — it prevents nextCookies() from applying session cookies from server actions.
+    await auth.api.signInEmail({
       body: { email, password },
       headers: await headers(),
-      asResponse: true,
     });
-
-    if (result.status >= 400) {
-      if (result.status === 401) {
-        return { error: "Invalid email or password" };
-      }
-
-      return {
-        error: result.statusText || "Unable to sign in. Please try again.",
-      } as any;
-    }
-
     return { success: true };
-  } catch (error: any) {
-    // Handle thrown errors (network, unexpected, etc.)
-    return { error: error?.message || "An unexpected error occurred" };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    const lower = message.toLowerCase();
+    if (
+      lower.includes("invalid email or password") ||
+      lower.includes("invalid_email_or_password") ||
+      (lower.includes("credential") && lower.includes("not found"))
+    ) {
+      return { error: "Invalid email or password" };
+    }
+    if (
+      lower.includes("exceeded the data transfer quota") ||
+      lower.includes("data transfer quota") ||
+      lower.includes("upgrade your plan to increase limits")
+    ) {
+      return {
+        error:
+          "Sign-in is unavailable: the database hit its transfer limit. Upgrade your Neon plan or try again after the quota resets.",
+      };
+    }
+    return { error: message || "An unexpected error occurred" };
   }
 });

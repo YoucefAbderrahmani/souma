@@ -16,16 +16,18 @@ import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { productDetailsHref } from "@/lib/product-page-link";
+import type { Product } from "@/types/product";
 
-const HeroCarousal = () => {
+const HeroCarousal = ({ products }: { products: Product[] }) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { mode } = usePriceMode();
-  const visibleProducts = getVisibleProductsForMode(shopData, mode);
-  const slideOneProduct = visibleProducts[0] ?? shopData[0];
-  const slideTwoProduct = visibleProducts[1] ?? visibleProducts[0] ?? shopData[0];
+  const source = products.length > 0 ? products : shopData;
+  const visibleProducts = getVisibleProductsForMode(source, mode);
+  const slideOneProduct = visibleProducts[0] ?? source[0];
+  const slideTwoProduct = visibleProducts[1] ?? visibleProducts[0] ?? source[0];
 
-  const openDetails = (product: (typeof shopData)[number]) => {
+  const openDetails = (product: Product) => {
     dispatch(updateproductDetails({ ...product }));
     localStorage.setItem("productDetails", JSON.stringify(product));
     sequenceStartProduct(product.title);

@@ -35,6 +35,12 @@ type Props = {
   onClose: () => void;
 };
 
+type EditColorFormRow = { id: string; name: string; price: string; imageUrl: string };
+
+function newEditColorFormRow(): EditColorFormRow {
+  return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
+}
+
 export default function EditProductModal({ product, onClose }: Props) {
   const router = useRouter();
   const [updateState, updateAction, isUpdating] = useActionState(updateProductFullAction, initialUpdateState);
@@ -43,7 +49,7 @@ export default function EditProductModal({ product, onClose }: Props) {
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState([{ name: "", price: "", imageUrl: "" }]);
+  const [colorRows, setColorRows] = useState<EditColorFormRow[]>([newEditColorFormRow()]);
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editVitrinaMode, setEditVitrinaMode] = useState(false);
   const [editPriceInput, setEditPriceInput] = useState("");
@@ -54,11 +60,12 @@ export default function EditProductModal({ product, onClose }: Props) {
     setColorHasPriceOverride(Boolean(parsed.colorHasPriceOverride));
     const colors = parsed.colors?.length
       ? parsed.colors.map((c) => ({
+          id: crypto.randomUUID(),
           name: c.name,
           price: c.price != null && !Number.isNaN(c.price) ? String(c.price) : "",
           imageUrl: c.imageUrl?.trim() ?? "",
         }))
-      : [{ name: "", price: "", imageUrl: "" }];
+      : [newEditColorFormRow()];
     setColorRows(colors);
     if (parsed.specifications?.length) {
       setSpecRows(
@@ -324,12 +331,13 @@ export default function EditProductModal({ product, onClose }: Props) {
                       <div>
                         <p className="text-sm font-semibold text-stone-800">Color options</p>
                         <p className="text-xs text-dark-4">
-                          Upload a photo per color so the product page swaps images with the selected variant.
+                          Per color: optional image URL and/or file upload (upload replaces URL). The product page swaps
+                          images when shoppers pick a variant.
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "", imageUrl: "" }])}
+                        onClick={() => setColorRows((prev) => [...prev, newEditColorFormRow()])}
                         className={pf.btnAccent}
                       >
                         + Add color
@@ -345,9 +353,9 @@ export default function EditProductModal({ product, onClose }: Props) {
                       Different price per color
                     </label>
                     <div className="space-y-2">
-                      {colorRows.map((row, index) => (
+                      {colorRows.map((row) => (
                         <div
-                          key={index}
+                          key={row.id}
                           className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
                         >
                           <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
@@ -359,7 +367,9 @@ export default function EditProductModal({ product, onClose }: Props) {
                                 value={row.name}
                                 onChange={(event) =>
                                   setColorRows((prev) =>
-                                    prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, name: event.target.value } : item
+                                    )
                                   )
                                 }
                                 className={pf.input}
@@ -376,10 +386,34 @@ export default function EditProductModal({ product, onClose }: Props) {
                                 value={row.price}
                                 onChange={(event) =>
                                   setColorRows((prev) =>
-                                    prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, price: event.target.value } : item
+                                    )
                                   )
                                 }
                                 className={`${pf.input} disabled:bg-stone-100`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
+                              <span className="font-medium text-stone-800">Variant image URL (optional)</span>
+                              <span className="text-[11px] text-dark-4">
+                                Paste a hosted link or an existing <code className="rounded bg-stone-100 px-0.5">/uploads/</code> path.
+                                Leave empty if you only use the file upload below.
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="url"
+                                autoComplete="off"
+                                placeholder="https://… or /uploads/products/…"
+                                value={row.imageUrl}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, imageUrl: event.target.value } : item
+                                    )
+                                  )
+                                }
+                                className={pf.input}
                               />
                             </label>
                             <div className="sm:col-span-2">
@@ -397,10 +431,10 @@ export default function EditProductModal({ product, onClose }: Props) {
                                 </p>
                               )}
                               <label className="flex flex-col gap-1 text-xs text-stone-600">
-                                <span className="font-medium text-stone-800">Photo for this color</span>
+                                <span className="font-medium text-stone-800">Upload photo for this color (optional)</span>
                                 <input
                                   type="file"
-                                  name={`colorImage_${index}`}
+                                  name={`colorImage_${row.id}`}
                                   accept="image/jpeg,image/png,image/webp,image/gif"
                                   className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
                                 />
@@ -410,7 +444,9 @@ export default function EditProductModal({ product, onClose }: Props) {
                           <button
                             type="button"
                             onClick={() =>
-                              setColorRows((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)))
+                              setColorRows((prev) =>
+                                prev.length === 1 ? prev : prev.filter((item) => item.id !== row.id)
+                              )
                             }
                             className={pf.btnDanger}
                           >
@@ -424,8 +460,8 @@ export default function EditProductModal({ product, onClose }: Props) {
                       name="colors"
                       value={JSON.stringify(
                         colorRows
-                          .map((row, rowIndex) => ({
-                            rowIndex,
+                          .map((row) => ({
+                            rowKey: row.id,
                             name: row.name.trim(),
                             price:
                               colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,

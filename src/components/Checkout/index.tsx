@@ -299,6 +299,7 @@ const Checkout = () => {
         cartItems.map((item) => ({
           id: item.id,
           quantity: item.quantity,
+          title: item.title,
         }))
       );
 

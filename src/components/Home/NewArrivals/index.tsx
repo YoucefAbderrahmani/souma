@@ -3,13 +3,13 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
-import shopData from "@/components/Shop/shopData";
+import type { Product } from "@/types/product";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 
-const NewArrival = () => {
+const NewArrival = ({ products }: { products: Product[] }) => {
   const { mode } = usePriceMode();
-  const visibleProducts = getVisibleProductsForMode(shopData, mode);
+  const visibleProducts = getVisibleProductsForMode(products, mode);
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -53,8 +53,8 @@ const NewArrival = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
           {/* <!-- New Arrivals item --> */}
-          {visibleProducts.map((item, key) => (
-            <ProductItem item={item} key={key} />
+          {visibleProducts.map((item) => (
+            <ProductItem item={item} key={item.id} />
           ))}
         </div>
       </div>

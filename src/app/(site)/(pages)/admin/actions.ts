@@ -18,6 +18,14 @@ import {
   resolveVitrinaQuickFixes,
 } from "@/server/seller-helper/apply-vitrina-quick-fixes";
 
+function revalidateStorefrontCatalogPaths() {
+  revalidatePath("/");
+  revalidatePath("/shop-with-sidebar");
+  revalidatePath("/shop-without-sidebar");
+  revalidatePath("/shop-details");
+  revalidatePath("/category", "layout");
+}
+
 export type CreateProductState = {
   success?: boolean;
   error?: string;
@@ -58,11 +66,23 @@ function parseAdminPriceFields(formData: FormData): { price: number; jomlaPrice:
 };
 
 type ParsedColorRow = {
+  /** Stable id from the client form row (preferred over rowIndex). */
+  rowKey?: string;
   rowIndex?: number;
   name: string;
   price?: number;
   imageUrl?: string;
 };
+
+function colorVariantUploadFieldName(entry: ParsedColorRow): string | null {
+  if (typeof entry.rowKey === "string" && entry.rowKey.trim()) {
+    return entry.rowKey.trim();
+  }
+  if (typeof entry.rowIndex === "number" && Number.isFinite(entry.rowIndex)) {
+    return String(Math.trunc(entry.rowIndex));
+  }
+  return null;
+}
 
 async function resolveColorVariantsFromForm(params: {
   formData: FormData;
@@ -97,16 +117,13 @@ async function resolveColorVariantsFromForm(params: {
     const inherited = prevColors.find((c) => c.name.trim().toLowerCase() === name.toLowerCase());
     let imageUrl = typeof entry.imageUrl === "string" && entry.imageUrl.trim() ? entry.imageUrl.trim() : undefined;
 
-    const rowIndex = entry.rowIndex;
-    const file =
-      typeof rowIndex === "number" && Number.isFinite(rowIndex) ?
-        params.formData.get(`colorImage_${Math.trunc(rowIndex)}`)
-      : null;
+    const uploadField = colorVariantUploadFieldName(entry);
+    const file = uploadField ? params.formData.get(`colorImage_${uploadField}`) : null;
 
     if (file instanceof File && file.size > 0) {
       const written = await saveProductVariantImageFile({
         slug: params.slug,
-        uniqueKey: `${Math.trunc(rowIndex as number)}-${Date.now()}`,
+        uniqueKey: `${uploadField}-${Date.now()}`,
         file,
       });
       if ("error" in written) return { error: written.error };
@@ -256,6 +273,9 @@ export async function createProductAction(
       });
     }
 
+    revalidatePath("/admin");
+    revalidateStorefrontCatalogPaths();
+
     return {
       success: true,
       message: "Product created successfully.",
@@ -284,7 +304,7 @@ export async function updateProductPricingStockAction(
       .where(sql`${productsTable.id} = ${productId}`);
 
     revalidatePath("/admin");
-    revalidatePath("/shop-with-sidebar");
+    revalidateStorefrontCatalogPaths();
     return { success: true, message: "Price and stock updated." };
   } catch {
     return { error: "Failed to update product price/stock." };
@@ -350,7 +370,7 @@ export async function updateProductDetailsAction(
       .where(sql`${productsTable.id} = ${productId}`);
 
     revalidatePath("/admin");
-    revalidatePath("/shop-with-sidebar");
+    revalidateStorefrontCatalogPaths();
     return { success: true, message: "Product details updated." };
   } catch {
     return { error: "Failed to update product details." };
@@ -443,7 +463,7 @@ export async function applyVitrinaQuickFixesAction(
 
     revalidatePath("/admin");
     revalidatePath("/seller-helper");
-    revalidatePath("/shop-with-sidebar");
+    revalidateStorefrontCatalogPaths();
     return {
       success: true,
       applied: result.applied,
@@ -599,7 +619,7 @@ export async function updateProductFullAction(
 
     revalidatePath("/admin");
     revalidatePath("/seller-helper");
-    revalidatePath("/shop-with-sidebar");
+    revalidateStorefrontCatalogPaths();
     return { success: true, message: "Product updated successfully." };
   } catch {
     return { error: "Failed to update product. Try again." };

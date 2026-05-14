@@ -21,7 +21,7 @@ function isRecommendationArray(value: unknown): value is VitrinaProductMarketing
 }
 
 export async function readVitrinaRecommendationsCache(): Promise<VitrinaProductMarketingRecommendation[]> {
-  if (memoryCache) {
+  if (memoryCache && memoryCache.recommendations.length > 0) {
     return memoryCache.recommendations;
   }
 
@@ -32,11 +32,13 @@ export async function readVitrinaRecommendationsCache(): Promise<VitrinaProductM
       return [];
     }
 
-    memoryCache = {
-      generatedAt: typeof parsed.generatedAt === "string" ? parsed.generatedAt : new Date(0).toISOString(),
-      recommendations: parsed.recommendations,
-    };
-    return memoryCache.recommendations;
+    if (parsed.recommendations.length > 0) {
+      memoryCache = {
+        generatedAt: typeof parsed.generatedAt === "string" ? parsed.generatedAt : new Date(0).toISOString(),
+        recommendations: parsed.recommendations,
+      };
+    }
+    return parsed.recommendations;
   } catch {
     return [];
   }
@@ -62,13 +64,19 @@ export async function writeVitrinaRecommendationsCache(
 }
 
 /** Recompute one row from live product + signals and merge into the on-disk / in-memory list (e.g. after quick fixes). */
-export async function refreshVitrinaRecommendationInCache(productId: string): Promise<void> {
+export async function refreshVitrinaRecommendationInCache(
+  productId: string,
+  mergeWithAlternateIds?: string[]
+): Promise<void> {
   const updated = await getVitrinaProductMarketingRecommendationByProductId(productId);
   if (!updated) return;
 
   const current = await readVitrinaRecommendationsCache();
-  const id = String(productId);
-  const idx = current.findIndex((r) => String(r.productId) === id);
+  const primary = String(productId);
+  const alternates = (mergeWithAlternateIds ?? []).map(String);
+  const idx = current.findIndex(
+    (r) => String(r.productId) === primary || alternates.some((alt) => String(r.productId) === alt)
+  );
   const next = idx === -1 ? [...current, updated] : current.map((row, i) => (i === idx ? updated : row));
   await writeVitrinaRecommendationsCache(next);
 }

@@ -1,5 +1,6 @@
 import Home from "@/components/Home";
 import { Metadata } from "next";
+import { getCatalogProducts } from "@/server/data-access/product-catalog";
 
 export const metadata: Metadata = {
   title: "Vitrina Store",
@@ -7,10 +8,12 @@ export const metadata: Metadata = {
   // other metadata
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const products = await getCatalogProducts();
+
   return (
     <>
-      <Home />
+      <Home products={products} />
     </>
   );
 }

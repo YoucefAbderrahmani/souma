@@ -12,18 +12,20 @@ import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct } from "@/lib/sequence-client";
 import { productDetailsHref } from "@/lib/product-page-link";
+import type { Product } from "@/types/product";
 
-const Hero = () => {
+const Hero = ({ products }: { products: Product[] }) => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { mode } = usePriceMode();
-  const visibleProducts = getVisibleProductsForMode(shopData, mode);
+  const source = products.length > 0 ? products : shopData;
+  const visibleProducts = getVisibleProductsForMode(source, mode);
   const topPhone =
     visibleProducts.find((item) => item.title.includes("iPhone")) ?? visibleProducts[0];
   const topHeadphone =
     visibleProducts.find((item) => item.title === "Wireless Headphone") ?? visibleProducts[0];
 
-  const openDetails = (product?: (typeof shopData)[number]) => {
+  const openDetails = (product?: Product) => {
     if (!product) return;
     dispatch(updateproductDetails({ ...product }));
     localStorage.setItem("productDetails", JSON.stringify(product));
@@ -46,7 +48,7 @@ const Hero = () => {
                 height={520}
               />
 
-              <HeroCarousel />
+              <HeroCarousel products={products} />
             </div>
           </div>
 

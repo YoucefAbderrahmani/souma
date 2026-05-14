@@ -38,8 +38,20 @@ const Signup = () => {
         provider: "google",
         callbackURL: "/",
       });
-    } catch {
-      toast.error("Google sign-up failed. Please try again.");
+    } catch (e: unknown) {
+      const msg = (e instanceof Error ? e.message : String(e ?? "")).toLowerCase();
+      if (
+        msg.includes("quota") ||
+        msg.includes("database_quota") ||
+        msg.includes("503") ||
+        msg.includes("transfer limit")
+      ) {
+        toast.error(
+          "Sign-in is unavailable: the database hit its transfer limit. Upgrade Neon or try again after the quota resets."
+        );
+      } else {
+        toast.error("Google sign-up failed. Please try again.");
+      }
       setIsGooglePending(false);
     }
   };

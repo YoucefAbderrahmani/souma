@@ -15,27 +15,33 @@ const fieldClass =
   "w-full rounded-lg border border-gray-3 bg-white px-3 py-2 text-custom-sm text-dark outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/15";
 
 type ColorRow = {
+  id: string;
   name: string;
   price: string;
   imageUrl?: string;
 };
 
+function newSellerColorRow(): ColorRow {
+  return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
+}
+
 function buildInitialColorRows(colors: ReturnType<typeof parseProductContent>["colors"]): ColorRow[] {
   const rows = colors
     .map((color) => ({
+      id: crypto.randomUUID(),
       name: color.name,
       price: color.price != null && !Number.isNaN(color.price) ? String(color.price) : "",
       imageUrl: color.imageUrl?.trim() ?? "",
     }))
     .filter((color) => color.name.trim());
 
-  return rows.length > 0 ? rows : [{ name: "", price: "", imageUrl: "" }];
+  return rows.length > 0 ? rows : [newSellerColorRow()];
 }
 
 function buildColorsPayload(rows: ColorRow[], defaultColorName: string, colorHasPriceOverride: boolean) {
   const enriched = rows
-    .map((row, rowIndex) => ({
-      rowIndex,
+    .map((row) => ({
+      rowKey: row.id,
       name: row.name.trim(),
       price: colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
       ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
@@ -273,12 +279,13 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                   <div>
                     <p className="text-custom-sm font-medium text-dark">Colors</p>
                     <p className="text-xs text-dark-4">
-                      The default color is preselected on the product page.
+                      The default color is preselected on the product page. Link each color to a photo with a URL and/or
+                      upload (upload overrides URL).
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setColorRows((previous) => [...previous, { name: "", price: "", imageUrl: "" }])}
+                    onClick={() => setColorRows((previous) => [...previous, newSellerColorRow()])}
                     className={sellerSecondaryButton}
                   >
                     Add a color
@@ -296,14 +303,14 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                 </label>
 
                 <div className="space-y-2">
-                  {colorRows.map((row, index) => {
+                  {colorRows.map((row) => {
                     const trimmedName = row.name.trim();
                     const isDefault = trimmedName.length > 0 && trimmedName === defaultColorName;
 
                     return (
                       <div
-                        key={`color-${index}`}
-                        className="flex flex-col gap-2 rounded-lg border border-gray-3 bg-white p-3 sm:flex-row sm:items-center"
+                        key={row.id}
+                        className="flex flex-col gap-2 rounded-lg border border-gray-3 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
                       >
                         <input
                           type="text"
@@ -312,15 +319,13 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                           onChange={(event) => {
                             const nextName = event.target.value;
                             setColorRows((previous) =>
-                              previous.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, name: nextName } : item
-                              )
+                              previous.map((item) => (item.id === row.id ? { ...item, name: nextName } : item))
                             );
                             if (defaultColorName === row.name.trim()) {
                               setDefaultColorName(nextName.trim());
                             }
                           }}
-                          className={fieldClass}
+                          className={`${fieldClass} min-w-[140px] flex-1 sm:max-w-[200px]`}
                         />
                         <input
                           type="number"
@@ -331,18 +336,36 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                           value={row.price}
                           onChange={(event) =>
                             setColorRows((previous) =>
-                              previous.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, price: event.target.value } : item
+                              previous.map((item) =>
+                                item.id === row.id ? { ...item, price: event.target.value } : item
                               )
                             )
                           }
-                          className={`${fieldClass} disabled:bg-gray-1`}
+                          className={`${fieldClass} w-full sm:w-[120px]`}
                         />
-                        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-dark-4 sm:max-w-[200px]">
-                          <span className="text-custom-sm font-medium text-dark-3">Variant photo</span>
+                        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-dark-4 sm:min-w-[200px] sm:max-w-[280px]">
+                          <span className="text-custom-sm font-medium text-dark-3">Variant image URL (optional)</span>
+                          <input
+                            type="text"
+                            inputMode="url"
+                            autoComplete="off"
+                            placeholder="/uploads/… or https://…"
+                            value={row.imageUrl ?? ""}
+                            onChange={(event) =>
+                              setColorRows((previous) =>
+                                previous.map((item) =>
+                                  item.id === row.id ? { ...item, imageUrl: event.target.value } : item
+                                )
+                              )
+                            }
+                            className={fieldClass}
+                          />
+                        </label>
+                        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-dark-4 sm:max-w-[220px]">
+                          <span className="text-custom-sm font-medium text-dark-3">Upload for this color</span>
                           <input
                             type="file"
-                            name={`colorImage_${index}`}
+                            name={`colorImage_${row.id}`}
                             accept="image/jpeg,image/png,image/webp,image/gif"
                             className="block w-full text-custom-sm text-dark-4 file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
                           />
@@ -361,8 +384,8 @@ export default function VitrinaQuickEditModal({ product, onClose }: Props) {
                           type="button"
                           onClick={() =>
                             setColorRows((previous) => {
-                              if (previous.length === 1) return [{ name: "", price: "", imageUrl: "" }];
-                              const next = previous.filter((_, itemIndex) => itemIndex !== index);
+                              if (previous.length === 1) return [newSellerColorRow()];
+                              const next = previous.filter((item) => item.id !== row.id);
                               if (defaultColorName === row.name.trim()) {
                                 setDefaultColorName(next[0]?.name.trim() ?? "");
                               }

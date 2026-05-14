@@ -7,7 +7,10 @@ import {
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
-import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
+import {
+  resolveDatabaseProductIdFromClientProductId,
+  resolveStorefrontProductId,
+} from "@/server/data-access/product-catalog";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 import { getBestProductReviewForMerch } from "@/server/reviews/reviews-db";
@@ -178,6 +181,16 @@ export async function applyVitrinaQuickFixes(
     return { applied: [], error: "No quick fixes selected." };
   }
 
+  const clientProductId = productId.trim();
+  const dbProductId = await resolveDatabaseProductIdFromClientProductId(clientProductId);
+  if (!dbProductId) {
+    return {
+      applied: [],
+      error:
+        "Could not resolve or create a database product for this listing. Check that Postgres is reachable, migrations are applied, and try again.",
+    };
+  }
+
   const [product] = await db
     .select({
       id: productsTable.id,
@@ -189,7 +202,7 @@ export async function applyVitrinaQuickFixes(
       description: productsTable.description,
     })
     .from(productsTable)
-    .where(eq(productsTable.id, productId))
+    .where(eq(productsTable.id, dbProductId))
     .limit(1);
 
   if (!product) {
@@ -321,7 +334,7 @@ export async function applyVitrinaQuickFixes(
         ...(priceChanged ? { jomlaPrice: nextJomlaPrice } : {}),
         ...(contentChanged ? { description: nextDescription } : {}),
       })
-      .where(eq(productsTable.id, productId));
+      .where(eq(productsTable.id, dbProductId));
   }
 
   const storefrontProductId = resolveStorefrontProductId(product.title, product.id);
@@ -335,9 +348,9 @@ export async function applyVitrinaQuickFixes(
     summary: summaryLines || `${applied.length} quick fix${applied.length === 1 ? "" : "es"} applied`,
     productLocalId: storefrontProductId > 0 ? storefrontProductId : null,
     productTitle: product.title,
-    sourceRefId: productId,
+    sourceRefId: clientProductId,
     details: {
-      productDbId: productId,
+      productDbId: dbProductId,
       productLocalId: storefrontProductId,
       productTitle: product.title,
       fixIds: appliedFixIds,
@@ -353,7 +366,10 @@ export async function applyVitrinaQuickFixes(
     },
   });
 
-  await refreshVitrinaRecommendationInCache(productId);
+  await refreshVitrinaRecommendationInCache(
+    dbProductId,
+    clientProductId !== dbProductId ? [clientProductId] : undefined
+  );
 
   return { applied };
 }

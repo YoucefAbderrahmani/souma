@@ -8,6 +8,7 @@ import { auth } from "@/server/lib/auth";
 import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, user } from "@/server/db/schema";
+import { ensureAllShopDataProductsInDatabase } from "@/server/data-access/product-catalog";
 import AdminPanels from "./AdminPanels";
 
 export const metadata: Metadata = {
@@ -62,6 +63,12 @@ const AdminPage = async () => {
     );
   }
 
+  try {
+    await ensureAllShopDataProductsInDatabase();
+  } catch (error) {
+    console.error("[admin] ensureAllShopDataProductsInDatabase", error);
+  }
+
   const [usersData, productsData, basicStats] = await Promise.all([
     db
       .select({
@@ -86,10 +93,10 @@ const AdminPage = async () => {
         manufacturer: productsTable.manufacturer,
         mainimage: productsTable.mainimage,
         description: productsTable.description,
-        categoryName: categoryTable.name,
+        categoryName: sql<string>`coalesce(${categoryTable.name}, 'Catalog')`.as("categoryName"),
       })
       .from(productsTable)
-      .innerJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
+      .leftJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id))
       .orderBy(desc(productsTable.id)),
     db.select({
       users: sql<number>`(select count(*) from "user")`,

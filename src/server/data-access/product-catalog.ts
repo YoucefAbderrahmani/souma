@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
@@ -17,6 +17,10 @@ const slugify = (value: string) =>
 
 const PG_INT_MAX = 2_147_483_647;
 
+/** Same shape as UUID primary keys on `products.id`. */
+const POSTGRES_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Legacy UUID→int hash (unsigned 32-bit); can exceed PostgreSQL `integer` range — do not use in SQL `integer` columns. */
 function legacyUnsignedHashFromUuid(databaseId: string): number {
   return databaseId.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 7);
@@ -32,6 +36,35 @@ function toNumericId(databaseId: string): number {
 export function resolveStorefrontProductId(title: string, databaseId: string) {
   const matchedStatic = shopData.find((item) => normalize(item.title) === normalize(title));
   return matchedStatic ? matchedStatic.id : toNumericId(databaseId);
+}
+
+/**
+ * Every storefront numeric id that may refer to the same DB row for inventory/checkout.
+ * Carts and URLs may use the static shopData id, the clamped UUID hash, or (when it fits
+ * PostgreSQL integer) the legacy unsigned hash — see {@link getCatalogProductAliasIds}.
+ */
+export function getStorefrontInventoryAliasIds(title: string, databaseId: string): number[] {
+  if (databaseId.startsWith("__offline__:")) {
+    const id = resolveStorefrontProductId(title, databaseId);
+    const t = Math.trunc(id);
+    return Number.isFinite(t) && t > 0 && t <= PG_INT_MAX ? [t] : [];
+  }
+
+  const ids = new Set<number>();
+  const addSafe = (n: number) => {
+    if (!Number.isFinite(n) || n <= 0) return;
+    const t = Math.trunc(n);
+    if (t <= PG_INT_MAX) ids.add(t);
+  };
+
+  addSafe(resolveStorefrontProductId(title, databaseId));
+  addSafe(toNumericId(databaseId));
+  addSafe(legacyUnsignedHashFromUuid(databaseId));
+
+  const legacy = shopData.find((item) => normalize(item.title) === normalize(title));
+  if (legacy) addSafe(legacy.id);
+
+  return Array.from(ids);
 }
 
 function buildCatalogProductImages(
@@ -82,6 +115,14 @@ function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProduct
   return [...staticOnly, ...dbDeduped];
 }
 
+function withHeroReviewSnippetFromDescription(product: Product): Product {
+  const heroReviewSnippet =
+    getVitrinaMerchandisingFromAdditionalInfo(parseProductContent(product.description).additionalInfo)
+      .heroReviewSnippet?.trim() ?? "";
+  if (!heroReviewSnippet) return product;
+  return { ...product, heroReviewSnippet };
+}
+
 export async function getCatalogProducts(): Promise<Product[]> {
   try {
     const dbProducts = await db
@@ -94,10 +135,10 @@ export async function getCatalogProducts(): Promise<Product[]> {
         rating: productsTable.rating,
         instock: productsTable.instock,
         mainimage: productsTable.mainimage,
-        categoryName: categoryTable.name,
+        categoryName: sql<string>`coalesce(${categoryTable.name}, 'Catalog')`.as("categoryName"),
       })
       .from(productsTable)
-      .innerJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id));
+      .leftJoin(categoryTable, eq(productsTable.categoryId, categoryTable.id));
 
     const mappedDbProducts: Product[] = dbProducts.map((item) => {
       const imgs = buildCatalogProductImages(item.mainimage, item.description);
@@ -115,9 +156,9 @@ export async function getCatalogProducts(): Promise<Product[]> {
       };
     });
 
-    return mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts);
+    return mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withHeroReviewSnippetFromDescription);
   } catch {
-    return dedupeProductsByTitle(shopData);
+    return dedupeProductsByTitle(shopData).map(withHeroReviewSnippetFromDescription);
   }
 }
 
@@ -244,13 +285,140 @@ export async function getHeroReviewSnippetsByStorefrontIds(
 
   for (const product of products) {
     if (!uniqueIds.has(product.id)) continue;
-    const snippet = getVitrinaMerchandisingFromAdditionalInfo(
-      parseProductContent(product.description).additionalInfo
-    ).heroReviewSnippet;
+    const snippet =
+      product.heroReviewSnippet?.trim() ||
+      getVitrinaMerchandisingFromAdditionalInfo(parseProductContent(product.description).additionalInfo)
+        .heroReviewSnippet;
     if (snippet) {
       snippets[product.id] = snippet;
     }
   }
 
   return snippets;
+}
+
+const categorySlugToDisplayName = new Map(categoryData.map((c) => [c.slug, c.title]));
+
+function toRatingFromReviewCount(reviews: number) {
+  if (!Number.isFinite(reviews)) return 0;
+  return Math.max(0, Math.min(5, Math.round(reviews / 3)));
+}
+
+async function ensureCategoryIdForShopSlug(categorySlug: string): Promise<string> {
+  const categoryName = categorySlugToDisplayName.get(categorySlug) ?? categorySlug;
+
+  const existing = await db
+    .select({ id: categoryTable.id })
+    .from(categoryTable)
+    .where(eq(categoryTable.name, categoryName))
+    .limit(1);
+
+  if (existing[0]?.id) return existing[0].id;
+
+  const inserted = await db.insert(categoryTable).values({ name: categoryName }).returning({ id: categoryTable.id });
+  return inserted[0]!.id;
+}
+
+/**
+ * Insert or update a row in `products` from bundled `shopData` (same rules as `scripts/seed-premade-products.ts`).
+ * Used when Seller Helper applies a quick fix against a numeric storefront id with no matching DB row yet.
+ */
+export async function upsertShopDataProductIntoDatabase(item: Product): Promise<string> {
+  const slug = slugify(item.title) || `product-${item.id}`;
+  const categoryId = await ensureCategoryIdForShopSlug(item.category);
+  const mainImage =
+    item.imgs?.previews?.[0] ?? item.imgs?.thumbnails?.[0] ?? "/images/products/product-1-bg-1.png";
+
+  const row = {
+    slug,
+    title: item.title,
+    mainimage: mainImage,
+    price: Math.round(Number(item.detailPrice ?? 0)),
+    jomlaPrice: item.jomlaPrice != null ? Math.round(Number(item.jomlaPrice)) : null,
+    rating: toRatingFromReviewCount(item.reviews),
+    description: item.description?.trim() || item.title,
+    manufacturer: "Vitrina",
+    instock: Math.max(10, Math.min(999_999, item.instock ?? 100)),
+    categoryId,
+  };
+
+  const [result] = await db
+    .insert(productsTable)
+    .values(row)
+    .onConflictDoUpdate({
+      target: productsTable.slug,
+      set: {
+        title: row.title,
+        mainimage: row.mainimage,
+        price: row.price,
+        jomlaPrice: row.jomlaPrice,
+        rating: row.rating,
+        description: row.description,
+        manufacturer: row.manufacturer,
+        categoryId: row.categoryId,
+      },
+    })
+    .returning({ id: productsTable.id });
+
+  if (!result?.id) {
+    throw new Error("upsertShopDataProductIntoDatabase: missing returning id");
+  }
+  return result.id;
+}
+
+/** Upsert every bundled storefront item into Postgres (idempotent). Call from admin boot or `npm run db:seed-products`. */
+export async function ensureAllShopDataProductsInDatabase(): Promise<{ ok: number; failed: number }> {
+  let ok = 0;
+  let failed = 0;
+  for (const item of shopData) {
+    try {
+      await upsertShopDataProductIntoDatabase(item);
+      ok += 1;
+    } catch (error) {
+      failed += 1;
+      console.error("[product-catalog] ensureAllShopDataProductsInDatabase failed for", item.title, error);
+    }
+  }
+  return { ok, failed };
+}
+
+/**
+ * Map a Seller Helper / storefront `productId` to Postgres `products.id`.
+ * Accepts a UUID, or a legacy numeric id from `shopData` (match by slug/title, or auto-upsert from `shopData`).
+ */
+export async function resolveDatabaseProductIdFromClientProductId(
+  clientProductId: string
+): Promise<string | null> {
+  const raw = clientProductId.trim();
+  if (!raw) return null;
+  if (POSTGRES_UUID_RE.test(raw)) return raw;
+
+  const numeric = Number.parseInt(raw, 10);
+  if (!Number.isFinite(numeric) || numeric <= 0 || String(numeric) !== raw) return null;
+
+  const staticItem = shopData.find((item) => item.id === numeric);
+  if (!staticItem) return null;
+
+  const slug = slugify(staticItem.title) || `product-${staticItem.id}`;
+  const bySlug = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .where(eq(productsTable.slug, slug))
+    .limit(1);
+  if (bySlug[0]?.id) return bySlug[0].id;
+
+  const targetTitle = normalize(staticItem.title);
+  const rows = await db.select({ id: productsTable.id, title: productsTable.title }).from(productsTable);
+  for (const row of rows) {
+    if (normalize(row.title) === targetTitle) {
+      return row.id;
+    }
+  }
+
+  try {
+    return await upsertShopDataProductIntoDatabase(staticItem);
+  } catch (error) {
+    console.error("[product-catalog] resolveDatabaseProductIdFromClientProductId upsert failed", error);
+    return null;
+  }
 }

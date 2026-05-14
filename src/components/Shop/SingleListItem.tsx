@@ -106,6 +106,8 @@ const SingleListItem = ({ item }: { item: Product }) => {
                 alt=""
                 width={250}
                 height={250}
+                heroReviewSnippet={item.heroReviewSnippet ?? null}
+                showHeroReviewOverlay
                 showPromoLabels={false}
               />
             </span>

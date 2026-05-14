@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import shopData from "@/components/Shop/shopData";
-import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
+import { getStorefrontInventoryAliasIds } from "@/server/data-access/product-catalog";
 import {
   clearDatabaseOutage,
   isNeonDataTransferQuotaError,
@@ -14,6 +14,16 @@ const normalize = (value: string) => value.toLowerCase().trim().replace(/\s+/g, 
 const LEGACY_STOREFRONT_IDS = new Set(shopData.map((s) => s.id));
 const STATIC_FALLBACK_STOCK = 99;
 
+/** Deterministic pseudo-random stock in [min, max] from a string seed (stable per product title). */
+function syntheticStockFromSeed(seed: string, min: number, max: number): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const span = Math.max(1, max - min + 1);
+  return min + (h % span);
+}
+
 const INVENTORY_READ_BREAKER_QUOTA_MS = 15 * 60 * 1000;
 const INVENTORY_READ_BREAKER_OTHER_MS = 60 * 1000;
 
@@ -22,13 +32,18 @@ let inventoryReadBreakerOpenUntil = 0;
 export type InventoryPurchaseItem = {
   productId: number;
   quantity: number;
+  /** When present, used to resolve the row if `productId` no longer matches (e.g. legacy id vs renamed DB title). */
+  title?: string;
 };
 
 type InventoryRow = {
   dbId: string;
   title: string;
   instock: number;
+  /** DB read failed; do not treat as live checkout. */
   offlineFallback?: boolean;
+  /** `SKIP_CATALOG_INVENTORY_DB`: allow checkout without persisting stock changes. */
+  skipDbSynthetic?: boolean;
 };
 
 function normalizeStorefrontProductId(productId: number): number | null {
@@ -37,14 +52,27 @@ function normalizeStorefrontProductId(productId: number): number | null {
 }
 
 function mergePurchaseItems(items: InventoryPurchaseItem[]): InventoryPurchaseItem[] {
-  const merged = new Map<number, number>();
+  const merged = new Map<number, { quantity: number; title?: string }>();
   for (const item of items) {
     const productId = normalizeStorefrontProductId(item.productId);
     const quantity = Math.max(1, Math.trunc(Number(item.quantity) || 0));
     if (!productId) continue;
-    merged.set(productId, (merged.get(productId) ?? 0) + quantity);
+    const title = typeof item.title === "string" && item.title.trim() ? item.title.trim() : undefined;
+    const prev = merged.get(productId);
+    if (!prev) {
+      merged.set(productId, { quantity, title });
+    } else {
+      merged.set(productId, {
+        quantity: prev.quantity + quantity,
+        title: prev.title ?? title,
+      });
+    }
   }
-  return Array.from(merged.entries()).map(([productId, quantity]) => ({ productId, quantity }));
+  return Array.from(merged.entries()).map(([productId, v]) => ({
+    productId,
+    quantity: v.quantity,
+    ...(v.title ? { title: v.title } : {}),
+  }));
 }
 
 function mapDbRows(
@@ -75,22 +103,30 @@ function titlesForLegacyStorefrontIds(storefrontIds: number[]): string[] {
   return Array.from(new Set(shopData.filter((s) => requested.has(s.id)).map((s) => s.title)));
 }
 
-function staticFallbackRowsForLegacy(storefrontIds: number[]): InventoryRow[] {
+function staticFallbackRowsForLegacy(
+  storefrontIds: number[],
+  source: "skip_db" | "breaker"
+): InventoryRow[] {
   const requested = new Set(
     storefrontIds.map((id) => Math.trunc(id)).filter((id) => Number.isFinite(id) && id > 0)
   );
   const rows: InventoryRow[] = [];
   for (const legacy of shopData) {
     if (!requested.has(legacy.id)) continue;
-    const instock =
+    const fromStatic =
       typeof legacy.instock === "number" && Number.isFinite(legacy.instock) ?
         Math.max(0, Math.trunc(legacy.instock))
-      : STATIC_FALLBACK_STOCK;
+      : null;
+    const instock =
+      source === "skip_db" ?
+        (fromStatic ?? syntheticStockFromSeed(legacy.title, 35, 220))
+      : (fromStatic ?? STATIC_FALLBACK_STOCK);
     rows.push({
       dbId: `__offline__:${legacy.id}`,
       title: legacy.title,
       instock,
-      offlineFallback: true,
+      offlineFallback: source === "breaker",
+      skipDbSynthetic: source === "skip_db",
     });
   }
   return rows;
@@ -138,17 +174,19 @@ async function loadInventoryRowsForStorefrontLookup(
   );
   if (unique.length === 0) return [];
 
-  const needsFullTable = unique.some((id) => !LEGACY_STOREFRONT_IDS.has(id));
+  const needsFullTable =
+    options?.bypassInventoryReadBreaker === true ||
+    unique.some((id) => !LEGACY_STOREFRONT_IDS.has(id));
   const legacyOnly = !needsFullTable;
   const honorBreaker = options?.bypassInventoryReadBreaker !== true;
 
   if (skipInventoryDbByEnv()) {
-    if (legacyOnly) return staticFallbackRowsForLegacy(unique);
+    if (legacyOnly) return staticFallbackRowsForLegacy(unique, "skip_db");
     return [];
   }
 
   if (honorBreaker && legacyOnly && isInventoryBreakerOpen()) {
-    return staticFallbackRowsForLegacy(unique);
+    return staticFallbackRowsForLegacy(unique, "breaker");
   }
 
   try {
@@ -166,15 +204,50 @@ async function loadInventoryRowsForStorefrontLookup(
     const ms = quota ? INVENTORY_READ_BREAKER_QUOTA_MS : INVENTORY_READ_BREAKER_OTHER_MS;
     tripInventoryBreaker(ms);
     noteDatabaseOutage(ms);
-    if (legacyOnly) return staticFallbackRowsForLegacy(unique);
+    if (legacyOnly) return staticFallbackRowsForLegacy(unique, "breaker");
     return [];
   }
 }
 
-async function buildStorefrontInventoryIndexForIds(
+/** Last-resort row for static catalog ids when the DB has no matching row (empty DB, drift, etc.). */
+function legacySyntheticInventoryRow(productId: number, cartTitle?: string): InventoryRow | undefined {
+  if (!LEGACY_STOREFRONT_IDS.has(productId)) return undefined;
+  const legacy = shopData.find((s) => s.id === productId);
+  if (!legacy) return undefined;
+  const trimmed = cartTitle?.trim();
+  if (trimmed && normalize(trimmed) !== normalize(legacy.title)) return undefined;
+  const fromStatic =
+    typeof legacy.instock === "number" && Number.isFinite(legacy.instock) ?
+      Math.max(0, Math.trunc(legacy.instock))
+    : null;
+  return {
+    dbId: `__synthetic_legacy__:${legacy.id}`,
+    title: legacy.title,
+    instock: fromStatic ?? syntheticStockFromSeed(legacy.title, 35, 220),
+    skipDbSynthetic: true,
+  };
+}
+
+function resolveInventoryRowForItem(
+  item: InventoryPurchaseItem,
+  index: Map<number, InventoryRow>,
+  rows: InventoryRow[]
+): InventoryRow | undefined {
+  const fromId = index.get(item.productId);
+  if (fromId) return fromId;
+  const rawTitle = item.title?.trim();
+  if (rawTitle) {
+    const key = normalize(rawTitle);
+    const fromTitle = rows.find((row) => normalize(row.title) === key);
+    if (fromTitle) return fromTitle;
+  }
+  return legacySyntheticInventoryRow(item.productId, item.title);
+}
+
+async function buildStorefrontInventoryLookup(
   storefrontIds: number[],
   options?: { bypassInventoryReadBreaker?: boolean }
-): Promise<Map<number, InventoryRow>> {
+): Promise<{ index: Map<number, InventoryRow>; rows: InventoryRow[] }> {
   const requested = new Set(
     storefrontIds.map((id) => Math.trunc(id)).filter((id) => Number.isFinite(id) && id > 0)
   );
@@ -183,8 +256,9 @@ async function buildStorefrontInventoryIndexForIds(
   const index = new Map<number, InventoryRow>();
 
   for (const row of rows) {
-    const storefrontId = resolveStorefrontProductId(row.title, row.dbId);
-    index.set(storefrontId, row);
+    for (const alias of getStorefrontInventoryAliasIds(row.title, row.dbId)) {
+      index.set(alias, row);
+    }
   }
 
   for (const legacy of shopData) {
@@ -196,7 +270,7 @@ async function buildStorefrontInventoryIndexForIds(
     }
   }
 
-  return index;
+  return { index, rows };
 }
 
 export async function getLiveInventoryByStorefrontIds(
@@ -211,10 +285,14 @@ export async function getLiveInventoryByStorefrontIds(
   );
   if (uniqueIds.length === 0) return {};
 
-  const index = await buildStorefrontInventoryIndexForIds(uniqueIds);
+  const { index } = await buildStorefrontInventoryLookup(uniqueIds);
   const inventory: Record<number, number> = {};
   for (const productId of uniqueIds) {
-    const row = index.get(productId);
+    let row = index.get(productId);
+    if (!row) {
+      const syn = legacySyntheticInventoryRow(productId);
+      if (syn) row = syn;
+    }
     if (row) {
       inventory[productId] = row.instock;
     }
@@ -230,11 +308,11 @@ export async function validateInventoryForPurchase(
     return { ok: false, error: "No purchasable items were provided." };
   }
 
-  const index = await buildStorefrontInventoryIndexForIds(merged.map((item) => item.productId), {
+  const { index, rows } = await buildStorefrontInventoryLookup(merged.map((item) => item.productId), {
     bypassInventoryReadBreaker: true,
   });
   for (const item of merged) {
-    const row = index.get(item.productId);
+    const row = resolveInventoryRowForItem(item, index, rows);
     if (!row) {
       return { ok: false, error: "One or more products are not available for live inventory checkout." };
     }
@@ -268,7 +346,7 @@ export async function applyPurchaseInventory(
     return { ok: false, error: validation.error };
   }
 
-  const index = await buildStorefrontInventoryIndexForIds(merged.map((item) => item.productId), {
+  const { index, rows } = await buildStorefrontInventoryLookup(merged.map((item) => item.productId), {
     bypassInventoryReadBreaker: true,
   });
   const updatedInventory: Record<number, number> = {};
@@ -276,9 +354,14 @@ export async function applyPurchaseInventory(
   try {
     await db.transaction(async (tx) => {
       for (const item of merged) {
-        const row = index.get(item.productId);
+        const row = resolveInventoryRowForItem(item, index, rows);
         if (!row) {
           throw new Error("One or more products are not available for live inventory checkout.");
+        }
+
+        if (row.skipDbSynthetic) {
+          updatedInventory[item.productId] = Math.max(0, row.instock - item.quantity);
+          continue;
         }
 
         const [updated] = await tx

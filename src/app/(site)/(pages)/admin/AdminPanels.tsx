@@ -47,6 +47,12 @@ type AdminMainTab = "users" | "add-product" | "products" | "tracking";
 
 const initialState: CreateProductState = {};
 
+type AdminColorFormRow = { id: string; name: string; price: string; imageUrl: string };
+
+function newAdminColorFormRow(): AdminColorFormRow {
+  return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
+}
+
 export default function AdminPanels({ users, products }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,7 +66,7 @@ export default function AdminPanels({ users, products }: Props) {
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState([{ name: "red", price: "", imageUrl: "" }]);
+  const [colorRows, setColorRows] = useState<AdminColorFormRow[]>(() => [newAdminColorFormRow()]);
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
@@ -130,6 +136,13 @@ export default function AdminPanels({ users, products }: Props) {
     }
     setActiveTab("users");
   }, [tabParam, router]);
+
+  useEffect(() => {
+    if (productCategoryTab === "__all__") return;
+    if (!productCategoryNames.includes(productCategoryTab)) {
+      setProductCategoryTab("__all__");
+    }
+  }, [productCategoryTab, productCategoryNames]);
 
   const switchTab = (tab: AdminMainTab) => {
     setActiveTab(tab);
@@ -400,13 +413,13 @@ export default function AdminPanels({ users, products }: Props) {
                       <div>
                         <p className="text-sm font-semibold text-stone-800">Color options</p>
                         <p className="text-xs text-dark-4">
-                          Add a name for each variant. Upload a photo per color so the storefront swaps the main image
-                          when shoppers pick a color (optional; falls back to the main product image).
+                          For each color, set a name, then link a picture with an image URL and/or a file upload. Upload
+                          wins if both are set. The storefront swaps the main photo when shoppers pick that color.
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setColorRows((prev) => [...prev, { name: "", price: "", imageUrl: "" }])}
+                        onClick={() => setColorRows((prev) => [...prev, newAdminColorFormRow()])}
                         className={pf.btnAccent}
                       >
                         + Add color
@@ -422,9 +435,9 @@ export default function AdminPanels({ users, products }: Props) {
                       Different price per color
                     </label>
                     <div className="space-y-2">
-                      {colorRows.map((row, index) => (
+                      {colorRows.map((row) => (
                         <div
-                          key={index}
+                          key={row.id}
                           className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
                         >
                           <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
@@ -436,7 +449,9 @@ export default function AdminPanels({ users, products }: Props) {
                                 value={row.name}
                                 onChange={(event) =>
                                   setColorRows((prev) =>
-                                    prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, name: event.target.value } : item
+                                    )
                                   )
                                 }
                                 className={pf.input}
@@ -455,21 +470,45 @@ export default function AdminPanels({ users, products }: Props) {
                                 value={row.price}
                                 onChange={(event) =>
                                   setColorRows((prev) =>
-                                    prev.map((item, i) => (i === index ? { ...item, price: event.target.value } : item))
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, price: event.target.value } : item
+                                    )
                                   )
                                 }
                                 className={`${pf.input} disabled:bg-stone-100 disabled:text-dark-4`}
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
-                              <span className="font-medium text-stone-800">Photo for this color</span>
+                              <span className="font-medium text-stone-800">Variant image URL (optional)</span>
                               <span className="text-[11px] text-dark-4">
-                                Recommended when the product looks different in this color — shoppers will see this
-                                image when they select it.
+                                Paste a link if the photo is already online; leave empty and use the file upload below
+                                instead.
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="url"
+                                autoComplete="off"
+                                placeholder="https://… or /uploads/products/…"
+                                value={row.imageUrl}
+                                onChange={(event) =>
+                                  setColorRows((prev) =>
+                                    prev.map((item) =>
+                                      item.id === row.id ? { ...item, imageUrl: event.target.value } : item
+                                    )
+                                  )
+                                }
+                                className={pf.input}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
+                              <span className="font-medium text-stone-800">Upload photo for this color (optional)</span>
+                              <span className="text-[11px] text-dark-4">
+                                When the product looks different in this color, shoppers see this image when they select
+                                it. Upload overrides the URL above.
                               </span>
                               <input
                                 type="file"
-                                name={`colorImage_${index}`}
+                                name={`colorImage_${row.id}`}
                                 accept="image/jpeg,image/png,image/webp,image/gif"
                                 className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
                               />
@@ -478,7 +517,9 @@ export default function AdminPanels({ users, products }: Props) {
                           <button
                             type="button"
                             onClick={() =>
-                              setColorRows((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)))
+                              setColorRows((prev) =>
+                                prev.length === 1 ? prev : prev.filter((item) => item.id !== row.id)
+                              )
                             }
                             className={pf.btnDanger}
                           >
@@ -492,8 +533,8 @@ export default function AdminPanels({ users, products }: Props) {
                       name="colors"
                       value={JSON.stringify(
                         colorRows
-                          .map((row, rowIndex) => ({
-                            rowIndex,
+                          .map((row) => ({
+                            rowKey: row.id,
                             name: row.name.trim(),
                             price:
                               colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
@@ -847,7 +888,13 @@ export default function AdminPanels({ users, products }: Props) {
                   {filteredProducts.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-sm text-dark-4">
-                        No products found for this filter.
+                        {products.length === 0 ?
+                          "No products loaded. Check the database connection in .env — when it works, opening this page syncs every storefront item from the catalogue into Postgres."
+                        : productQuery.trim() ?
+                          "No products match your search. Clear the search box or try another keyword."
+                        : productCategoryTab !== "__all__" ?
+                          `No products in “${productCategoryTab}”. Pick another category tab or All.`
+                        : "No products match the current filter."}
                       </td>
                     </tr>
                   ) : (
