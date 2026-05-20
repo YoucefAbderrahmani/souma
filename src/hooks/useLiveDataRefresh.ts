@@ -9,6 +9,7 @@ export function useLiveDataRefresh(
   enabled = true,
   intervalMs = LIVE_DATA_REFRESH_MS
 ) {
+  const safeInterval = Math.max(5_000, intervalMs);
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
 
@@ -21,7 +22,7 @@ export function useLiveDataRefresh(
 
     const start = () => {
       if (timer) return;
-      timer = window.setInterval(run, intervalMs);
+      timer = window.setInterval(run, safeInterval);
     };
 
     const stop = () => {
@@ -50,5 +51,5 @@ export function useLiveDataRefresh(
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", run);
     };
-  }, [enabled, intervalMs, refresh]);
+  }, [enabled, refresh, safeInterval]);
 }

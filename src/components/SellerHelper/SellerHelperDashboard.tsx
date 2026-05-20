@@ -1,9 +1,9 @@
 "use client";
 
-import React, { startTransition, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
-import { ConceptionSection } from "./ConceptionSection";
 import {
   useConceptionAdminData,
   type ConceptionAdminInitialData,
@@ -12,10 +12,9 @@ import { sortByImportance } from "@/lib/importance-ranking";
 import type { ConceptionOverviewDto } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
 import { ProgressBar, TrafficChart } from "./charts";
-import { AiRecommendationsContent, AlertsContent, UserBehaviorContent } from "./sections";
+import { UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
 import { SecurityTabContent } from "./security-tab";
-import { TimelineContent } from "./timeline-tab";
 import { SELLER_HELPER_NAV, SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
 import {
   sellerAccentStrip,
@@ -42,6 +41,25 @@ import {
 } from "./layout";
 
 const NAV = SELLER_HELPER_NAV;
+
+function SectionLoading({ label }: { label: string }) {
+  return <div className={sellerPlaceholder}>Loading {label}…</div>;
+}
+
+const TimelineContent = dynamic(
+  () => import("./timeline-tab").then((m) => m.TimelineContent),
+  { loading: () => <SectionLoading label="timeline" /> }
+);
+
+const AiRecommendationsContent = dynamic(
+  () => import("./sections").then((m) => m.AiRecommendationsContent),
+  { loading: () => <SectionLoading label="AI recommendations" /> }
+);
+
+const AlertsContent = dynamic(
+  () => import("./sections").then((m) => m.AlertsContent),
+  { loading: () => <SectionLoading label="alerts" /> }
+);
 
 function SectionHeading({
   title,
@@ -297,16 +315,13 @@ type SellerHelperDashboardProps = {
   variant?: "default" | "admin";
 };
 
-export default function SellerHelperDashboard({
+function SellerHelperDashboardInner({
   initialData,
   initialError = null,
   variant = "default",
 }: SellerHelperDashboardProps) {
   const isAdminEmbed = variant === "admin";
   const [activeNav, setActiveNav] = useState<SellerHelperNavItem>("Dashboard");
-  const [visitedSections, setVisitedSections] = useState<Set<SellerHelperNavItem>>(
-    () => new Set<SellerHelperNavItem>(["Dashboard"])
-  );
   const {
     overview,
     alerts,
@@ -327,49 +342,15 @@ export default function SellerHelperDashboard({
     clearAllAlerts,
     clearAllSecurity,
     dismissVitrinaAfterQuickFix,
-  } = useConceptionAdminData(initialData, initialError);
+  } = useConceptionAdminData(initialData, initialError, {
+    liveRefreshIntervalMs: isAdminEmbed ? 60_000 : 5_000,
+  });
 
   const trafficSeries = overview?.trafficHourlyNormalized ?? [];
 
   const handleNavigateSection = useCallback((section: SellerHelperNavItem) => {
     setActiveNav(section);
   }, []);
-
-  useEffect(() => {
-    setVisitedSections((current) => {
-      if (current.has(activeNav)) return current;
-      const next = new Set(current);
-      next.add(activeNav);
-      return next;
-    });
-  }, [activeNav]);
-
-  useEffect(() => {
-    if (!isAdminEmbed) return;
-    const preloadAll = () => {
-      setVisitedSections((current) => {
-        if (current.size >= NAV.length) return current;
-        return new Set(NAV);
-      });
-    };
-    const idleId = window.requestIdleCallback?.(preloadAll, { timeout: 1200 });
-    const timeoutId = idleId == null ? window.setTimeout(preloadAll, 400) : undefined;
-    return () => {
-      if (idleId != null) window.cancelIdleCallback?.(idleId);
-      if (timeoutId != null) window.clearTimeout(timeoutId);
-    };
-  }, [isAdminEmbed]);
-
-  const section = (item: SellerHelperNavItem, content: React.ReactNode) => (
-    <ConceptionSection
-      key={item}
-      active={activeNav === item}
-      mounted={visitedSections.has(item)}
-      sectionId={`seller-helper-section-${item.replace(/\s+/g, "-").toLowerCase()}`}
-    >
-      {content}
-    </ConceptionSection>
-  );
 
   return (
     <div className={sellerHelperStack}>
@@ -474,28 +455,28 @@ export default function SellerHelperDashboard({
       </div>
 
       <div id="seller-helper-active-section" className="min-h-[12rem]">
-        {section(
-          "Dashboard",
+        {activeNav === "Dashboard" ?
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
-        )}
-        {section("Timeline", <TimelineContent />)}
-        {section(
-          "User Behavior",
+        : null}
+        {activeNav === "Timeline" ?
+          <TimelineContent />
+        : null}
+        {activeNav === "User Behavior" ?
           <UserBehaviorContent
             behavior={overview?.userBehavior ?? null}
             onNavigateSection={handleNavigateSection}
           />
-        )}
-        {section("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
-        {section(
-          "Vitrina Recommendation",
+        : null}
+        {activeNav === "Conversion Funnel" ?
+          <ConversionFunnelContent overview={overview} />
+        : null}
+        {activeNav === "Vitrina Recommendation" ?
           <VitrinaRecommendationsContent
             recommendations={vitrinaRecommendations}
             onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
           />
-        )}
-        {section(
-          "AI Recommendations",
+        : null}
+        {activeNav === "AI Recommendations" ?
           <AiRecommendationsContent
             recommendations={recommendations}
             overview={overview}
@@ -504,9 +485,8 @@ export default function SellerHelperDashboard({
             onSendRecommendationEmail={sendRecommendationEmail}
             onClearAllRecommendations={clearAllRecommendations}
           />
-        )}
-        {section(
-          "Alerts",
+        : null}
+        {activeNav === "Alerts" ?
           <AlertsContent
             alerts={alerts}
             resolvedAlerts={resolvedAlerts}
@@ -515,12 +495,13 @@ export default function SellerHelperDashboard({
             onDismissAlert={dismissAlert}
             onClearAllAlerts={clearAllAlerts}
           />
-        )}
-        {section(
-          "Security",
+        : null}
+        {activeNav === "Security" ?
           <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
-        )}
+        : null}
       </div>
     </div>
   );
 }
+
+export default memo(SellerHelperDashboardInner);

@@ -49,10 +49,19 @@ function getInitialVitrinaRecommendations() {
   return filterOutQuickFixAppliedRecommendations(readCachedVitrinaRecommendations());
 }
 
+export type UseConceptionAdminDataOptions = {
+  /** Background poll interval (default 5s). Use 60s+ in embedded admin to avoid UI jank. */
+  liveRefreshIntervalMs?: number;
+  liveRefreshEnabled?: boolean;
+};
+
 export function useConceptionAdminData(
   initialData?: ConceptionAdminInitialData,
-  initialError: string | null = null
+  initialError: string | null = null,
+  options?: UseConceptionAdminDataOptions
 ) {
+  const liveRefreshIntervalMs = options?.liveRefreshIntervalMs ?? 5_000;
+  const liveRefreshEnabled = options?.liveRefreshEnabled ?? true;
   const [state, setState] = useState<State>({
     overview: initialData?.overview ?? null,
     alerts: initialData?.alerts ?? [],
@@ -157,7 +166,7 @@ export function useConceptionAdminData(
   }, []);
 
   const refreshLive = useCallback(() => load({ background: true }), [load]);
-  useLiveDataRefresh(refreshLive);
+  useLiveDataRefresh(refreshLive, liveRefreshEnabled, liveRefreshIntervalMs);
 
   const dismissAlert = useCallback(async (id: string, disposition: "resolved" | "ignored" = "resolved") => {
     setState((s) => ({ ...s, actionMessage: null }));

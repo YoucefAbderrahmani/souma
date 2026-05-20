@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useActionState, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { KeepAlivePanel } from "@/components/SellerHelper/ConceptionSection";
+import { AdminTabBar, type AdminMainTab } from "./AdminTabBar";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
@@ -49,19 +48,21 @@ type Props = {
   conceptionInitialError?: string | null;
 };
 
-type AdminMainTab = "users" | "add-product" | "products" | "tracking" | "role-emails" | "seller-helper";
-
-const ADMIN_TABS: AdminMainTab[] = [
-  "users",
-  "add-product",
-  "products",
-  "tracking",
-  "role-emails",
-  "seller-helper",
-];
-
-function isAdminMainTab(value: string | null): value is AdminMainTab {
-  return value != null && ADMIN_TABS.includes(value as AdminMainTab);
+function readAdminTabFromUrl(): AdminMainTab {
+  if (typeof window === "undefined") return "users";
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  if (tab === "conception") return "seller-helper";
+  if (
+    tab === "users" ||
+    tab === "add-product" ||
+    tab === "products" ||
+    tab === "tracking" ||
+    tab === "role-emails" ||
+    tab === "seller-helper"
+  ) {
+    return tab;
+  }
+  return "users";
 }
 
 const initialState: CreateProductState = {};
@@ -78,14 +79,7 @@ export default function AdminPanels({
   conceptionInitialData,
   conceptionInitialError = null,
 }: Props) {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const initialTab: AdminMainTab =
-    tabParam === "conception" ? "seller-helper"
-    : isAdminMainTab(tabParam) ? tabParam
-    : "users";
-  const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
-  const [visitedTabs, setVisitedTabs] = useState<Set<AdminMainTab>>(() => new Set([initialTab]));
+  const [activeTab, setActiveTab] = useState<AdminMainTab>(readAdminTabFromUrl);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
@@ -152,25 +146,15 @@ export default function AdminPanels({
   }, [addVitrinaMode, addPriceInput]);
 
   useEffect(() => {
-    if (tabParam === "conception" && typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "conception") {
       window.history.replaceState(null, "", "/admin?tab=seller-helper");
     }
-  }, [tabParam]);
+  }, []);
 
   useEffect(() => {
-    const onPopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab === "conception") {
-        setActiveTab("seller-helper");
-        setVisitedTabs((prev) => new Set(prev).add("seller-helper"));
-        return;
-      }
-      if (isAdminMainTab(tab)) {
-        setActiveTab(tab);
-        setVisitedTabs((prev) => new Set(prev).add(tab));
-      }
-    };
+    const onPopState = () => setActiveTab(readAdminTabFromUrl());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -184,102 +168,16 @@ export default function AdminPanels({
 
   const switchTab = useCallback((tab: AdminMainTab) => {
     setActiveTab(tab);
-    setVisitedTabs((prev) => {
-      if (prev.has(tab)) return prev;
-      const next = new Set(prev);
-      next.add(tab);
-      return next;
-    });
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/admin?tab=${tab}`);
     }
   }, []);
 
-  const renderAdminTab = useCallback(
-    (tab: AdminMainTab, children: React.ReactNode) => {
-      if (!visitedTabs.has(tab)) return null;
-      return (
-        <KeepAlivePanel active={activeTab === tab} mounted sectionId={`admin-tab-${tab}`}>
-          {children}
-        </KeepAlivePanel>
-      );
-    },
-    [activeTab, visitedTabs]
-  );
-
   return (
     <div className="mt-10 space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => switchTab("users")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "users"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Users
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("add-product")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "add-product"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Add Items
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("products")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "products"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Stock & Edit Items
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("tracking")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "tracking"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Analytics tracking
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("role-emails")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "role-emails"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Assign role emails
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab("seller-helper")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === "seller-helper"
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
-        >
-          Seller Helper
-        </button>
-      </div>
+      <AdminTabBar activeTab={activeTab} onSelect={switchTab} />
 
-      {renderAdminTab(
-        "seller-helper",
+      {activeTab === "seller-helper" ?
         <section className="mt-6">
           <SellerHelperDashboard
             variant="admin"
@@ -287,10 +185,9 @@ export default function AdminPanels({
             initialError={conceptionInitialError}
           />
         </section>
-      )}
+      : null}
 
-      {renderAdminTab(
-        "users",
+      {activeTab === "users" ?
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Users" value={userStats.total} />
@@ -342,10 +239,9 @@ export default function AdminPanels({
             </div>
           </div>
         </section>
-      )}
+      : null}
 
-      {renderAdminTab(
-        "add-product",
+      {activeTab === "add-product" ?
         <section className="mt-6">
           <form action={createAction} encType="multipart/form-data">
             <ProductFormShell
@@ -908,10 +804,9 @@ export default function AdminPanels({
             ) : null}
           </form>
         </section>
-      )}
+      : null}
 
-      {renderAdminTab(
-        "products",
+      {activeTab === "products" ?
         <section className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Products" value={productStats.total} />
@@ -1038,21 +933,19 @@ export default function AdminPanels({
             />
           ) : null}
         </section>
-      )}
+      : null}
 
-      {renderAdminTab(
-        "tracking",
+      {activeTab === "tracking" ?
         <section className="mt-2">
           <ProductAnalyticsTrackingPanel />
         </section>
-      )}
+      : null}
 
-      {renderAdminTab(
-        "role-emails",
+      {activeTab === "role-emails" ?
         <section className="mt-2">
           <RecommendationRoleEmailsPanel />
         </section>
-      )}
+      : null}
     </div>
   );
 }
