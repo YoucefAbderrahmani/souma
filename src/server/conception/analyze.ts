@@ -1,10 +1,15 @@
 import { runConceptionLlmAnalysis } from "@/server/conception/llm-analysis";
 import { buildConceptionAnalyzeSignals } from "@/server/conception/metrics";
+import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
+import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
+import { attachAssignedRoleToRecommendationRow } from "@/server/conception/recommendation-role-enrich";
 import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
 import { writeVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
+import { autoSendRecommendationEmails } from "@/server/email/auto-send-recommendation-emails";
+import { isMoosendAutomatedEmailEnabled } from "@/server/email/moosend-config";
 
 function dayFingerprint(prefix: string): string {
   const d = new Date();
@@ -19,6 +24,8 @@ function hourFingerprint(prefix: string): string {
 export type ConceptionAnalyzeResult = {
   insertedAlerts: number;
   insertedRecommendations: number;
+  emailsSent: number;
+  emailsFailed: number;
   llmUsed: boolean;
   llmSummary: string | null;
   llmError: string | null;
@@ -35,6 +42,7 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
 
   let insertedAlerts = 0;
   let insertedRecommendations = 0;
+  const newRecommendationIds: string[] = [];
 
   const alerts: (typeof conceptionAlertTable.$inferInsert)[] = [];
 
@@ -113,58 +121,86 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     if (r.length > 0) insertedAlerts += 1;
   }
 
+  const economicsCtx = await buildRecommendationEconomicsContext();
   const recs: (typeof conceptionRecommendationTable.$inferInsert)[] = [];
   const f = s.funnel7;
 
-  if (f.nProduct > 0 && f.nCart / f.nProduct < 0.35) {
-    recs.push({
-      priority: "high",
-      impactLabel: "+4–8% conversion (est.)",
-      title: "Strengthen intent between product page and cart",
-      analysis: `Only ${(100 * (f.nCart / f.nProduct)).toFixed(1)}% of product views lead to an add-to-cart click.`,
-      recommendation:
-        "Clarify all-in price, availability, and shipping above the fold; strengthen reviews and guarantees near the primary CTA.",
-      confidence: 82,
-      revenueHint: "—",
-      implementationHint: "2–4 jours",
-      roiHint: "—",
-      evidenceJson: JSON.stringify({ step: "product_to_cart", ratio: f.nCart / f.nProduct }),
-      fingerprint: dayFingerprint("REC_FUNNEL_PRODUCT_CART"),
+  const enrichDraft = async (
+    draft: typeof conceptionRecommendationTable.$inferInsert
+  ) => {
+    const hints = ensureRecommendationEconomicsHints(
+      {
+        priority: draft.priority as "critical" | "high" | "medium" | "low",
+        impactLabel: draft.impactLabel,
+        confidence: draft.confidence,
+        title: draft.title,
+        revenueHint: draft.revenueHint,
+        roiHint: draft.roiHint,
+      },
+      economicsCtx
+    );
+    return attachAssignedRoleToRecommendationRow({
+      ...draft,
+      revenueHint: hints.revenueHint,
+      roiHint: hints.roiHint,
     });
+  };
+
+  if (f.nProduct > 0 && f.nCart / f.nProduct < 0.35) {
+    recs.push(
+      await enrichDraft({
+        priority: "high",
+        impactLabel: "+4–8% conversion (est.)",
+        title: "Strengthen intent between product page and cart",
+        analysis: `Only ${(100 * (f.nCart / f.nProduct)).toFixed(1)}% of product views lead to an add-to-cart click.`,
+        recommendation:
+          "Clarify all-in price, availability, and shipping above the fold; strengthen reviews and guarantees near the primary CTA.",
+        confidence: 82,
+        revenueHint: null,
+        implementationHint: "2–4 jours",
+        roiHint: null,
+        evidenceJson: JSON.stringify({ step: "product_to_cart", ratio: f.nCart / f.nProduct }),
+        fingerprint: dayFingerprint("REC_FUNNEL_PRODUCT_CART"),
+      })
+    );
   }
 
   if (f.nCart > 0 && f.nCheckoutPath / f.nCart < 0.45) {
-    recs.push({
-      priority: "high",
-      impactLabel: "+5–10% conversion (est.)",
-      title: "Reduce cart → checkout friction",
-      analysis: `${(100 * (1 - f.nCheckoutPath / f.nCart)).toFixed(1)}% of sessions with purchase intent never reach a checkout step.`,
-      recommendation:
-        "Enable guest checkout, reduce form fields on mobile, show shipping costs early, and add a funnel progress bar.",
-      confidence: 88,
-      revenueHint: "—",
-      implementationHint: "3–5 jours",
-      roiHint: "—",
-      evidenceJson: JSON.stringify({ step: "cart_to_checkout", ratio: f.nCheckoutPath / f.nCart }),
-      fingerprint: dayFingerprint("REC_FUNNEL_CART_CHECKOUT"),
-    });
+    recs.push(
+      await enrichDraft({
+        priority: "high",
+        impactLabel: "+5–10% conversion (est.)",
+        title: "Reduce cart → checkout friction",
+        analysis: `${(100 * (1 - f.nCheckoutPath / f.nCart)).toFixed(1)}% of sessions with purchase intent never reach a checkout step.`,
+        recommendation:
+          "Enable guest checkout, reduce form fields on mobile, show shipping costs early, and add a funnel progress bar.",
+        confidence: 88,
+        revenueHint: null,
+        implementationHint: "3–5 jours",
+        roiHint: null,
+        evidenceJson: JSON.stringify({ step: "cart_to_checkout", ratio: f.nCheckoutPath / f.nCart }),
+        fingerprint: dayFingerprint("REC_FUNNEL_CART_CHECKOUT"),
+      })
+    );
   }
 
   if (s.lcpSlowSessions >= 3) {
-    recs.push({
-      priority: "medium",
-      impactLabel: "+2–4% conversion (est.)",
-      title: "Optimize product page LCP",
-      analysis: "Multiple sessions show LCP above 4 s, which increases bounce before interaction.",
-      recommendation:
-        "Compress visuals (WebP/AVIF), lazy-load below the fold, prioritize the hero, and limit third-party scripts on the product page.",
-      confidence: 76,
-      revenueHint: "—",
-      implementationHint: "1–3 jours",
-      roiHint: "—",
-      evidenceJson: JSON.stringify({ lcpSlowSessions: s.lcpSlowSessions }),
-      fingerprint: dayFingerprint("REC_LCP_PERF"),
-    });
+    recs.push(
+      await enrichDraft({
+        priority: "medium",
+        impactLabel: "+2–4% conversion (est.)",
+        title: "Optimize product page LCP",
+        analysis: "Multiple sessions show LCP above 4 s, which increases bounce before interaction.",
+        recommendation:
+          "Compress visuals (WebP/AVIF), lazy-load below the fold, prioritize the hero, and limit third-party scripts on the product page.",
+        confidence: 76,
+        revenueHint: null,
+        implementationHint: "1–3 jours",
+        roiHint: null,
+        evidenceJson: JSON.stringify({ lcpSlowSessions: s.lcpSlowSessions }),
+        fingerprint: dayFingerprint("REC_LCP_PERF"),
+      })
+    );
   }
 
   for (const row of recs) {
@@ -173,7 +209,10 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
       .values(row)
       .onConflictDoNothing({ target: conceptionRecommendationTable.fingerprint })
       .returning({ id: conceptionRecommendationTable.id });
-    if (ins.length > 0) insertedRecommendations += 1;
+    if (ins.length > 0) {
+      insertedRecommendations += 1;
+      newRecommendationIds.push(ins[0].id);
+    }
   }
 
   let llmUsed = false;
@@ -203,7 +242,10 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
           .values(recommendation)
           .onConflictDoNothing({ target: conceptionRecommendationTable.fingerprint })
           .returning({ id: conceptionRecommendationTable.id });
-        if (inserted.length > 0) insertedRecommendations += 1;
+        if (inserted.length > 0) {
+          insertedRecommendations += 1;
+          newRecommendationIds.push(inserted[0].id);
+        }
       }
     }
   } catch (error) {
@@ -219,9 +261,26 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     console.error("[conception/analyze][vitrina]", error);
   }
 
+  let emailsSent = 0;
+  let emailsFailed = 0;
+  const autoSendOnAnalyze =
+    isMoosendAutomatedEmailEnabled() &&
+    process.env.MOOSEND_AUTO_SEND_ON_ANALYZE?.trim().toLowerCase() !== "false";
+
+  if (autoSendOnAnalyze && newRecommendationIds.length > 0) {
+    const emailResult = await autoSendRecommendationEmails(newRecommendationIds);
+    emailsSent = emailResult.sent;
+    emailsFailed = emailResult.failed;
+    if (emailResult.errors.length > 0) {
+      console.warn("[conception/analyze][auto-email]", emailResult.errors.join("; "));
+    }
+  }
+
   return {
     insertedAlerts,
     insertedRecommendations,
+    emailsSent,
+    emailsFailed,
     llmUsed,
     llmSummary,
     llmError,

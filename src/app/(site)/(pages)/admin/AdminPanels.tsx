@@ -6,6 +6,7 @@ import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
 import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
+import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
 import {
   pf,
   productFormSectionIds,
@@ -43,7 +44,7 @@ type Props = {
   products: AdminProduct[];
 };
 
-type AdminMainTab = "users" | "add-product" | "products" | "tracking";
+type AdminMainTab = "users" | "add-product" | "products" | "tracking" | "role-emails";
 
 const initialState: CreateProductState = {};
 
@@ -58,7 +59,12 @@ export default function AdminPanels({ users, products }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const initialTab: AdminMainTab =
-    tabParam === "add-product" || tabParam === "products" || tabParam === "tracking" ? tabParam : "users";
+    tabParam === "add-product" ||
+    tabParam === "products" ||
+    tabParam === "tracking" ||
+    tabParam === "role-emails"
+      ? tabParam
+      : "users";
   const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
@@ -130,7 +136,12 @@ export default function AdminPanels({ users, products }: Props) {
       router.replace("/seller-helper");
       return;
     }
-    if (tabParam === "add-product" || tabParam === "products" || tabParam === "tracking") {
+    if (
+      tabParam === "add-product" ||
+      tabParam === "products" ||
+      tabParam === "tracking" ||
+      tabParam === "role-emails"
+    ) {
       setActiveTab(tabParam);
       return;
     }
@@ -195,6 +206,17 @@ export default function AdminPanels({ users, products }: Props) {
           }`}
         >
           Analytics tracking
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("role-emails")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+            activeTab === "role-emails"
+              ? "bg-orange text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Assign role emails
         </button>
       </div>
 
@@ -949,6 +971,12 @@ export default function AdminPanels({ users, products }: Props) {
       {activeTab === "tracking" && (
         <section className="mt-2">
           <ProductAnalyticsTrackingPanel />
+        </section>
+      )}
+
+      {activeTab === "role-emails" && (
+        <section className="mt-2">
+          <RecommendationRoleEmailsPanel />
         </section>
       )}
     </div>

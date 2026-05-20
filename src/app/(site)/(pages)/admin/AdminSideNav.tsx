@@ -34,6 +34,9 @@ export default function AdminSideNav() {
         <Link href="/admin?tab=tracking" className={linkClass(onAdminHome && tab === "tracking")}>
           Analytics tracking
         </Link>
+        <Link href="/admin?tab=role-emails" className={linkClass(onAdminHome && tab === "role-emails")}>
+          Assign role emails
+        </Link>
       </div>
 
       <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">

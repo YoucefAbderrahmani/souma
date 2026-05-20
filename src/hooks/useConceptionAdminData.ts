@@ -204,6 +204,38 @@ export function useConceptionAdminData(
     }
   }, []);
 
+  const sendRecommendationEmail = useCallback(async (id: string) => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/recommendations/send-email", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendationId: id }),
+      });
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        ok?: boolean;
+      }>(res, "Send recommendation email API");
+
+      if (!res.ok || body.ok === false) {
+        throw new Error(body.message || body.error || "Failed to send email");
+      }
+
+      const successMessage = body.message || "Email sent automatically via Moosend.";
+
+      setState((s) => ({ ...s, actionMessage: successMessage }));
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, []);
+
   const dismissRecommendation = useCallback(async (id: string) => {
     setState((s) => ({ ...s, actionMessage: null }));
     try {
@@ -274,6 +306,8 @@ export function useConceptionAdminData(
         message?: string;
         insertedAlerts?: number;
         insertedRecommendations?: number;
+        emailsSent?: number;
+        emailsFailed?: number;
         llmUsed?: boolean;
         llmSummary?: string;
         llmError?: string;
@@ -283,6 +317,8 @@ export function useConceptionAdminData(
       if (!res.ok) throw new Error(body.message || body.error || "Analyze failed");
       const insertedAlerts = Number(body.insertedAlerts ?? 0);
       const insertedRecommendations = Number(body.insertedRecommendations ?? 0);
+      const emailsSent = Number(body.emailsSent ?? 0);
+      const emailsFailed = Number(body.emailsFailed ?? 0);
       const llmUsed = Boolean(body.llmUsed);
       const llmSummary = typeof body.llmSummary === "string" ? body.llmSummary : null;
       const llmError = typeof body.llmError === "string" ? body.llmError : null;
@@ -292,6 +328,12 @@ export function useConceptionAdminData(
       : [];
 
       let analyzeMessage = `Analysis complete — ${insertedAlerts} alert(s), ${insertedRecommendations} recommendation(s), ${vitrinaRecommendations.length} storefront recommendation(s).`;
+      if (emailsSent > 0) {
+        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically via Moosend.`;
+      }
+      if (emailsFailed > 0) {
+        analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) could not be sent (check MOOSEND_API_KEY, EMAIL_FROM, and role addresses).`;
+      }
       if (llmUsed && llmSummary) {
         analyzeMessage = `${analyzeMessage} AI summary (${llmModel ?? "LLM"}): ${llmSummary}`;
       } else if (llmError) {
@@ -357,6 +399,7 @@ export function useConceptionAdminData(
     runAnalyze,
     dismissAlert,
     dismissRecommendation,
+    sendRecommendationEmail,
     clearAllRecommendations,
     dismissVitrinaAfterQuickFix,
   };

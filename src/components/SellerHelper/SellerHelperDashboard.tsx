@@ -314,6 +314,7 @@ export default function SellerHelperDashboard({
     actionMessage,
     dismissAlert,
     dismissRecommendation,
+    sendRecommendationEmail,
     clearAllRecommendations,
     dismissVitrinaAfterQuickFix,
   } = useConceptionAdminData(initialData, initialError);
@@ -442,6 +443,7 @@ export default function SellerHelperDashboard({
             overview={overview}
             onNavigateSection={handleNavigateSection}
             onDismissRecommendation={dismissRecommendation}
+            onSendRecommendationEmail={sendRecommendationEmail}
             onClearAllRecommendations={clearAllRecommendations}
           />
         )}

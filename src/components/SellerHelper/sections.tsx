@@ -24,8 +24,9 @@ import type {
 } from "@/types/conception-admin";
 import { sortByImportance } from "@/lib/importance-ranking";
 import { cn } from "@/lib/utils";
-import { ProgressBar } from "./charts";
 import { ProductPageHeatmap } from "./ProductPageHeatmap";
+import { AiRecommendationCard } from "./AiRecommendationCard";
+import { mapConceptionRecommendationToCard } from "./ai-recommendation-card-utils";
 import type { SellerHelperNavItem } from "./nav";
 import {
   sellerGhostButton,
@@ -66,17 +67,26 @@ function SectionHeading({
   title,
   description,
   icon: Icon,
+  count,
 }: {
   title: string;
   description: string;
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  count?: number;
 }) {
   return (
     <div className="space-y-1">
-      <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
-        {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
-        {title}
-      </h3>
+      <div className="flex flex-wrap items-center gap-3">
+        <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
+          {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
+          {title}
+        </h3>
+        {count != null && count > 0 ?
+          <span className="rounded-full bg-orange px-2.5 py-0.5 text-[13px] font-bold text-white tabular-nums">
+            {count}
+          </span>
+        : null}
+      </div>
       <p className="text-custom-sm text-dark-4">{description}</p>
     </div>
   );
@@ -382,51 +392,28 @@ export function UserBehaviorContent({
   );
 }
 
-function aiRecPriorityStyles(tier: ConceptionRecommendationDto["priority"]) {
-  if (tier === "critical") {
-    return "bg-red text-white ring-1 ring-red-dark";
-  }
-  if (tier === "high") {
-    return "bg-red-light-6 text-red-dark ring-1 ring-red-light-3";
-  }
-  if (tier === "medium") {
-    return "bg-orange/10 text-orange-dark ring-1 ring-orange/25";
-  }
-  return "bg-gray-2 text-dark-4 ring-1 ring-gray-3";
-}
-
 export function AiRecommendationsContent({
   recommendations,
   overview,
   onNavigateSection,
   onDismissRecommendation,
+  onSendRecommendationEmail,
   onClearAllRecommendations,
 }: {
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
   onNavigateSection?: (section: SellerHelperNavItem) => void;
   onDismissRecommendation?: (id: string) => Promise<boolean>;
+  onSendRecommendationEmail?: (id: string) => Promise<boolean>;
   onClearAllRecommendations?: () => Promise<boolean>;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [emailBusyKey, setEmailBusyKey] = useState<string | null>(null);
   const [clearAllBusy, setClearAllBusy] = useState(false);
 
   const recs = useMemo(
-    () =>
-      sortByImportance(recommendations, (rec) => rec.priority).map((rec) => ({
-        key: rec.id,
-        priority: rec.priorityLabel,
-        tier: rec.priority,
-        impact: rec.impactLabel ?? "—",
-        title: rec.title,
-        confidence: rec.confidence,
-        analyse: rec.analysis,
-        recommendation: rec.recommendation,
-        revenue: rec.revenueHint ?? "—",
-        implementation: rec.implementationHint ?? "—",
-        roi: rec.roiHint ?? "—",
-      })),
+    () => sortByImportance(recommendations, (rec) => rec.priority).map(mapConceptionRecommendationToCard),
     [recommendations]
   );
 
@@ -435,6 +422,13 @@ export function AiRecommendationsContent({
     const dismissed = await onDismissRecommendation?.(key);
     if (dismissed && expandedKey === key) setExpandedKey(null);
     setBusyKey(null);
+  };
+
+  const sendRecommendationEmail = async (key: string) => {
+    if (!onSendRecommendationEmail) return;
+    setEmailBusyKey(key);
+    await onSendRecommendationEmail(key);
+    setEmailBusyKey(null);
   };
 
   const summary = [
@@ -458,6 +452,7 @@ export function AiRecommendationsContent({
         title="AI Recommendations"
         description="Saved recommendations from the last LLM analysis (OpenRouter / Gemini), grounded in live telemetry and your product catalogue from the database. Run Analyze now to refresh."
         icon={Lightbulb}
+        count={recs.length}
       />
       {recommendations.length > 0 && onClearAllRecommendations ?
         <div className="flex flex-wrap justify-end gap-2">
@@ -502,91 +497,31 @@ export function AiRecommendationsContent({
           <div className="rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-6 text-center text-custom-sm text-dark-4">
             No active recommendations right now.
           </div>
-        : recs.map((rec) => (
-          <Panel key={rec.key}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <span
-                className={cn(
-                  "inline-flex w-fit rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
-                  aiRecPriorityStyles(rec.tier)
-                )}
-              >
-                {rec.priority}
-              </span>
-              <p className="text-custom-sm text-dark-4">
-                Estimated impact: <span className="font-semibold text-orange">{rec.impact}</span>
-              </p>
-            </div>
-
-            <div className="mt-3 flex flex-col gap-3 border-t border-gray-3 pt-3 sm:flex-row sm:items-start sm:justify-between">
-              <h4 className="text-base font-semibold leading-snug text-dark sm:max-w-[65%]">{rec.title}</h4>
-              <div className="shrink-0 sm:text-right">
-                <p className="text-xs font-medium uppercase tracking-wide text-dark-4">AI confidence</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-dark">{rec.confidence}%</p>
-                <ProgressBar value={rec.confidence} className="mt-2 sm:ml-auto sm:w-28" />
-              </div>
-            </div>
-
-            <div className={cn(sellerInsightRow, sellerInsightTone.info, "mt-3")}>
-              <span className={sellerInsightBadge.info}>Analysis</span>
-              <p className="min-w-0 flex-1 text-custom-sm leading-relaxed text-dark-3">{rec.analyse}</p>
-            </div>
-
-            <div className={cn(sellerInsightRow, sellerInsightTone.guidance, "mt-3")}>
-              <span className={sellerInsightBadge.guidance}>Recommendation</span>
-              <p className="min-w-0 flex-1 text-custom-sm leading-relaxed text-dark-3">{rec.recommendation}</p>
-            </div>
-
-            <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-gray-3 pt-3 sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-dark-4">Estimated revenue</dt>
-                <dd className="mt-1 text-lg font-semibold tabular-nums text-dark">{rec.revenue}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-dark-4">Implementation time</dt>
-                <dd className="mt-1 text-lg font-semibold text-dark-3">{rec.implementation}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-dark-4">Estimated ROI</dt>
-                <dd className="mt-1 text-lg font-semibold text-orange">{rec.roi}</dd>
-              </div>
-            </dl>
-
-            {expandedKey === rec.key ?
-              <div className="mt-3 rounded-lg border border-gray-3 bg-gray-1 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-dark-4">Full details</p>
-                <p className="mt-2 text-custom-sm leading-relaxed text-dark-3">{rec.analyse}</p>
-                <p className="mt-3 text-custom-sm leading-relaxed text-dark-3">{rec.recommendation}</p>
-              </div>
-            : null}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={busyKey === rec.key}
-                onClick={() => onNavigateSection?.(resolveImplementationSection(rec.title, rec.recommendation))}
-                className={sellerPrimaryButton}
-              >
-                Implement this recommendation
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpandedKey((current) => (current === rec.key ? null : rec.key))}
-                className={sellerSecondaryButton}
-              >
-                {expandedKey === rec.key ? "Hide details" : "More details"}
-              </button>
-              <button
-                type="button"
-                disabled={busyKey === rec.key}
-                onClick={() => void dismissRecommendation(rec.key)}
-                className={sellerGhostButton}
-              >
-                Dismiss
-              </button>
-            </div>
-          </Panel>
-        ))}
+        : <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(auto-fill,minmax(400px,1fr))]">
+            {recs.map((rec, index) => (
+              <AiRecommendationCard
+                key={rec.key}
+                rec={rec}
+                animationIndex={index}
+                expanded={expandedKey === rec.key}
+                busy={busyKey === rec.key}
+                onToggleExpand={() =>
+                  setExpandedKey((current) => (current === rec.key ? null : rec.key))
+                }
+                onImplement={() =>
+                  onNavigateSection?.(resolveImplementationSection(rec.title, rec.recommendation))
+                }
+                onDismiss={() => void dismissRecommendation(rec.key)}
+                emailBusy={emailBusyKey === rec.key}
+                onSendEmail={
+                  onSendRecommendationEmail ?
+                    () => void sendRecommendationEmail(rec.key)
+                  : undefined
+                }
+              />
+            ))}
+          </div>
+        }
       </div>
     </div>
   );

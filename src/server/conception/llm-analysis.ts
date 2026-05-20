@@ -8,6 +8,12 @@ import {
   requestOpenRouterChatCompletion,
 } from "@/server/lib/openrouter-client";
 import type { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
+import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
+import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
+import { attachAssignedRoleToRecommendationRow } from "@/server/conception/recommendation-role-enrich";
+import { listRecommendationRoleEmails } from "@/server/conception/recommendation-role-emails-db";
+import { resolveAssignedRoleKey } from "@/server/conception/recommendation-role-assign";
+import { normalizeRoleKey } from "@/lib/recommendation-roles";
 
 const severitySchema = z.enum(["critical", "high", "medium", "low"]);
 const prioritySchema = z.enum(["critical", "high", "medium", "low"]);
@@ -38,6 +44,7 @@ const llmAnalysisSchema = z.object({
         revenueHint: z.string().max(64).optional(),
         implementationHint: z.string().max(64).optional(),
         roiHint: z.string().max(32).optional(),
+        assignedRoleKey: z.string().max(64).optional(),
       })
     )
     .max(8),
@@ -86,10 +93,11 @@ function conceptionGeminiModel() {
 }
 
 async function buildConceptionLlmContext() {
-  const [overview, signals, catalogProducts] = await Promise.all([
+  const [overview, signals, catalogProducts, roleEmails] = await Promise.all([
     buildConceptionOverview(),
     buildConceptionAnalyzeSignals(),
     buildCatalogSnapshotForConceptionLlm(28),
+    listRecommendationRoleEmails(),
   ]);
 
   return {
@@ -106,6 +114,10 @@ async function buildConceptionLlmContext() {
     security: overview.security,
     signals,
     catalogProducts,
+    recommendationRoles: roleEmails.map((r) => ({
+      roleKey: r.roleKey,
+      displayName: r.displayName,
+    })),
   };
 }
 
@@ -146,8 +158,9 @@ Write summary, titles, descriptions, analysis, and recommendation fields in Fren
 Do not invent metrics or products that are absent from the payload. When you cite a product, use a title that appears in catalogProducts or a metric that appears in telemetry.
 Prefer actionable merchandising, pricing, stock, conversion, checkout, performance, and security insights grounded in the supplied numbers.
 Each alert must include alertType (short snake_case code), severity, title, description, optional detail, optional affectedSessionsEstimate.
-Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, and optional revenueHint, implementationHint, roiHint.
-If event data is sparse, produce cautious recommendations and lower confidence instead of fabricating incidents.`;
+Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, revenueHint (estimated incremental revenue in DZD, e.g. "12 500 DA"), roiHint (e.g. "6.2x" or "High (8.5x)"), implementationHint, and assignedRoleKey (one of the role keys provided in the user payload).
+Assign technical/checkout/payment/performance issues to technical_support; merchandising, conversion, pricing, and catalog issues to marketing_agent.
+If event data is sparse, lower confidence and use conservative revenueHint/roiHint grounded in funnel scale — never leave revenueHint or roiHint empty.`;
 }
 
 function buildUserPrompt(context: Awaited<ReturnType<typeof buildConceptionLlmContext>>) {
@@ -183,6 +196,9 @@ function mapLlmOutput(
     revenueHint: recommendation.revenueHint ?? null,
     implementationHint: recommendation.implementationHint ?? null,
     roiHint: recommendation.roiHint ?? null,
+    assignedRoleKey: recommendation.assignedRoleKey
+      ? normalizeRoleKey(recommendation.assignedRoleKey)
+      : null,
     evidenceJson: JSON.stringify({
       source,
       computedAt: context.computedAt,
@@ -198,6 +214,43 @@ function mapLlmOutput(
     recommendations,
     model,
   };
+}
+
+async function enrichRecommendationsWithEconomics(
+  recommendations: (typeof conceptionRecommendationTable.$inferInsert)[]
+) {
+  const economicsCtx = await buildRecommendationEconomicsContext();
+  const roleMap = await listRecommendationRoleEmails();
+  const registeredKeys = roleMap.map((r) => r.roleKey);
+
+  const enriched = await Promise.all(
+    recommendations.map(async (row) => {
+      const hints = ensureRecommendationEconomicsHints(
+        {
+          priority: row.priority as "critical" | "high" | "medium" | "low",
+          impactLabel: row.impactLabel,
+          confidence: row.confidence,
+          title: row.title,
+          revenueHint: row.revenueHint,
+          roiHint: row.roiHint,
+        },
+        economicsCtx
+      );
+      const llmRole = row.assignedRoleKey ? normalizeRoleKey(row.assignedRoleKey) : "";
+      const assignedRoleKey = resolveAssignedRoleKey(
+        llmRole && registeredKeys.includes(llmRole) ? llmRole : null,
+        { title: row.title, analysis: row.analysis, recommendation: row.recommendation },
+        registeredKeys
+      );
+      return attachAssignedRoleToRecommendationRow({
+        ...row,
+        revenueHint: hints.revenueHint,
+        roiHint: hints.roiHint,
+        assignedRoleKey,
+      });
+    })
+  );
+  return enriched;
 }
 
 function asString(value: unknown) {
@@ -307,6 +360,10 @@ function normalizeAnalysisPayload(raw: unknown) {
         revenueHint: limitText(asString(recommendation.revenueHint), 64),
         implementationHint: limitText(asString(recommendation.implementationHint), 64),
         roiHint: limitText(asString(recommendation.roiHint), 32),
+        assignedRoleKey: limitText(
+          asString(recommendation.assignedRoleKey ?? recommendation.role ?? recommendation.assigned_role),
+          64
+        ),
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
@@ -417,7 +474,11 @@ export async function runConceptionLlmAnalysis(): Promise<ConceptionLlmAnalysisR
     try {
       const completion = await requestOpenRouterAnalysisCompletion(system, user);
       const parsed = parseAnalysisJson(completion.raw);
-      return mapLlmOutput(parsed, context, "openrouter", completion.model);
+      const mapped = mapLlmOutput(parsed, context, "openrouter", completion.model);
+      return {
+        ...mapped,
+        recommendations: await enrichRecommendationsWithEconomics(mapped.recommendations),
+      };
     } catch (error) {
       openRouterError = error instanceof Error ? error.message : String(error);
       if (!shouldFallbackToGemini(openRouterError)) {
@@ -430,7 +491,11 @@ export async function runConceptionLlmAnalysis(): Promise<ConceptionLlmAnalysisR
     try {
       const completion = await requestGeminiAnalysisCompletion(system, user);
       const parsed = parseAnalysisJson(completion.raw);
-      return mapLlmOutput(parsed, context, "gemini", completion.model);
+      const mapped = mapLlmOutput(parsed, context, "gemini", completion.model);
+      return {
+        ...mapped,
+        recommendations: await enrichRecommendationsWithEconomics(mapped.recommendations),
+      };
     } catch (error) {
       const geminiError = error instanceof Error ? error.message : String(error);
       if (openRouterError) {

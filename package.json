@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ensure-sales-micro-event-table.mjs && node scripts/ensure-products-description-text.mjs && node scripts/ensure-conception-security-block.mjs && node scripts/ensure-seller-helper-applied-action.mjs && next build",
+    "build": "node scripts/ensure-sales-micro-event-table.mjs && node scripts/ensure-products-description-text.mjs && node scripts/ensure-conception-security-block.mjs && node scripts/ensure-seller-helper-applied-action.mjs && node scripts/ensure-recommendation-role-emails.mjs && next build",
     "db:ensure-sales-micro-event": "node scripts/ensure-sales-micro-event-table.mjs",
     "db:ensure-products-description-text": "node scripts/ensure-products-description-text.mjs",
     "db:ensure-conception-security-block": "node scripts/ensure-conception-security-block.mjs",
     "db:ensure-seller-helper-applied-action": "node scripts/ensure-seller-helper-applied-action.mjs",
+    "db:ensure-recommendation-role-emails": "node scripts/ensure-recommendation-role-emails.mjs",
+    "moosend:list-transactional": "node scripts/list-moosend-transactional-campaigns.mjs",
+    "moosend:test-send": "node scripts/test-moosend-send.mjs",
     "db:seed-products": "tsx scripts/seed-premade-products.ts",
     "db:simulate-traffic": "tsx scripts/simulate-storefront-analytics.ts",
     "db:bulk-7d-activity": "tsx scripts/bulk-simulate-7d-high-activity.ts",
@@ -18,7 +21,14 @@
     "report:html": "node scripts/build-vitrina-application-report.mjs",
     "report:pdf": "node scripts/build-vitrina-application-report.mjs --pdf",
     "report:seller-helper:html": "node scripts/build-seller-helper-report.mjs",
-    "report:seller-helper:pdf": "node scripts/build-seller-helper-report.mjs --pdf"
+    "report:seller-helper:pdf": "node scripts/build-seller-helper-report.mjs --pdf",
+    "report:seller-helper-solution:html": "node scripts/build-seller-helper-solution-report.mjs",
+    "report:seller-helper-solution:pdf": "node scripts/build-seller-helper-solution-report.mjs --pdf",
+    "report:seller-helper-graduation:html": "node scripts/build-seller-helper-graduation-report.mjs",
+    "report:seller-helper-graduation:pdf": "node scripts/build-seller-helper-graduation-report.mjs --pdf",
+    "report:seller-helper-graduation-fr:merge": "node scripts/merge-graduation-fr.mjs",
+    "report:seller-helper-graduation-fr:html": "node scripts/merge-graduation-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs",
+    "report:seller-helper-graduation-fr:pdf": "node scripts/merge-graduation-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs --pdf"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {

@@ -302,19 +302,24 @@ const config: Config = {
   				'0%, 100%': { opacity: '0.04' },
   				'50%': { opacity: '0.1' },
   			},
-  			'conception-chart-line': {
-  				'0%, 100%': { opacity: '0.92' },
-  				'50%': { opacity: '1' },
-  			},
-  		},
-  		animation: {
+			'conception-chart-line': {
+				'0%, 100%': { opacity: '0.92' },
+				'50%': { opacity: '1' },
+			},
+			'ai-rec-slide-in': {
+				from: { opacity: '0', transform: 'translateY(20px)' },
+				to: { opacity: '1', transform: 'translateY(0)' },
+			},
+		},
+		animation: {
   			'conception-aurora': 'conception-aurora 16s ease-in-out infinite',
   			'conception-aurora-slow': 'conception-aurora-slow 22s ease-in-out infinite',
   			'conception-shimmer': 'conception-shimmer 5s ease-in-out infinite',
   			'conception-pulse-glow': 'conception-pulse-glow 3.5s ease-in-out infinite',
   			'conception-grid': 'conception-grid 10s ease-in-out infinite',
-  			'conception-chart-line': 'conception-chart-line 2.8s ease-in-out infinite',
-  		},
+			'conception-chart-line': 'conception-chart-line 2.8s ease-in-out infinite',
+			'ai-rec-slide-in': 'ai-rec-slide-in 0.5s ease forwards',
+		},
   		boxShadow: {
   			'1': '0px 1px 2px 0px rgba(166, 175, 195, 0.25)',
   			'2': '0px 6px 24px 0px rgba(235, 238, 251, 0.40), 0px 2px 4px 0px rgba(148, 163, 184, 0.05)',

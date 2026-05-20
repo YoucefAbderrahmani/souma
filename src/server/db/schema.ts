@@ -295,6 +295,15 @@ export const sellerHelperAppliedActionTable = pgTable("seller_helper_applied_act
   occurredAt: timestamp("occurred_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+/** Admin-configured email targets for AI recommendation handoff (e.g. marketing_agent). */
+export const recommendationRoleEmailTable = pgTable("recommendation_role_email", {
+  roleKey: varchar("role_key", { length: 64 }).primaryKey(),
+  displayName: varchar("display_name", { length: 120 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().default(""),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 /** Rule-based / engine-generated recommendations surfaced in the Conception admin UI */
 export const conceptionRecommendationTable = pgTable(
   "conception_recommendation",
@@ -309,6 +318,7 @@ export const conceptionRecommendationTable = pgTable(
     revenueHint: varchar("revenue_hint", { length: 64 }),
     implementationHint: varchar("implementation_hint", { length: 64 }),
     roiHint: varchar("roi_hint", { length: 32 }),
+    assignedRoleKey: varchar("assigned_role_key", { length: 64 }),
     evidenceJson: text("evidence_json"),
     fingerprint: varchar("fingerprint", { length: 160 }).notNull(),
     dismissedAt: timestamp("dismissed_at", { mode: "date" }),

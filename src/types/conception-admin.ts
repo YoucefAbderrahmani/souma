@@ -227,5 +227,15 @@ export type ConceptionRecommendationDto = {
   revenueHint: string | null;
   implementationHint: string | null;
   roiHint: string | null;
+  assignedRoleKey: string;
+  assignedRoleLabel: string;
+  roleEmailConfigured: boolean;
   createdAt: string;
+};
+
+export type RecommendationRoleEmailDto = {
+  roleKey: string;
+  displayName: string;
+  email: string;
+  updatedAt: string;
 };

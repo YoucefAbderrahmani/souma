@@ -2,6 +2,10 @@ import { desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import { compareImportance, normalizeImportanceTier, sortByImportance } from "@/lib/importance-ranking";
+import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
+import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
+import { resolveAssignedRoleKey } from "@/server/conception/recommendation-role-assign";
+import { getRoleEmailMap } from "@/server/conception/recommendation-role-emails-db";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import type {
   ConceptionAlertDto,
@@ -224,30 +228,110 @@ export async function listConceptionRecommendationsForAdmin(options?: {
   limit?: number;
 }): Promise<ConceptionRecommendationDto[]> {
   const limit = Math.min(100, Math.max(1, options?.limit ?? 30));
-  const rows = await db
-    .select()
-    .from(conceptionRecommendationTable)
-    .where(isNull(conceptionRecommendationTable.dismissedAt))
-    .orderBy(desc(conceptionRecommendationTable.createdAt))
-    .limit(limit);
+  const [rows, economicsCtx, roleMap] = await Promise.all([
+    db
+      .select()
+      .from(conceptionRecommendationTable)
+      .where(isNull(conceptionRecommendationTable.dismissedAt))
+      .orderBy(desc(conceptionRecommendationTable.createdAt))
+      .limit(limit),
+    buildRecommendationEconomicsContext(),
+    getRoleEmailMap(),
+  ]);
 
-  const recommendations = rows.map((r) => {
-    const priority = mapRecPriority(r.priority);
-    return {
-      id: r.id,
-      priority,
-      priorityLabel: priorityLabel(priority),
-      impactLabel: r.impactLabel,
-      title: r.title,
-      analysis: r.analysis,
-      recommendation: r.recommendation,
-      confidence: r.confidence,
-      revenueHint: r.revenueHint,
-      implementationHint: r.implementationHint,
-      roiHint: r.roiHint,
-      createdAt: r.createdAt.toISOString(),
-    };
-  });
+  const registeredKeys = Array.from(roleMap.keys());
+
+  const recommendations = await Promise.all(
+    rows.map(async (r) => {
+      const priority = mapRecPriority(r.priority);
+      const hints = ensureRecommendationEconomicsHints(
+        {
+          priority,
+          impactLabel: r.impactLabel,
+          confidence: r.confidence,
+          title: r.title,
+          revenueHint: r.revenueHint,
+          roiHint: r.roiHint,
+        },
+        economicsCtx
+      );
+      const assignedRoleKey = resolveAssignedRoleKey(
+        r.assignedRoleKey,
+        { title: r.title, analysis: r.analysis, recommendation: r.recommendation },
+        registeredKeys
+      );
+      const roleMeta = roleMap.get(assignedRoleKey);
+      return {
+        id: r.id,
+        priority,
+        priorityLabel: priorityLabel(priority),
+        impactLabel: r.impactLabel,
+        title: r.title,
+        analysis: r.analysis,
+        recommendation: r.recommendation,
+        confidence: r.confidence,
+        revenueHint: hints.revenueHint,
+        implementationHint: r.implementationHint,
+        roiHint: hints.roiHint,
+        assignedRoleKey,
+        assignedRoleLabel: roleMeta?.displayName ?? assignedRoleKey.replace(/_/g, " "),
+        roleEmailConfigured: Boolean(roleMeta?.email?.trim()),
+        createdAt: r.createdAt.toISOString(),
+      };
+    })
+  );
 
   return sortByImportance(recommendations, (item) => item.priority);
+}
+
+export async function getConceptionRecommendationById(id: string) {
+  const [row] = await db
+    .select()
+    .from(conceptionRecommendationTable)
+    .where(eq(conceptionRecommendationTable.id, id))
+    .limit(1);
+  if (!row || row.dismissedAt) return null;
+
+  const [roleMap, economicsCtx] = await Promise.all([
+    getRoleEmailMap(),
+    buildRecommendationEconomicsContext(),
+  ]);
+  const registeredKeys = Array.from(roleMap.keys());
+  const priority = mapRecPriority(row.priority);
+  const hints = ensureRecommendationEconomicsHints(
+    {
+      priority,
+      impactLabel: row.impactLabel,
+      confidence: row.confidence,
+      title: row.title,
+      revenueHint: row.revenueHint,
+      roiHint: row.roiHint,
+    },
+    economicsCtx
+  );
+  const assignedRoleKey = resolveAssignedRoleKey(
+    row.assignedRoleKey,
+    { title: row.title, analysis: row.analysis, recommendation: row.recommendation },
+    registeredKeys
+  );
+  const roleMeta = roleMap.get(assignedRoleKey);
+
+  return {
+    id: row.id,
+    priority,
+    priorityLabel: priorityLabel(priority),
+    impactLabel: row.impactLabel,
+    title: row.title,
+    analysis: row.analysis,
+    recommendation: row.recommendation,
+    confidence: row.confidence,
+    revenueHint: hints.revenueHint,
+    implementationHint: row.implementationHint,
+    roiHint: hints.roiHint,
+    assignedRoleKey,
+    assignedRoleLabel: roleMeta?.displayName ?? assignedRoleKey.replace(/_/g, " "),
+    roleEmail: roleMeta?.email?.trim() ?? "",
+    roleEmailConfigured: Boolean(roleMeta?.email?.trim()),
+    createdAt: row.createdAt.toISOString(),
+  };
 }
