@@ -9,6 +9,7 @@ import {
   Clock,
   Lightbulb,
   Play,
+  RotateCcw,
   Settings2,
   Users,
   Zap,
@@ -446,36 +447,42 @@ export function AiRecommendationsContent({
     },
   ];
 
+  const handleClearAll = () => {
+    if (
+      !window.confirm(
+        "Clear every AI recommendation from the database (active and dismissed)? This cannot be undone. Use Analyze now afterward to generate a fresh set."
+      )
+    ) {
+      return;
+    }
+    setClearAllBusy(true);
+    void onClearAllRecommendations?.().finally(() => setClearAllBusy(false));
+  };
+
   return (
     <div className={sellerHelperStack}>
-      <SectionHeading
-        title="AI Recommendations"
-        description="Saved recommendations from the last LLM analysis (OpenRouter / Gemini), grounded in live telemetry and your product catalogue from the database. Run Analyze now to refresh."
-        icon={Lightbulb}
-        count={recs.length}
-      />
-      {recommendations.length > 0 && onClearAllRecommendations ?
-        <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <SectionHeading
+          title="AI Recommendations"
+          description="Saved recommendations from the last LLM analysis (OpenRouter / Gemini), grounded in live telemetry and your product catalogue from the database. Run Analyze now to refresh."
+          icon={Lightbulb}
+          count={recs.length}
+        />
+        {onClearAllRecommendations ?
           <button
             type="button"
             disabled={clearAllBusy}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  "Erase every AI recommendation stored in the database? You can run Analyze again to generate new cards."
-                )
-              ) {
-                return;
-              }
-              setClearAllBusy(true);
-              void onClearAllRecommendations().finally(() => setClearAllBusy(false));
-            }}
-            className={sellerGhostButton}
+            onClick={handleClearAll}
+            className={cn(
+              sellerGhostButton,
+              "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+            )}
           >
-            {clearAllBusy ? "Erasing…" : "Erase all recommendations"}
+            <RotateCcw className={cn("h-4 w-4", clearAllBusy && "animate-spin")} aria-hidden />
+            {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
           </button>
-        </div>
-      : null}
+        : null}
+      </div>
       {recommendations.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
           No recommendations yet. Click <strong>Analyze now</strong> above: the model reads your micro-events and

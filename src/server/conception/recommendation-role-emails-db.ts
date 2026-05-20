@@ -87,6 +87,11 @@ export async function getRoleEmailMap(): Promise<
   return map;
 }
 
+export async function getRoleDefinitionList() {
+  const rows = await listRecommendationRoleEmails();
+  return rows.map((r) => ({ roleKey: r.roleKey, displayName: r.displayName }));
+}
+
 export function registeredRoleKeysFromMap(map: Map<string, unknown>): string[] {
   return Array.from(map.keys());
 }

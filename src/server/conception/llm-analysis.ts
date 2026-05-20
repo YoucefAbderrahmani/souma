@@ -13,6 +13,7 @@ import { buildRecommendationEconomicsContext } from "@/server/conception/recomme
 import { attachAssignedRoleToRecommendationRow } from "@/server/conception/recommendation-role-enrich";
 import { listRecommendationRoleEmails } from "@/server/conception/recommendation-role-emails-db";
 import { resolveAssignedRoleKey } from "@/server/conception/recommendation-role-assign";
+import { buildRoleAssignmentPromptBlock } from "@/lib/recommendation-role-profiles";
 import { normalizeRoleKey } from "@/lib/recommendation-roles";
 
 const severitySchema = z.enum(["critical", "high", "medium", "low"]);
@@ -145,7 +146,10 @@ function formatProviderFailure(label: string, message: string) {
   return `${label} : ${message.slice(0, 280)}`;
 }
 
-function buildSystemPrompt() {
+function buildSystemPrompt(
+  roles: Awaited<ReturnType<typeof buildConceptionLlmContext>>["recommendationRoles"]
+) {
+  const roleBlock = buildRoleAssignmentPromptBlock(roles);
   return `You are a senior ecommerce analytics consultant for Vitrina Store.
 Analyze only the JSON provided by the user. It merges (1) live telemetry from the database (events, funnel, KPIs, signals) and (2) catalogProducts: real products currently in the catalogue (titles, categories, prices in DZD, stock levels). Use both sources together.
 Return one JSON object only with exactly these top-level keys: summary, alerts, recommendations.
@@ -158,8 +162,8 @@ Write summary, titles, descriptions, analysis, and recommendation fields in Fren
 Do not invent metrics or products that are absent from the payload. When you cite a product, use a title that appears in catalogProducts or a metric that appears in telemetry.
 Prefer actionable merchandising, pricing, stock, conversion, checkout, performance, and security insights grounded in the supplied numbers.
 Each alert must include alertType (short snake_case code), severity, title, description, optional detail, optional affectedSessionsEstimate.
-Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, revenueHint (estimated incremental revenue in DZD, e.g. "12 500 DA"), roiHint (e.g. "6.2x" or "High (8.5x)"), implementationHint, and assignedRoleKey (one of the role keys provided in the user payload).
-Assign technical/checkout/payment/performance issues to technical_support; merchandising, conversion, pricing, and catalog issues to marketing_agent.
+Each recommendation must include priority, impactLabel, title, analysis, recommendation, confidence, revenueHint (estimated incremental revenue in DZD, e.g. "12 500 DA"), roiHint (e.g. "6.2x" or "High (8.5x)"), implementationHint, and assignedRoleKey.
+${roleBlock}
 If event data is sparse, lower confidence and use conservative revenueHint/roiHint grounded in funnel scale — never leave revenueHint or roiHint empty.`;
 }
 
@@ -220,8 +224,10 @@ async function enrichRecommendationsWithEconomics(
   recommendations: (typeof conceptionRecommendationTable.$inferInsert)[]
 ) {
   const economicsCtx = await buildRecommendationEconomicsContext();
-  const roleMap = await listRecommendationRoleEmails();
-  const registeredKeys = roleMap.map((r) => r.roleKey);
+  const roleDefinitions = (await listRecommendationRoleEmails()).map((r) => ({
+    roleKey: r.roleKey,
+    displayName: r.displayName,
+  }));
 
   const enriched = await Promise.all(
     recommendations.map(async (row) => {
@@ -238,9 +244,9 @@ async function enrichRecommendationsWithEconomics(
       );
       const llmRole = row.assignedRoleKey ? normalizeRoleKey(row.assignedRoleKey) : "";
       const assignedRoleKey = resolveAssignedRoleKey(
-        llmRole && registeredKeys.includes(llmRole) ? llmRole : null,
+        llmRole && roleDefinitions.some((r) => r.roleKey === llmRole) ? llmRole : null,
         { title: row.title, analysis: row.analysis, recommendation: row.recommendation },
-        registeredKeys
+        roleDefinitions
       );
       return attachAssignedRoleToRecommendationRow({
         ...row,
@@ -464,7 +470,7 @@ export async function runConceptionLlmAnalysis(): Promise<ConceptionLlmAnalysisR
   }
 
   const context = await buildConceptionLlmContext();
-  const system = buildSystemPrompt();
+  const system = buildSystemPrompt(context.recommendationRoles);
   const user = buildUserPrompt(context);
   const openRouterApiKey = getOpenRouterApiKey();
   const googleApiKey = getGoogleApiKey();

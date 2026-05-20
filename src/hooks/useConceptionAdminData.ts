@@ -281,9 +281,10 @@ export function useConceptionAdminData(
         recommendations: [],
         actionMessage:
           deleted > 0 ?
-            `Cleared ${deleted} stored recommendation(s). Run Analyze now to generate new ones.`
-          : "No stored recommendations were found.",
+            `Cleared ${deleted} recommendation(s) from the database. Click Analyze now to start fresh.`
+          : "No stored recommendations in the database. Click Analyze now to generate your first set.",
       }));
+      await load({ background: true });
       return true;
     } catch (e) {
       setState((s) => ({
@@ -292,7 +293,7 @@ export function useConceptionAdminData(
       }));
       return false;
     }
-  }, []);
+  }, [load]);
 
   const runAnalyze = useCallback(async () => {
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));

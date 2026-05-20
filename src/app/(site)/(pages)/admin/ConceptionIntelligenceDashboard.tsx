@@ -686,7 +686,7 @@ function AiRecommendationsContent({
               onClick={() => {
                 if (
                   !window.confirm(
-                    "Erase every AI recommendation stored in the database? You can run Analyze again to generate new cards."
+                    "Clear every AI recommendation from the database (active and dismissed)? Use Analyze again afterward to start fresh."
                   )
                 ) {
                   return;
@@ -696,10 +696,10 @@ function AiRecommendationsContent({
               }}
               className={cn(
                 conceptionNoFocusRing,
-                "rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:border-orange-400/50 hover:bg-zinc-800 hover:text-orange-200 disabled:opacity-50"
+                "rounded-lg border border-red-500/40 bg-zinc-900 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400/60 hover:bg-zinc-800 disabled:opacity-50"
               )}
             >
-              {clearAllBusy ? "Erasing…" : "Erase all recommendations"}
+              {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
             </button>
           </div>
         : null}

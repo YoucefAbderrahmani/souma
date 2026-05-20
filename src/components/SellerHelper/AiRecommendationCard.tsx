@@ -99,8 +99,11 @@ export function AiRecommendationCard({
           <p className="text-sm font-medium leading-relaxed text-dark-3">{rec.recommendation}</p>
         </section>
 
-        <p className="text-xs text-dark-4">
-          Assigned to: <span className="font-semibold text-dark">{rec.assignedRoleLabel}</span>
+        <p className="inline-flex flex-wrap items-center gap-1.5 text-xs text-dark-4">
+          <span>Assigned to</span>
+          <span className="rounded-full border border-gray-3 bg-white px-2.5 py-0.5 font-semibold text-dark">
+            {rec.assignedRoleLabel}
+          </span>
         </p>
 
         <div className="grid grid-cols-3 gap-3 rounded-lg border border-gray-2 bg-gray-1 p-4">
@@ -127,45 +130,23 @@ export function AiRecommendationCard({
         : null}
       </div>
 
-      <footer className="flex flex-col gap-3 border-t border-gray-2 px-6 pb-5 pt-4">
-        <div className="flex flex-wrap gap-2.5">
+      <footer className="mt-auto flex flex-col gap-3 border-t border-gray-2 px-6 pb-5 pt-4">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={onImplement}
             className={cn(
-              "inline-flex min-w-[140px] flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3",
+              "inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3",
               "bg-orange text-sm font-bold uppercase tracking-wide text-white shadow-[0_2px_8px_rgba(242,122,26,0.35)]",
               "transition-all duration-150 hover:-translate-y-0.5 hover:bg-blue-dark hover:shadow-[0_6px_20px_rgba(242,122,26,0.45)]",
               "active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
             )}
           >
-            <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+            <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
             Implement
           </button>
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-gray-3 bg-white px-4 py-2.5",
-              "text-sm font-semibold text-dark-3 transition-colors duration-150",
-              "hover:border-orange hover:bg-blue-light-5 hover:text-orange"
-            )}
-          >
-            {expanded ? "Hide details" : "More details"}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onDismiss}
-            className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-gray-3 bg-white px-4 py-2.5",
-              "text-sm font-semibold text-dark-4 transition-colors duration-150",
-              "hover:border-red hover:bg-red-light-6 hover:text-red-dark disabled:opacity-60"
-            )}
-          >
-            Dismiss
-          </button>
+
           {onSendEmail ?
             <button
               type="button"
@@ -179,14 +160,57 @@ export function AiRecommendationCard({
               className={cn(
                 "inline-flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-teal/40 bg-teal/10 px-4 py-2.5",
                 "text-sm font-semibold text-teal-dark transition-colors duration-150",
-                "hover:border-teal hover:bg-teal/15 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                "hover:border-teal hover:bg-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
               )}
             >
-              <Mail className="h-4 w-4" aria-hidden />
-              {emailBusy ? "Sending…" : `Send email to ${rec.assignedRoleLabel}`}
+              <Mail className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="min-w-0 text-center leading-snug">
+                {emailBusy ?
+                  "Sending…"
+                : <>
+                    <span className="block">Send email</span>
+                    <span className="block text-xs font-medium text-teal-dark/80">
+                      {rec.assignedRoleLabel}
+                    </span>
+                  </>
+                }
+              </span>
             </button>
           : null}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className={cn(
+                "inline-flex min-h-[42px] items-center justify-center rounded-lg border-[1.5px] border-gray-3 bg-white px-3 py-2.5",
+                "text-sm font-semibold text-dark-3 transition-colors duration-150",
+                "hover:border-orange hover:bg-blue-light-5 hover:text-orange"
+              )}
+            >
+              {expanded ? "Hide details" : "More details"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onDismiss}
+              className={cn(
+                "inline-flex min-h-[42px] items-center justify-center rounded-lg border-[1.5px] border-gray-3 bg-white px-3 py-2.5",
+                "text-sm font-semibold text-dark-4 transition-colors duration-150",
+                "hover:border-red hover:bg-red-light-6 hover:text-red-dark disabled:cursor-not-allowed disabled:opacity-60"
+              )}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
+
+        {onSendEmail && !rec.roleEmailConfigured ?
+          <p className="text-center text-[11px] leading-snug text-dark-4">
+            Set a recipient for <span className="font-semibold text-dark">{rec.assignedRoleLabel}</span> in
+            Admin → Assign role emails.
+          </p>
+        : null}
 
         <div
           className={cn(

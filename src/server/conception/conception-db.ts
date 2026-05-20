@@ -5,6 +5,7 @@ import { compareImportance, normalizeImportanceTier, sortByImportance } from "@/
 import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
 import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
 import { resolveAssignedRoleKey } from "@/server/conception/recommendation-role-assign";
+import { getRoleDefinitionList } from "@/server/conception/recommendation-role-emails-db";
 import { getRoleEmailMap } from "@/server/conception/recommendation-role-emails-db";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import type {
@@ -228,7 +229,7 @@ export async function listConceptionRecommendationsForAdmin(options?: {
   limit?: number;
 }): Promise<ConceptionRecommendationDto[]> {
   const limit = Math.min(100, Math.max(1, options?.limit ?? 30));
-  const [rows, economicsCtx, roleMap] = await Promise.all([
+  const [rows, economicsCtx, roleMap, roleDefinitions] = await Promise.all([
     db
       .select()
       .from(conceptionRecommendationTable)
@@ -237,9 +238,8 @@ export async function listConceptionRecommendationsForAdmin(options?: {
       .limit(limit),
     buildRecommendationEconomicsContext(),
     getRoleEmailMap(),
+    getRoleDefinitionList(),
   ]);
-
-  const registeredKeys = Array.from(roleMap.keys());
 
   const recommendations = await Promise.all(
     rows.map(async (r) => {
@@ -258,7 +258,7 @@ export async function listConceptionRecommendationsForAdmin(options?: {
       const assignedRoleKey = resolveAssignedRoleKey(
         r.assignedRoleKey,
         { title: r.title, analysis: r.analysis, recommendation: r.recommendation },
-        registeredKeys
+        roleDefinitions
       );
       const roleMeta = roleMap.get(assignedRoleKey);
       return {
@@ -292,11 +292,11 @@ export async function getConceptionRecommendationById(id: string) {
     .limit(1);
   if (!row || row.dismissedAt) return null;
 
-  const [roleMap, economicsCtx] = await Promise.all([
+  const [roleMap, roleDefinitions, economicsCtx] = await Promise.all([
     getRoleEmailMap(),
+    getRoleDefinitionList(),
     buildRecommendationEconomicsContext(),
   ]);
-  const registeredKeys = Array.from(roleMap.keys());
   const priority = mapRecPriority(row.priority);
   const hints = ensureRecommendationEconomicsHints(
     {
@@ -312,7 +312,7 @@ export async function getConceptionRecommendationById(id: string) {
   const assignedRoleKey = resolveAssignedRoleKey(
     row.assignedRoleKey,
     { title: row.title, analysis: row.analysis, recommendation: row.recommendation },
-    registeredKeys
+    roleDefinitions
   );
   const roleMeta = roleMap.get(assignedRoleKey);
 
