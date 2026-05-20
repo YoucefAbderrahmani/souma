@@ -2,7 +2,6 @@ import type { Viewport } from "next";
 import "../css/euclid-circular-a-font.css";
 import "../css/style.css";
 import { RootAppShell } from "@/components/Layout/RootAppShell";
-import MoosendWebsiteTracking from "@/components/Analytics/MoosendWebsiteTracking";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,7 +25,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body suppressHydrationWarning={true}>
-        <MoosendWebsiteTracking />
         <RootAppShell>{children}</RootAppShell>
       </body>
     </html>

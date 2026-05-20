@@ -9,7 +9,7 @@ import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 import { autoSendRecommendationEmails } from "@/server/email/auto-send-recommendation-emails";
-import { isMoosendAutomatedEmailEnabled } from "@/server/email/moosend-config";
+import { isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
 function dayFingerprint(prefix: string): string {
   const d = new Date();
@@ -264,8 +264,8 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   let emailsSent = 0;
   let emailsFailed = 0;
   const autoSendOnAnalyze =
-    isMoosendAutomatedEmailEnabled() &&
-    process.env.MOOSEND_AUTO_SEND_ON_ANALYZE?.trim().toLowerCase() !== "false";
+    isBrevoAutomatedEmailEnabled() &&
+    process.env.BREVO_AUTO_SEND_ON_ANALYZE?.trim().toLowerCase() !== "false";
 
   if (autoSendOnAnalyze && newRecommendationIds.length > 0) {
     const emailResult = await autoSendRecommendationEmails(newRecommendationIds);

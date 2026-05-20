@@ -223,7 +223,7 @@ export function useConceptionAdminData(
         throw new Error(body.message || body.error || "Failed to send email");
       }
 
-      const successMessage = body.message || "Email sent automatically via Moosend.";
+      const successMessage = body.message || "Email sent automatically via Brevo.";
 
       setState((s) => ({ ...s, actionMessage: successMessage }));
       return true;
@@ -329,10 +329,10 @@ export function useConceptionAdminData(
 
       let analyzeMessage = `Analysis complete — ${insertedAlerts} alert(s), ${insertedRecommendations} recommendation(s), ${vitrinaRecommendations.length} storefront recommendation(s).`;
       if (emailsSent > 0) {
-        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically via Moosend.`;
+        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically via Brevo.`;
       }
       if (emailsFailed > 0) {
-        analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) could not be sent (check MOOSEND_API_KEY, EMAIL_FROM, and role addresses).`;
+        analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) could not be sent (check BREVO_API_KEY, EMAIL_FROM, and role addresses).`;
       }
       if (llmUsed && llmSummary) {
         analyzeMessage = `${analyzeMessage} AI summary (${llmModel ?? "LLM"}): ${llmSummary}`;

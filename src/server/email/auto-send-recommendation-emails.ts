@@ -1,6 +1,6 @@
 import { getConceptionRecommendationById } from "@/server/conception/conception-db";
 import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-email";
-import { isMoosendAutomatedEmailEnabled } from "@/server/email/moosend-config";
+import { isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
 export type AutoSendRecommendationEmailsResult = {
   attempted: number;
@@ -17,7 +17,7 @@ function storeUrlFromEnv(): string | undefined {
   return vercel ? `https://${vercel}` : undefined;
 }
 
-/** Sends each new recommendation to its assigned role inbox via Moosend. */
+/** Sends each new recommendation to its assigned role inbox via Brevo. */
 export async function autoSendRecommendationEmails(
   recommendationIds: string[]
 ): Promise<AutoSendRecommendationEmailsResult> {
@@ -30,7 +30,7 @@ export async function autoSendRecommendationEmails(
     errors: [],
   };
 
-  if (uniqueIds.length === 0 || !isMoosendAutomatedEmailEnabled()) {
+  if (uniqueIds.length === 0 || !isBrevoAutomatedEmailEnabled()) {
     result.skipped = uniqueIds.length;
     return result;
   }
@@ -62,7 +62,7 @@ export async function autoSendRecommendationEmails(
       storeUrl,
     });
 
-    if (sendResult.ok === true && sendResult.method === "moosend") {
+    if (sendResult.ok === true && sendResult.method === "brevo") {
       result.sent += 1;
       continue;
     }

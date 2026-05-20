@@ -1,16 +1,12 @@
 import { isValidEmail } from "@/lib/recommendation-roles";
 import {
+  brevoNotConfiguredMessage,
+  getBrevoApiKey,
+  getBrevoTransactionalTemplateId,
   getEmailFromRaw,
-  getMoosendApiHost,
-  getMoosendApiKey,
-  getMoosendTransactionalTemplateId,
-  getMoosendTransactionalTemplateName,
-  getMoosendUserId,
-  isMoosendAutomatedEmailEnabled,
-  moosendNotConfiguredMessage,
-  moosendTemplateRequiredMessage,
+  isBrevoAutomatedEmailEnabled,
   parseEmailFromAddress,
-} from "@/server/email/moosend-config";
+} from "@/server/email/brevo-config";
 
 export type RecommendationEmailPayload = {
   to: string;
@@ -83,145 +79,94 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-type MoosendSendResponse = {
-  TotalAccepted?: number;
-  TotalExcluded?: number;
-  ExcludedRecipients?: { Email?: string; Reason?: string }[];
-  Error?: string;
-  Code?: number;
-  Context?: string | null;
+type BrevoErrorBody = {
+  message?: string;
+  code?: string;
 };
 
-function parseMoosendApiError(parsed: MoosendSendResponse, raw: string, status: number): string {
-  if (parsed.Error) {
-    const code = parsed.Code != null ? ` (${parsed.Code})` : "";
-    return `Moosend${code}: ${parsed.Error}`;
-  }
-  if (!raw && status >= 400) {
-    return `Moosend HTTP ${status}`;
-  }
-  return raw.slice(0, 300) || `Moosend HTTP ${status}`;
-}
-
-function hasMoosendApiError(parsed: MoosendSendResponse): boolean {
-  if (parsed.Error?.trim()) return true;
-  if (typeof parsed.Code === "number" && parsed.Code >= 400) return true;
-  return false;
-}
-
-async function sendViaMoosend(
+async function sendViaBrevo(
   payload: RecommendationEmailPayload
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = getMoosendApiKey();
+): Promise<{ ok: true; messageId?: string } | { ok: false; error: string }> {
+  const apiKey = getBrevoApiKey();
   if (!apiKey) {
-    return { ok: false, error: moosendNotConfiguredMessage() };
+    return { ok: false, error: brevoNotConfiguredMessage() };
   }
-
-  const templateId = getMoosendTransactionalTemplateId();
-  const templateName = getMoosendTransactionalTemplateName();
 
   const fromParsed = parseEmailFromAddress(getEmailFromRaw());
   if (!fromParsed.email) {
     return {
       ok: false,
-      error: "Set EMAIL_FROM in .env.local to your verified Moosend sender (e.g. Vitrina Store <youcefabderrahmani1711@gmail.com>).",
+      error: "Set EMAIL_FROM in .env.local to a verified Brevo sender (e.g. Vitrina Store <you@yourdomain.com>).",
     };
   }
 
-  const { subject, html } = buildEmailBodies(payload);
-  const userId = getMoosendUserId();
-  const useTemplate = Boolean(templateId || templateName);
+  const { subject, text, html } = buildEmailBodies(payload);
+  const templateId = getBrevoTransactionalTemplateId();
 
-  const substitutions = {
-    role_name: payload.roleDisplayName,
-    title: payload.title,
-    priority: payload.priority,
-    confidence: String(payload.confidence),
-    analysis: payload.analysis,
-    recommendation: payload.recommendation,
-    revenue_hint: payload.revenueHint ?? "",
-    roi_hint: payload.roiHint ?? "",
-    implementation_hint: payload.implementationHint ?? "",
-    store_url: payload.storeUrl ?? "",
-  };
-
-  // One content type per request. With a template, body HTML comes from Moosend — do not also send Content.
   const body: Record<string, unknown> = {
-    Subject: subject,
-    From: {
-      Email: fromParsed.email,
-      sendersName: fromParsed.name,
+    sender: { name: fromParsed.name, email: fromParsed.email },
+    to: [{ email: payload.to, name: payload.roleDisplayName }],
+    subject,
+    htmlContent: html,
+    textContent: text,
+    params: {
+      role_name: payload.roleDisplayName,
+      title: payload.title,
+      priority: payload.priority,
+      confidence: String(payload.confidence),
+      analysis: payload.analysis,
+      recommendation: payload.recommendation,
+      revenue_hint: payload.revenueHint ?? "",
+      roi_hint: payload.roiHint ?? "",
+      implementation_hint: payload.implementationHint ?? "",
+      store_url: payload.storeUrl ?? "",
     },
-    MailSettings: {
-      BypassUnsubscribeManagement: { Enable: true },
-      UnsubscribeLinkManagement: { IncludeUnsubscribeLink: false },
-    },
-    Personalizations: [
-      {
-        To: [{ Email: payload.to, Name: payload.roleDisplayName }],
-        Substitutions: substitutions,
-      },
-    ],
   };
 
-  if (userId) body.userId = userId;
-  if (templateId) body.TemplateId = templateId;
-  else if (templateName) body.TemplateName = templateName;
-
-  if (!useTemplate) {
-    body.Content = [{ Type: "text/html", Value: html }];
+  if (templateId) {
+    body.templateId = templateId;
   }
 
-  const url = `${getMoosendApiHost()}/v3/campaigns/transactional/send.json?apikey=${encodeURIComponent(apiKey)}`;
-
-  const response = await fetch(url, {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
+      accept: "application/json",
+      "content-type": "application/json",
+      "api-key": apiKey,
     },
     body: JSON.stringify(body),
   });
 
   const raw = await response.text().catch(() => "");
-  let parsed: MoosendSendResponse = {};
+  let parsed: { messageId?: string } & BrevoErrorBody = {};
   try {
-    parsed = raw ? (JSON.parse(raw) as MoosendSendResponse) : {};
+    parsed = raw ? (JSON.parse(raw) as typeof parsed) : {};
   } catch {
     parsed = {};
   }
 
-  if (!response.ok || hasMoosendApiError(parsed)) {
-    return { ok: false, error: parseMoosendApiError(parsed, raw, response.status) };
+  if (!response.ok) {
+    const detail = parsed.message || raw.slice(0, 300) || response.statusText;
+    return { ok: false, error: `Brevo (${response.status}): ${detail}` };
   }
 
-  const accepted = Number(parsed.TotalAccepted ?? 0);
-  if (accepted < 1) {
-    const excluded = parsed.ExcludedRecipients?.[0];
-    const reason =
-      parsed.Error?.trim() ||
-      excluded?.Reason ||
-      moosendTemplateRequiredMessage();
-    return { ok: false, error: reason.includes("TemplateId") ? moosendTemplateRequiredMessage() : `Moosend did not send: ${reason}` };
-  }
-
-  return { ok: true };
+  return { ok: true, messageId: parsed.messageId };
 }
 
 export async function sendRecommendationRoleEmail(
   payload: RecommendationEmailPayload
-): Promise<{ ok: true; method: "moosend" } | { ok: false; error: string }> {
+): Promise<{ ok: true; method: "brevo"; messageId?: string } | { ok: false; error: string }> {
   if (!isValidEmail(payload.to)) {
     return { ok: false, error: "No valid email configured for this role." };
   }
 
-  if (!isMoosendAutomatedEmailEnabled()) {
-    return { ok: false, error: moosendNotConfiguredMessage() };
+  if (!isBrevoAutomatedEmailEnabled()) {
+    return { ok: false, error: brevoNotConfiguredMessage() };
   }
 
-  const result = await sendViaMoosend(payload);
+  const result = await sendViaBrevo(payload);
   if (result.ok === true) {
-    return { ok: true, method: "moosend" };
+    return { ok: true, method: "brevo", messageId: result.messageId };
   }
 
   return { ok: false, error: result.error };

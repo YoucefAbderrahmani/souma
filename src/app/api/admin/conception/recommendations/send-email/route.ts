@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import { getConceptionRecommendationById } from "@/server/conception/conception-db";
 import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-email";
-import { isMoosendAutomatedEmailEnabled, moosendNotConfiguredMessage } from "@/server/email/moosend-config";
+import { brevoNotConfiguredMessage, isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
 export async function POST(req: NextRequest) {
   const gate = await requireAdminApi(req);
@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  if (!isMoosendAutomatedEmailEnabled()) {
-    return NextResponse.json({ ok: false, error: moosendNotConfiguredMessage() }, { status: 503 });
+  if (!isBrevoAutomatedEmailEnabled()) {
+    return NextResponse.json({ ok: false, error: brevoNotConfiguredMessage() }, { status: 503 });
   }
 
   try {
@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      method: "moosend",
-      message: `Email sent automatically via Moosend to ${rec.assignedRoleLabel} (${rec.roleEmail}).`,
+      method: "brevo",
+      messageId: result.messageId ?? null,
+      message: `Email sent via Brevo to ${rec.assignedRoleLabel} (${rec.roleEmail}).`,
     });
   } catch (e) {
     console.error("[recommendations/send-email]", e);
