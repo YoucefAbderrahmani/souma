@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertTriangle, Ban, Shield } from "lucide-react";
+import { AlertTriangle, Ban, RotateCcw, Shield } from "lucide-react";
 import type { ConceptionOverviewDto } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
 import { ProgressBar, ThreatActivityChart } from "./charts";
@@ -76,9 +76,28 @@ type QuickFixTarget =
   | { kind: "incident"; item: NonNullable<ConceptionOverviewDto["security"]["incidents"]>[number] }
   | { kind: "blocked"; item: NonNullable<ConceptionOverviewDto["security"]["blockedIdentities"]>[number] };
 
-export function SecurityTabContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+export function SecurityTabContent({
+  overview,
+  onClearAllSecurity,
+}: {
+  overview: ConceptionOverviewDto | null;
+  onClearAllSecurity?: () => Promise<boolean>;
+}) {
   const security = overview?.security;
   const [quickFixTarget, setQuickFixTarget] = useState<QuickFixTarget | null>(null);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
+
+  const handleClearAllSecurity = () => {
+    if (
+      !window.confirm(
+        "Unblock all sessions in the blocklist? Live suspicious-activity signals are computed from micro-events and may still appear after refresh. Run Analyze to refresh stored alerts."
+      )
+    ) {
+      return;
+    }
+    setClearAllBusy(true);
+    void onClearAllSecurity?.().finally(() => setClearAllBusy(false));
+  };
 
   const kpis = security?.kpis ?? [];
   const threatTypes7d = security?.threatTypes7d ?? [];
@@ -89,11 +108,27 @@ export function SecurityTabContent({ overview }: { overview: ConceptionOverviewD
   return (
     <>
       <div className={sellerHelperStack}>
-        <SectionHeading
-          title="Sécurité & intégrité des données"
-          description="Signaux calculés à partir des micro-événements des 7 derniers jours"
-          icon={Shield}
-        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeading
+            title="Sécurité & intégrité des données"
+            description="Signaux calculés à partir des micro-événements des 7 derniers jours"
+            icon={Shield}
+          />
+          {onClearAllSecurity ?
+            <button
+              type="button"
+              disabled={clearAllBusy}
+              onClick={handleClearAllSecurity}
+              className={cn(
+                sellerGhostButton,
+                "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+              )}
+            >
+              <RotateCcw className={cn("h-4 w-4", clearAllBusy && "animate-spin")} aria-hidden />
+              {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+            </button>
+          : null}
+        </div>
 
         <div className={sellerHelperGrid.four}>
           {kpis.length === 0 ?

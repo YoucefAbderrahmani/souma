@@ -756,14 +756,17 @@ export function AlertsContent({
   alertRules,
   onNavigateSection,
   onDismissAlert,
+  onClearAllAlerts,
 }: {
   alerts: ConceptionAlertDto[];
   resolvedAlerts: ConceptionResolvedAlertDto[];
   alertRules: ConceptionAlertRule[];
   onNavigateSection?: (section: SellerHelperNavItem) => void;
   onDismissAlert?: (id: string, disposition: "resolved" | "ignored") => Promise<boolean>;
+  onClearAllAlerts?: () => Promise<boolean>;
 }) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
   const [detailAlert, setDetailAlert] = useState<ConceptionAlertDto | null>(null);
   const [detailAnalysis, setDetailAnalysis] = useState<ConceptionAlertDetailAnalysisDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -862,13 +865,41 @@ export function AlertsContent({
     },
   ];
 
+  const handleClearAllAlerts = () => {
+    if (
+      !window.confirm(
+        "Clear every alert from the database (active and resolved)? This cannot be undone. Run Analyze now afterward to detect new incidents."
+      )
+    ) {
+      return;
+    }
+    setClearAllBusy(true);
+    void onClearAllAlerts?.().finally(() => setClearAllBusy(false));
+  };
+
   return (
     <div className={sellerHelperStack}>
-      <SectionHeading
-        title="Alerts"
-        description="Incidents and signals that need attention"
-        icon={Bell}
-      />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <SectionHeading
+          title="Alerts"
+          description="Incidents and signals that need attention"
+          icon={Bell}
+        />
+        {onClearAllAlerts ?
+          <button
+            type="button"
+            disabled={clearAllBusy}
+            onClick={handleClearAllAlerts}
+            className={cn(
+              sellerGhostButton,
+              "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+            )}
+          >
+            <RotateCcw className={cn("h-4 w-4", clearAllBusy && "animate-spin")} aria-hidden />
+            {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+          </button>
+        : null}
+      </div>
       {alerts.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
           Run analysis to detect incidents from collected micro-events.

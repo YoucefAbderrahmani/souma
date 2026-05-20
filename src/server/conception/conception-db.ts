@@ -219,6 +219,12 @@ export async function dismissConceptionRecommendationById(id: string): Promise<b
   return true;
 }
 
+/** Permanently deletes all rows in `conception_alert` (active and dismissed). */
+export async function deleteAllConceptionAlerts(): Promise<number> {
+  const rows = await db.delete(conceptionAlertTable).returning({ id: conceptionAlertTable.id });
+  return rows.length;
+}
+
 /** Permanently deletes all rows in `conception_recommendation` (admin reset before a new analysis). */
 export async function deleteAllConceptionRecommendations(): Promise<number> {
   const rows = await db.delete(conceptionRecommendationTable).returning({ id: conceptionRecommendationTable.id });

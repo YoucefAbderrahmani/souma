@@ -110,6 +110,17 @@ export async function applySecurityQuickFixes(
   return { applied };
 }
 
+/** Lifts every active security block (Seller Helper “clear security” reset). */
+export async function clearAllSecurityBlocks(): Promise<number> {
+  const now = new Date();
+  const rows = await db
+    .update(conceptionSecurityBlockTable)
+    .set({ liftedAt: now })
+    .where(isNull(conceptionSecurityBlockTable.liftedAt))
+    .returning({ sessionKey: conceptionSecurityBlockTable.sessionKey });
+  return rows.length;
+}
+
 export async function getActiveBlockedSessionKeys(sessionKeys: string[]) {
   const uniqueKeys = Array.from(new Set(sessionKeys.map((key) => key.trim()).filter(Boolean)));
   if (uniqueKeys.length === 0) return new Set<string>();

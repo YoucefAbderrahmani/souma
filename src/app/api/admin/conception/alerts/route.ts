@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
 import {
+  deleteAllConceptionAlerts,
   dismissConceptionAlertById,
   listConceptionAlertsForAdmin,
   listDismissedConceptionAlertsForAdmin,
@@ -59,6 +60,27 @@ export async function PATCH(req: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[conception/alerts PATCH]", e);
+    return NextResponse.json(
+      {
+        error: "database_error",
+        message: migrationHintFromDbMessage(message) ?? message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const gate = await requireAdminApi(req);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
+  }
+  try {
+    const deleted = await deleteAllConceptionAlerts();
+    return NextResponse.json({ success: true, deleted });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[conception/alerts DELETE]", e);
     return NextResponse.json(
       {
         error: "database_error",

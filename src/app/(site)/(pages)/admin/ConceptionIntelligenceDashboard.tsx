@@ -1007,14 +1007,48 @@ function alertDtoToIncident(a: ConceptionAlertDto) {
   };
 }
 
-function SecurityContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+function SecurityContent({
+  overview,
+  onClearAllSecurity,
+}: {
+  overview: ConceptionOverviewDto | null;
+  onClearAllSecurity?: () => Promise<boolean>;
+}) {
   const s = overview?.security;
+  const [clearAllBusy, setClearAllBusy] = useState(false);
   return (
     <div className="rounded-xl border border-orange-500/25 bg-zinc-900 p-3 sm:p-4">
-      <h3 className="text-lg font-semibold text-zinc-200">Security &amp; data integrity</h3>
-      <p className="mt-1 text-sm text-zinc-500">
-        Bot / scraping heuristics on micro-events (7-day window)
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-zinc-200">Security &amp; data integrity</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            Bot / scraping heuristics on micro-events (7-day window)
+          </p>
+        </div>
+        {onClearAllSecurity ?
+          <button
+            type="button"
+            disabled={clearAllBusy}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Unblock all sessions in the blocklist? Live threat signals may still appear from micro-events after refresh."
+                )
+              ) {
+                return;
+              }
+              setClearAllBusy(true);
+              void onClearAllSecurity().finally(() => setClearAllBusy(false));
+            }}
+            className={cn(
+              conceptionNoFocusRing,
+              "shrink-0 rounded-lg border border-red-500/40 bg-zinc-900 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400/60 hover:bg-zinc-800 disabled:opacity-50"
+            )}
+          >
+            {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+          </button>
+        : null}
+      </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className={cn(conceptionPanelCompact)}>
           <p className="text-sm text-zinc-500">High-velocity sessions</p>
@@ -1044,12 +1078,15 @@ function AlertsContent({
   alerts,
   onDismissAlert,
   onNavigateSection,
+  onClearAllAlerts,
 }: {
   alerts: ConceptionAlertDto[];
   onDismissAlert?: (id: string, disposition: "resolved" | "ignored") => Promise<boolean>;
   onNavigateSection?: (section: NavItem) => void;
+  onClearAllAlerts?: () => Promise<boolean>;
 }) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
   const usingPlaceholderAlerts = alerts.length === 0;
   const incidents =
     alerts.length > 0 ?
@@ -1079,6 +1116,31 @@ function AlertsContent({
           Demo mode: placeholder alerts shown while waiting for real incidents.
         </p>
       ) : null}
+      {!usingPlaceholderAlerts && onClearAllAlerts ?
+        <div className="mb-3 flex flex-wrap justify-end">
+          <button
+            type="button"
+            disabled={clearAllBusy}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Clear every alert from the database (active and resolved)? Run Analyze again afterward."
+                )
+              ) {
+                return;
+              }
+              setClearAllBusy(true);
+              void onClearAllAlerts().finally(() => setClearAllBusy(false));
+            }}
+            className={cn(
+              conceptionNoFocusRing,
+              "rounded-lg border border-red-500/40 bg-zinc-900 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400/60 hover:bg-zinc-800 disabled:opacity-50"
+            )}
+          >
+            {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+          </button>
+        </div>
+      : null}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {summary.map((s) => (
           <div
@@ -1499,6 +1561,8 @@ export default function ConceptionIntelligenceDashboard() {
     dismissAlert,
     dismissRecommendation,
     clearAllRecommendations,
+    clearAllAlerts,
+    clearAllSecurity,
   } = useConceptionAdminData();
   const trafficSeries = overview?.trafficHourlyNormalized?.length
     ? overview.trafficHourlyNormalized
@@ -1642,9 +1706,12 @@ export default function ConceptionIntelligenceDashboard() {
             alerts={alerts}
             onDismissAlert={dismissAlert}
             onNavigateSection={setActiveNav}
+            onClearAllAlerts={clearAllAlerts}
           />
         )}
-        {activeNav === "Security" && <SecurityContent overview={overview} />}
+        {activeNav === "Security" && (
+          <SecurityContent overview={overview} onClearAllSecurity={clearAllSecurity} />
+        )}
         {activeNav !== "Dashboard" &&
           activeNav !== "Conversion Funnel" &&
           activeNav !== "User Behavior" &&

@@ -316,6 +316,8 @@ export default function SellerHelperDashboard({
     dismissRecommendation,
     sendRecommendationEmail,
     clearAllRecommendations,
+    clearAllAlerts,
+    clearAllSecurity,
     dismissVitrinaAfterQuickFix,
   } = useConceptionAdminData(initialData, initialError);
 
@@ -454,9 +456,12 @@ export default function SellerHelperDashboard({
             alertRules={overview?.alertRules ?? []}
             onNavigateSection={handleNavigateSection}
             onDismissAlert={dismissAlert}
+            onClearAllAlerts={clearAllAlerts}
           />
         )}
-        {activeNav === "Security" && <SecurityTabContent overview={overview} />}
+        {activeNav === "Security" && (
+          <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
+        )}
       </div>
     </div>
   );

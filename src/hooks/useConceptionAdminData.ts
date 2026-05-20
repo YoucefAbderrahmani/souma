@@ -295,6 +295,72 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
+  const clearAllAlerts = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/alerts", {
+        method: "DELETE",
+        ...fetchOptions,
+      });
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        deleted?: number;
+      }>(res, "Alerts API");
+      if (!res.ok || body.error) throw new Error(body.message || body.error || "Clear failed");
+      const deleted = Number(body.deleted ?? 0);
+      setState((s) => ({
+        ...s,
+        alerts: [],
+        resolvedAlerts: [],
+        actionMessage:
+          deleted > 0 ?
+            `Cleared ${deleted} alert(s) from the database. Run Analyze now to detect new incidents.`
+          : "No stored alerts in the database. Run Analyze now to generate new alerts.",
+      }));
+      await load({ background: true });
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, [load]);
+
+  const clearAllSecurity = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/security", {
+        method: "DELETE",
+        ...fetchOptions,
+      });
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        lifted?: number;
+      }>(res, "Security API");
+      if (!res.ok || body.error) throw new Error(body.message || body.error || "Clear failed");
+      const lifted = Number(body.lifted ?? 0);
+      setState((s) => ({
+        ...s,
+        actionMessage:
+          lifted > 0 ?
+            `Unblocked ${lifted} session(s). Live threat signals may still appear from micro-events until you refresh or run Analyze.`
+          : "No active session blocks. Live threat signals are computed from micro-events and may still appear on refresh.",
+      }));
+      await load({ background: true });
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, [load]);
+
   const runAnalyze = useCallback(async () => {
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));
     try {
@@ -411,6 +477,8 @@ export function useConceptionAdminData(
     dismissRecommendation,
     sendRecommendationEmail,
     clearAllRecommendations,
+    clearAllAlerts,
+    clearAllSecurity,
     dismissVitrinaAfterQuickFix,
   };
 }
