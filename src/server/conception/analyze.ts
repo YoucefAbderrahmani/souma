@@ -1,5 +1,6 @@
-import { runConceptionLlmAnalysis } from "@/server/conception/llm-analysis";
-import { buildConceptionAnalyzeSignals } from "@/server/conception/metrics";
+import { isGeminiConfigured, runConceptionLlmAnalysis } from "@/server/conception/llm-analysis";
+import { buildCatalogSnapshotForConceptionLlm } from "@/server/conception/llm-catalog-snapshot";
+import { buildConceptionAnalyzeSignals, buildConceptionOverview } from "@/server/conception/metrics";
 import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
 import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
 import { attachAssignedRoleToRecommendationRow } from "@/server/conception/recommendation-role-enrich";
@@ -30,8 +31,102 @@ export type ConceptionAnalyzeResult = {
   llmSummary: string | null;
   llmError: string | null;
   llmModel: string | null;
+  geminiConfigured: boolean;
+  baselineRecommendationsInserted: number;
   vitrinaRecommendations: VitrinaProductMarketingRecommendation[];
 };
+
+async function insertBaselineRecommendationsIfEmpty(
+  insertedSoFar: number,
+  newRecommendationIds: string[],
+  enrichDraft: (
+    draft: typeof conceptionRecommendationTable.$inferInsert
+  ) => Promise<typeof conceptionRecommendationTable.$inferInsert>
+): Promise<{ total: number; baselineInserted: number }> {
+  if (insertedSoFar > 0) {
+    return { total: insertedSoFar, baselineInserted: 0 };
+  }
+
+  const [overview, catalog] = await Promise.all([
+    buildConceptionOverview(),
+    buildCatalogSnapshotForConceptionLlm(8),
+  ]);
+
+  const drafts: (typeof conceptionRecommendationTable.$inferInsert)[] = [
+    {
+      priority: "medium",
+      impactLabel: "Catalogue & funnel (baseline)",
+      title: "Refresh merchandising from live catalogue data",
+      analysis: overview.hasEventData
+        ? `${overview.totalEvents7d.toLocaleString("en-US")} micro-events recorded over 7 days. AI analysis was unavailable — use telemetry and catalogue data to prioritize the next actions.`
+        : "Telemetry is still sparse. Strengthen product pages, pricing clarity, and checkout trust while event volume grows.",
+      recommendation:
+        "Review top products for stock, images, and pricing; align CTAs with shipping and returns; re-run Analyze after configuring GOOGLE_API_KEY (Gemini) or OpenRouter credits.",
+      confidence: overview.hasEventData ? 68 : 55,
+      revenueHint: null,
+      implementationHint: "1–2 jours",
+      roiHint: null,
+      evidenceJson: JSON.stringify({ source: "baseline", hasEventData: overview.hasEventData }),
+      fingerprint: hourFingerprint("REC_BASELINE_CATALOG"),
+    },
+  ];
+
+  const lowStock = catalog.filter((p) => p.instock <= 3).slice(0, 2);
+  for (const product of lowStock) {
+    drafts.push({
+      priority: product.instock === 0 ? "high" : "medium",
+      impactLabel: product.instock === 0 ? "Out of stock" : "Low stock",
+      title: product.instock === 0 ? `Restock: ${product.title}` : `Low stock: ${product.title}`,
+      analysis: `${product.title} (${product.category}) — ${product.instock} unit(s) in stock, list price ${product.listPriceDzd} DZD.`,
+      recommendation:
+        product.instock === 0
+          ? "Mark unavailable or restock urgently; hide add-to-cart until inventory returns to avoid cart abandonment."
+          : "Highlight scarcity on the product page, consider a restock alert, and verify promo price vs list price.",
+      confidence: 72,
+      revenueHint: null,
+      implementationHint: "1 jour",
+      roiHint: null,
+      evidenceJson: JSON.stringify({ source: "baseline", productId: product.id, instock: product.instock }),
+      fingerprint: hourFingerprint(`REC_BASELINE_STOCK_${product.id}`),
+    });
+  }
+
+  if (lowStock.length === 0 && catalog[0]) {
+    const product = catalog[0];
+    drafts.push({
+      priority: "medium",
+      impactLabel: "Merchandising",
+      title: `Improve presentation: ${product.title}`,
+      analysis: `Catalogue includes “${product.title}” (${product.category}, ${product.instock} in stock).`,
+      recommendation:
+        "Update hero image, short description, and social proof; test psychological pricing against list price on mobile.",
+      confidence: 65,
+      revenueHint: null,
+      implementationHint: "2–3 jours",
+      roiHint: null,
+      evidenceJson: JSON.stringify({ source: "baseline", productId: product.id }),
+      fingerprint: hourFingerprint(`REC_BASELINE_MERCH_${product.id}`),
+    });
+  }
+
+  let baselineInserted = 0;
+  let total = insertedSoFar;
+  for (const draft of drafts) {
+    const row = await enrichDraft(draft);
+    const ins = await db
+      .insert(conceptionRecommendationTable)
+      .values(row)
+      .onConflictDoNothing({ target: conceptionRecommendationTable.fingerprint })
+      .returning({ id: conceptionRecommendationTable.id });
+    if (ins.length > 0) {
+      baselineInserted += 1;
+      total += 1;
+      newRecommendationIds.push(ins[0].id);
+    }
+  }
+
+  return { total, baselineInserted };
+}
 
 /**
  * Rule engine aligned with the academic spec: conversion drop, traffic spike,
@@ -253,6 +348,15 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     console.error("[conception/analyze][llm]", error);
   }
 
+  let baselineRecommendationsInserted = 0;
+  const baselineResult = await insertBaselineRecommendationsIfEmpty(
+    insertedRecommendations,
+    newRecommendationIds,
+    enrichDraft
+  );
+  insertedRecommendations = baselineResult.total;
+  baselineRecommendationsInserted = baselineResult.baselineInserted;
+
   let vitrinaRecommendations: VitrinaProductMarketingRecommendation[] = [];
   try {
     vitrinaRecommendations = await listVitrinaProductMarketingRecommendations({ limit: 200 });
@@ -285,6 +389,8 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     llmSummary,
     llmError,
     llmModel,
+    geminiConfigured: isGeminiConfigured(),
+    baselineRecommendationsInserted,
     vitrinaRecommendations,
   };
 }

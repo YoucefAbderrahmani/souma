@@ -77,8 +77,22 @@ function utcHourFingerprint(prefix: string, title: string) {
 
 const GEMINI_MODEL = "gemini-2.0-flash";
 
+/** Google AI Studio / Gemini key (several env names used on Vercel). */
+export function getGeminiApiKey() {
+  return (
+    process.env.GOOGLE_API_KEY?.trim() ||
+    process.env.GEMINI_API_KEY?.trim() ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
+    ""
+  );
+}
+
 function getGoogleApiKey() {
-  return process.env.GOOGLE_API_KEY?.trim() || "";
+  return getGeminiApiKey();
+}
+
+export function isGeminiConfigured() {
+  return Boolean(getGeminiApiKey());
 }
 
 function conceptionOpenRouterModel() {
@@ -139,7 +153,9 @@ function shouldFallbackToGemini(openRouterError: string | null) {
   if (!openRouterError) return false;
   if (process.env.CONCEPTION_LLM_GEMINI_FALLBACK === "false") return false;
   if (process.env.CONCEPTION_LLM_GEMINI_FALLBACK === "true") return true;
-  return /\(402\)|insufficient credits/i.test(openRouterError);
+  return /\(402\)|\(401\).*credit|insufficient credits|requires more credits|not enough credits|credit balance|payment required|spend limit/i.test(
+    openRouterError
+  );
 }
 
 function formatProviderFailure(label: string, message: string) {
@@ -434,7 +450,7 @@ async function requestGeminiAnalysisCompletion(
 }
 
 export function isConceptionLlmConfigured() {
-  return Boolean(getOpenRouterApiKey() || getGoogleApiKey());
+  return Boolean(getOpenRouterApiKey() || getGeminiApiKey());
 }
 
 async function requestOpenRouterAnalysisCompletion(system: string, user: string) {
@@ -514,7 +530,10 @@ export async function runConceptionLlmAnalysis(): Promise<ConceptionLlmAnalysisR
   }
 
   if (openRouterError) {
-    throw new Error(formatProviderFailure("OpenRouter", openRouterError));
+    const hint = isGeminiConfigured()
+      ? ""
+      : " Add GOOGLE_API_KEY (Google AI Studio) on Vercel for free Gemini fallback, or top up OpenRouter credits.";
+    throw new Error(`${formatProviderFailure("OpenRouter", openRouterError)}${hint}`);
   }
 
   return null;
