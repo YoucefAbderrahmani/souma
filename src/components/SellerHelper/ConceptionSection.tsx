@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
  * Keeps section trees mounted after first visit so tab switches stay instant.
  * Inactive sections are hidden (not unmounted).
  */
-export function ConceptionSection({
+/** Shared keep-alive panel for Seller Helper + admin tabs */
+export function KeepAlivePanel({
   active,
   mounted,
   sectionId,
@@ -30,4 +31,13 @@ export function ConceptionSection({
       {children}
     </div>
   );
+}
+
+export function ConceptionSection(props: {
+  active: boolean;
+  mounted: boolean;
+  sectionId: string;
+  children: ReactNode;
+}) {
+  return <KeepAlivePanel {...props} />;
 }

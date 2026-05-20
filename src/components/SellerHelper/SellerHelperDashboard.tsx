@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { startTransition, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
 import { ConceptionSection } from "./ConceptionSection";
@@ -343,6 +343,22 @@ export default function SellerHelperDashboard({
       return next;
     });
   }, [activeNav]);
+
+  useEffect(() => {
+    if (!isAdminEmbed) return;
+    const preloadAll = () => {
+      setVisitedSections((current) => {
+        if (current.size >= NAV.length) return current;
+        return new Set(NAV);
+      });
+    };
+    const idleId = window.requestIdleCallback?.(preloadAll, { timeout: 1200 });
+    const timeoutId = idleId == null ? window.setTimeout(preloadAll, 400) : undefined;
+    return () => {
+      if (idleId != null) window.cancelIdleCallback?.(idleId);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+    };
+  }, [isAdminEmbed]);
 
   const section = (item: SellerHelperNavItem, content: React.ReactNode) => (
     <ConceptionSection
