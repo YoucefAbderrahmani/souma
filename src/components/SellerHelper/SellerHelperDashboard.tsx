@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
+import { ConceptionSection } from "./ConceptionSection";
 import {
   useConceptionAdminData,
   type ConceptionAdminInitialData,
@@ -292,13 +293,20 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
 type SellerHelperDashboardProps = {
   initialData?: ConceptionAdminInitialData;
   initialError?: string | null;
+  /** Embedded in admin panel vs standalone /seller-helper page */
+  variant?: "default" | "admin";
 };
 
 export default function SellerHelperDashboard({
   initialData,
   initialError = null,
+  variant = "default",
 }: SellerHelperDashboardProps) {
+  const isAdminEmbed = variant === "admin";
   const [activeNav, setActiveNav] = useState<SellerHelperNavItem>("Dashboard");
+  const [visitedSections, setVisitedSections] = useState<Set<SellerHelperNavItem>>(
+    () => new Set<SellerHelperNavItem>(["Dashboard"])
+  );
   const {
     overview,
     alerts,
@@ -327,18 +335,44 @@ export default function SellerHelperDashboard({
     setActiveNav(section);
   }, []);
 
+  useEffect(() => {
+    setVisitedSections((current) => {
+      if (current.has(activeNav)) return current;
+      const next = new Set(current);
+      next.add(activeNav);
+      return next;
+    });
+  }, [activeNav]);
+
+  const section = (item: SellerHelperNavItem, content: React.ReactNode) => (
+    <ConceptionSection
+      key={item}
+      active={activeNav === item}
+      mounted={visitedSections.has(item)}
+      sectionId={`seller-helper-section-${item.replace(/\s+/g, "-").toLowerCase()}`}
+    >
+      {content}
+    </ConceptionSection>
+  );
+
   return (
     <div className={sellerHelperStack}>
       <div className={sellerHero}>
         <div className={sellerHeroInner}>
           <div className="max-w-3xl space-y-2">
             <p className="inline-flex items-center gap-2 text-custom-sm font-medium text-orange">
-              <Store className="h-4 w-4" aria-hidden />
-              Seller Helper
+              {isAdminEmbed ?
+                <BarChart2 className="h-4 w-4" aria-hidden />
+              : <Store className="h-4 w-4" aria-hidden />}
+              {isAdminEmbed ? "E-Commerce Intelligence" : "Seller Helper"}
             </p>
-            <h2 className="text-2xl font-semibold text-dark sm:text-custom-2">Your store dashboard</h2>
+            <h2 className="text-2xl font-semibold text-dark sm:text-custom-2">
+              {isAdminEmbed ? "Analysis & recommendation system" : "Your store dashboard"}
+            </h2>
             <p className="max-w-2xl text-custom-sm text-dark-4">
-              Start with overview and behavior, then work through funnel, merchandising, and alerts.
+              {isAdminEmbed ?
+                "Same Seller Helper experience as the storefront dashboard — live telemetry, AI recommendations, alerts, and security."
+              : "Start with overview and behavior, then work through funnel, merchandising, and alerts."}
             </p>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className={overview?.hasEventData ? sellerBadge.live : sellerBadge.muted}>
@@ -365,10 +399,12 @@ export default function SellerHelperDashboard({
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-            <Link href="/admin" className={sellerSecondaryButton}>
-              <Compass className="h-4 w-4" aria-hidden />
-              Open admin
-            </Link>
+            {!isAdminEmbed ?
+              <Link href="/admin" className={sellerSecondaryButton}>
+                <Compass className="h-4 w-4" aria-hidden />
+                Open admin
+              </Link>
+            : null}
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => void refresh()} disabled={loading} className={sellerSecondaryButton}>
                 Refresh
@@ -402,7 +438,7 @@ export default function SellerHelperDashboard({
         </p>
       ) : null}
 
-      <nav className={sellerNav} aria-label="Seller Helper sections">
+      <nav className={sellerNav} aria-label={isAdminEmbed ? "Intelligence sections" : "Seller Helper sections"}>
         {NAV.map((item) => (
           <button
             key={item}
@@ -421,25 +457,29 @@ export default function SellerHelperDashboard({
         <p className="mt-1 text-xs text-dark-4">{SELLER_HELPER_NAV_META[activeNav].description}</p>
       </div>
 
-      <div id="seller-helper-active-section">
-        {activeNav === "Dashboard" && (
+      <div id="seller-helper-active-section" className="min-h-[12rem]">
+        {section(
+          "Dashboard",
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
         )}
-        {activeNav === "Timeline" && <TimelineContent />}
-        {activeNav === "User Behavior" && (
+        {section("Timeline", <TimelineContent />)}
+        {section(
+          "User Behavior",
           <UserBehaviorContent
             behavior={overview?.userBehavior ?? null}
             onNavigateSection={handleNavigateSection}
           />
         )}
-        {activeNav === "Conversion Funnel" && <ConversionFunnelContent overview={overview} />}
-        {activeNav === "Vitrina Recommendation" && (
+        {section("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
+        {section(
+          "Vitrina Recommendation",
           <VitrinaRecommendationsContent
             recommendations={vitrinaRecommendations}
             onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
           />
         )}
-        {activeNav === "AI Recommendations" && (
+        {section(
+          "AI Recommendations",
           <AiRecommendationsContent
             recommendations={recommendations}
             overview={overview}
@@ -449,7 +489,8 @@ export default function SellerHelperDashboard({
             onClearAllRecommendations={clearAllRecommendations}
           />
         )}
-        {activeNav === "Alerts" && (
+        {section(
+          "Alerts",
           <AlertsContent
             alerts={alerts}
             resolvedAlerts={resolvedAlerts}
@@ -459,7 +500,8 @@ export default function SellerHelperDashboard({
             onClearAllAlerts={clearAllAlerts}
           />
         )}
-        {activeNav === "Security" && (
+        {section(
+          "Security",
           <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
         )}
       </div>

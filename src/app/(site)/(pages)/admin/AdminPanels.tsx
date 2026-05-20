@@ -7,6 +7,8 @@ import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
 import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
+import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
+import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
 import {
   pf,
   productFormSectionIds,
@@ -42,9 +44,11 @@ type AdminProduct = {
 type Props = {
   users: AdminUser[];
   products: AdminProduct[];
+  conceptionInitialData?: ConceptionAdminInitialData;
+  conceptionInitialError?: string | null;
 };
 
-type AdminMainTab = "users" | "add-product" | "products" | "tracking" | "role-emails";
+type AdminMainTab = "users" | "add-product" | "products" | "tracking" | "role-emails" | "seller-helper";
 
 const initialState: CreateProductState = {};
 
@@ -54,7 +58,12 @@ function newAdminColorFormRow(): AdminColorFormRow {
   return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
 }
 
-export default function AdminPanels({ users, products }: Props) {
+export default function AdminPanels({
+  users,
+  products,
+  conceptionInitialData,
+  conceptionInitialError = null,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -62,8 +71,10 @@ export default function AdminPanels({ users, products }: Props) {
     tabParam === "add-product" ||
     tabParam === "products" ||
     tabParam === "tracking" ||
-    tabParam === "role-emails"
-      ? tabParam
+    tabParam === "role-emails" ||
+    tabParam === "seller-helper" ||
+    tabParam === "conception"
+      ? tabParam === "conception" ? "seller-helper" : tabParam
       : "users";
   const [activeTab, setActiveTab] = useState<AdminMainTab>(initialTab);
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
@@ -133,14 +144,16 @@ export default function AdminPanels({ users, products }: Props) {
 
   useEffect(() => {
     if (tabParam === "conception") {
-      router.replace("/seller-helper");
+      setActiveTab("seller-helper");
+      router.replace("/admin?tab=seller-helper", { scroll: false });
       return;
     }
     if (
       tabParam === "add-product" ||
       tabParam === "products" ||
       tabParam === "tracking" ||
-      tabParam === "role-emails"
+      tabParam === "role-emails" ||
+      tabParam === "seller-helper"
     ) {
       setActiveTab(tabParam);
       return;
@@ -218,7 +231,28 @@ export default function AdminPanels({ users, products }: Props) {
         >
           Assign role emails
         </button>
+        <button
+          type="button"
+          onClick={() => switchTab("seller-helper")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none transition focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+            activeTab === "seller-helper"
+              ? "bg-orange text-white shadow-sm"
+              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
+          }`}
+        >
+          Seller Helper
+        </button>
       </div>
+
+      {activeTab === "seller-helper" && (
+        <section className="mt-6">
+          <SellerHelperDashboard
+            variant="admin"
+            initialData={conceptionInitialData}
+            initialError={conceptionInitialError}
+          />
+        </section>
+      )}
 
       {activeTab === "users" && (
         <section className="mt-6">
