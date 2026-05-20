@@ -55,11 +55,11 @@ const body = {
     BypassUnsubscribeManagement: { Enable: true },
     UnsubscribeLinkManagement: { IncludeUnsubscribeLink: false },
   },
-  Content: [{ Type: "text/html", Value: html }],
   Personalizations: [{ To: [{ Email: to, Name: "Test" }] }],
 };
 if (templateId) body.TemplateId = templateId;
-if (templateName) body.TemplateName = templateName;
+else if (templateName) body.TemplateName = templateName;
+else body.Content = [{ Type: "text/html", Value: html }];
 
 const url = `${host}/v3/campaigns/transactional/send.json?apikey=${encodeURIComponent(apiKey)}`;
 console.log("POST", url.replace(apiKey, "***"));

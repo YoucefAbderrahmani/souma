@@ -130,59 +130,46 @@ async function sendViaMoosend(
 
   const { subject, html } = buildEmailBodies(payload);
   const userId = getMoosendUserId();
+  const useTemplate = Boolean(templateId || templateName);
 
-  // Moosend accepts mixed casing; official send examples use lowercase templateid / personalizations.
+  const substitutions = {
+    role_name: payload.roleDisplayName,
+    title: payload.title,
+    priority: payload.priority,
+    confidence: String(payload.confidence),
+    analysis: payload.analysis,
+    recommendation: payload.recommendation,
+    revenue_hint: payload.revenueHint ?? "",
+    roi_hint: payload.roiHint ?? "",
+    implementation_hint: payload.implementationHint ?? "",
+    store_url: payload.storeUrl ?? "",
+  };
+
+  // One content type per request. With a template, body HTML comes from Moosend — do not also send Content.
   const body: Record<string, unknown> = {
     Subject: subject,
-    subject,
     From: {
       Email: fromParsed.email,
       sendersName: fromParsed.name,
-    },
-    from: {
-      email: fromParsed.email,
-      name: fromParsed.name,
     },
     MailSettings: {
       BypassUnsubscribeManagement: { Enable: true },
       UnsubscribeLinkManagement: { IncludeUnsubscribeLink: false },
     },
-    mailSettings: {
-      BypassUnsubscribeManagement: { Enable: true },
-      UnsubscribeLinkManagement: { IncludeUnsubscribeLink: false },
-    },
-    personalizations: [
+    Personalizations: [
       {
-        to: [{ Email: payload.to, Name: payload.roleDisplayName }],
-        Substitutions: {
-          role_name: payload.roleDisplayName,
-          title: payload.title,
-          priority: payload.priority,
-          confidence: String(payload.confidence),
-          analysis: payload.analysis,
-          recommendation: payload.recommendation,
-          revenue_hint: payload.revenueHint ?? "",
-          roi_hint: payload.roiHint ?? "",
-          implementation_hint: payload.implementationHint ?? "",
-          store_url: payload.storeUrl ?? "",
-        },
+        To: [{ Email: payload.to, Name: payload.roleDisplayName }],
+        Substitutions: substitutions,
       },
     ],
-    Content: [{ Type: "text/html", Value: html }],
-    content: [{ Type: "text/html", Value: html }],
   };
 
-  if (userId) {
-    body.userId = userId;
-    body.UserId = userId;
-  }
-  if (templateId) {
-    body.TemplateId = templateId;
-    body.templateid = templateId;
-  }
-  if (templateName) {
-    body.TemplateName = templateName;
-    body.templatename = templateName;
+  if (userId) body.userId = userId;
+  if (templateId) body.TemplateId = templateId;
+  else if (templateName) body.TemplateName = templateName;
+
+  if (!useTemplate) {
+    body.Content = [{ Type: "text/html", Value: html }];
   }
 
   const url = `${getMoosendApiHost()}/v3/campaigns/transactional/send.json?apikey=${encodeURIComponent(apiKey)}`;
