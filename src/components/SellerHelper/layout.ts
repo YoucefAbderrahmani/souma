@@ -71,8 +71,8 @@ export const sellerNav = cn(
 
 export const sellerNavButton = (active: boolean) =>
   cn(
-    "relative inline-flex items-center whitespace-nowrap py-1 font-medium text-custom-sm ease-out duration-200",
-    "before:absolute before:bottom-0 before:left-0 before:h-0.5 before:rounded-b-[2px] before:bg-orange before:ease-out before:duration-200",
+    "relative inline-flex items-center whitespace-nowrap py-1 font-medium text-custom-sm",
+    "before:absolute before:bottom-0 before:left-0 before:h-0.5 before:rounded-b-[2px] before:bg-orange",
     active ? "text-orange before:w-full" : "text-dark before:w-0 hover:text-orange hover:before:w-full"
   );
 

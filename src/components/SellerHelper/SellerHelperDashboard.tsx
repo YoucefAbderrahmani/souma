@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
@@ -15,15 +15,16 @@ import { ProgressBar, TrafficChart } from "./charts";
 import { UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
 import { SecurityTabContent } from "./security-tab";
-import { SELLER_HELPER_NAV, SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
+import { SellerHelperNav } from "./SellerHelperNav";
+import { SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
+import { useInstantTab } from "@/hooks/useInstantTab";
+import { InstantPanel } from "@/components/ui/InstantPanel";
 import {
   sellerAccentStrip,
   sellerBadge,
   sellerHelperGrid,
   sellerHero,
   sellerHeroInner,
-  sellerNav,
-  sellerNavButton,
   sellerPanel,
   sellerPanelPadding,
   sellerPlaceholder,
@@ -39,8 +40,6 @@ import {
   sellerTableRow,
   sellerTableWrap,
 } from "./layout";
-
-const NAV = SELLER_HELPER_NAV;
 
 function SectionLoading({ label }: { label: string }) {
   return <div className={sellerPlaceholder}>Loading {label}…</div>;
@@ -321,7 +320,13 @@ function SellerHelperDashboardInner({
   variant = "default",
 }: SellerHelperDashboardProps) {
   const isAdminEmbed = variant === "admin";
-  const [activeNav, setActiveNav] = useState<SellerHelperNavItem>("Dashboard");
+  const { active: activeNav, visited: visitedSections, select: selectNav } =
+    useInstantTab<SellerHelperNavItem>("Dashboard");
+  const [visualNav, setVisualNav] = useState<SellerHelperNavItem>("Dashboard");
+
+  useEffect(() => {
+    setVisualNav(activeNav);
+  }, [activeNav]);
   const {
     overview,
     alerts,
@@ -348,9 +353,34 @@ function SellerHelperDashboardInner({
 
   const trafficSeries = overview?.trafficHourlyNormalized ?? [];
 
-  const handleNavigateSection = useCallback((section: SellerHelperNavItem) => {
-    setActiveNav(section);
-  }, []);
+  const handleNavigateSection = useCallback(
+    (section: SellerHelperNavItem) => {
+      setVisualNav(section);
+      selectNav(section);
+    },
+    [selectNav]
+  );
+
+  const handleSelectNav = useCallback(
+    (section: SellerHelperNavItem) => {
+      setVisualNav(section);
+      selectNav(section);
+    },
+    [selectNav]
+  );
+
+  const showPanel = (item: SellerHelperNavItem, content: React.ReactNode) => {
+    if (!visitedSections.has(item)) return null;
+    return (
+      <InstantPanel
+        active={visualNav === item}
+        mounted
+        panelId={`seller-helper-section-${item.replace(/\s+/g, "-").toLowerCase()}`}
+      >
+        {content}
+      </InstantPanel>
+    );
+  };
 
   return (
     <div className={sellerHelperStack}>
@@ -435,48 +465,40 @@ function SellerHelperDashboardInner({
         </p>
       ) : null}
 
-      <nav className={sellerNav} aria-label={isAdminEmbed ? "Intelligence sections" : "Seller Helper sections"}>
-        {NAV.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => handleNavigateSection(item)}
-            className={sellerNavButton(activeNav === item)}
-            aria-current={activeNav === item ? "page" : undefined}
-          >
-            {SELLER_HELPER_NAV_META[item].label}
-          </button>
-        ))}
-      </nav>
+      <SellerHelperNav
+        activeNav={visualNav}
+        ariaLabel={isAdminEmbed ? "Intelligence sections" : "Seller Helper sections"}
+        onSelect={handleSelectNav}
+      />
 
       <div className="rounded-lg border border-gray-3 bg-gray-1 px-4 py-3">
-        <p className="text-sm font-semibold text-dark">{activeNav}</p>
-        <p className="mt-1 text-xs text-dark-4">{SELLER_HELPER_NAV_META[activeNav].description}</p>
+        <p className="text-sm font-semibold text-dark">{visualNav}</p>
+        <p className="mt-1 text-xs text-dark-4">{SELLER_HELPER_NAV_META[visualNav].description}</p>
       </div>
 
-      <div id="seller-helper-active-section" className="min-h-[12rem]">
-        {activeNav === "Dashboard" ?
+      <div id="seller-helper-active-section" className="relative min-h-[12rem]">
+        {showPanel(
+          "Dashboard",
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
-        : null}
-        {activeNav === "Timeline" ?
-          <TimelineContent />
-        : null}
-        {activeNav === "User Behavior" ?
+        )}
+        {showPanel("Timeline", <TimelineContent />)}
+        {showPanel(
+          "User Behavior",
           <UserBehaviorContent
             behavior={overview?.userBehavior ?? null}
             onNavigateSection={handleNavigateSection}
           />
-        : null}
-        {activeNav === "Conversion Funnel" ?
-          <ConversionFunnelContent overview={overview} />
-        : null}
-        {activeNav === "Vitrina Recommendation" ?
+        )}
+        {showPanel("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
+        {showPanel(
+          "Vitrina Recommendation",
           <VitrinaRecommendationsContent
             recommendations={vitrinaRecommendations}
             onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
           />
-        : null}
-        {activeNav === "AI Recommendations" ?
+        )}
+        {showPanel(
+          "AI Recommendations",
           <AiRecommendationsContent
             recommendations={recommendations}
             overview={overview}
@@ -485,8 +507,9 @@ function SellerHelperDashboardInner({
             onSendRecommendationEmail={sendRecommendationEmail}
             onClearAllRecommendations={clearAllRecommendations}
           />
-        : null}
-        {activeNav === "Alerts" ?
+        )}
+        {showPanel(
+          "Alerts",
           <AlertsContent
             alerts={alerts}
             resolvedAlerts={resolvedAlerts}
@@ -495,10 +518,11 @@ function SellerHelperDashboardInner({
             onDismissAlert={dismissAlert}
             onClearAllAlerts={clearAllAlerts}
           />
-        : null}
-        {activeNav === "Security" ?
+        )}
+        {showPanel(
+          "Security",
           <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
-        : null}
+        )}
       </div>
     </div>
   );

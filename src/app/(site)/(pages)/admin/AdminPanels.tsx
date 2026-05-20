@@ -2,6 +2,8 @@
 
 import React, { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { AdminTabBar, type AdminMainTab } from "./AdminTabBar";
+import { useInstantTab } from "@/hooks/useInstantTab";
+import { InstantPanel } from "@/components/ui/InstantPanel";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import EditProductModal from "./EditProductModal";
@@ -79,7 +81,8 @@ export default function AdminPanels({
   conceptionInitialData,
   conceptionInitialError = null,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<AdminMainTab>(readAdminTabFromUrl);
+  const { active: activeTab, visited: visitedTabs, select: switchTab } =
+    useInstantTab<AdminMainTab>(readAdminTabFromUrl());
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
@@ -154,10 +157,19 @@ export default function AdminPanels({
   }, []);
 
   useEffect(() => {
-    const onPopState = () => setActiveTab(readAdminTabFromUrl());
+    const onPopState = () => switchTab(readAdminTabFromUrl());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  }, [switchTab]);
+
+  const renderTab = (tab: AdminMainTab, content: React.ReactNode) => {
+    if (!visitedTabs.has(tab)) return null;
+    return (
+      <InstantPanel active={activeTab === tab} mounted panelId={`admin-tab-${tab}`}>
+        {content}
+      </InstantPanel>
+    );
+  };
 
   useEffect(() => {
     if (productCategoryTab === "__all__") return;
@@ -166,29 +178,35 @@ export default function AdminPanels({
     }
   }, [productCategoryTab, productCategoryNames]);
 
-  const switchTab = useCallback((tab: AdminMainTab) => {
-    setActiveTab(tab);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/admin?tab=${tab}`);
-    }
-  }, []);
+  const onSelectTab = useCallback(
+    (tab: AdminMainTab) => {
+      switchTab(tab);
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `/admin?tab=${tab}`);
+      }
+    },
+    [switchTab]
+  );
 
   return (
     <div className="mt-10 space-y-6">
-      <AdminTabBar activeTab={activeTab} onSelect={switchTab} />
+      <AdminTabBar activeTab={activeTab} onSelect={onSelectTab} />
 
-      {activeTab === "seller-helper" ?
-        <section className="mt-6">
-          <SellerHelperDashboard
-            variant="admin"
-            initialData={conceptionInitialData}
-            initialError={conceptionInitialError}
-          />
-        </section>
-      : null}
+      <div className="relative mt-6 min-h-[240px]">
+        {renderTab(
+          "seller-helper",
+          <section>
+            <SellerHelperDashboard
+              variant="admin"
+              initialData={conceptionInitialData}
+              initialError={conceptionInitialError}
+            />
+          </section>
+        )}
 
-      {activeTab === "users" ?
-        <section className="mt-6">
+        {renderTab(
+          "users",
+          <section>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Users" value={userStats.total} />
             <StatCard label="Admins" value={userStats.admins} />
@@ -238,11 +256,12 @@ export default function AdminPanels({
               </table>
             </div>
           </div>
-        </section>
-      : null}
+          </section>
+        )}
 
-      {activeTab === "add-product" ?
-        <section className="mt-6">
+        {renderTab(
+          "add-product",
+          <section>
           <form action={createAction} encType="multipart/form-data">
             <ProductFormShell
               title="Add new product"
@@ -803,11 +822,12 @@ export default function AdminPanels({
               </p>
             ) : null}
           </form>
-        </section>
-      : null}
+          </section>
+        )}
 
-      {activeTab === "products" ?
-        <section className="mt-6">
+        {renderTab(
+          "products",
+          <section>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Products" value={productStats.total} />
             <StatCard label="Total Stock" value={productStats.totalStock} />
@@ -932,20 +952,23 @@ export default function AdminPanels({
               onClose={() => setEditingProduct(null)}
             />
           ) : null}
-        </section>
-      : null}
+          </section>
+        )}
 
-      {activeTab === "tracking" ?
-        <section className="mt-2">
-          <ProductAnalyticsTrackingPanel />
-        </section>
-      : null}
+        {renderTab(
+          "tracking",
+          <section className="mt-2">
+            <ProductAnalyticsTrackingPanel />
+          </section>
+        )}
 
-      {activeTab === "role-emails" ?
-        <section className="mt-2">
-          <RecommendationRoleEmailsPanel />
-        </section>
-      : null}
+        {renderTab(
+          "role-emails",
+          <section className="mt-2">
+            <RecommendationRoleEmailsPanel />
+          </section>
+        )}
+      </div>
     </div>
   );
 }

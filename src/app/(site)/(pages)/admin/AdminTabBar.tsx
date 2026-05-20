@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { useOptimisticTabIndicator } from "@/hooks/useOptimisticTabIndicator";
 
 export type AdminMainTab =
   | "users"
@@ -19,6 +20,12 @@ const TABS: { id: AdminMainTab; label: string }[] = [
   { id: "seller-helper", label: "Seller Helper" },
 ];
 
+const TAB_PREFETCH: Partial<Record<AdminMainTab, () => void>> = {
+  "seller-helper": () => {
+    void import("@/components/SellerHelper/SellerHelperDashboard");
+  },
+};
+
 function AdminTabBarInner({
   activeTab,
   onSelect,
@@ -26,15 +33,19 @@ function AdminTabBarInner({
   activeTab: AdminMainTab;
   onSelect: (tab: AdminMainTab) => void;
 }) {
+  const { indicatorTab, selectTab } = useOptimisticTabIndicator(activeTab);
+
   return (
     <div className="flex flex-wrap gap-2">
       {TABS.map(({ id, label }) => (
         <button
           key={id}
           type="button"
-          onClick={() => onSelect(id)}
+          onMouseEnter={() => TAB_PREFETCH[id]?.()}
+          onFocus={() => TAB_PREFETCH[id]?.()}
+          onClick={() => selectTab(id, onSelect)}
           className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            activeTab === id
+            indicatorTab === id
               ? "bg-orange text-white shadow-sm"
               : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
           }`}
