@@ -4,7 +4,6 @@ import type {
   VitrinaProductMarketingRecommendation,
 } from "@/types/vitrina-product-recommendations";
 import { IMPORTANCE_RANKS } from "@/lib/importance-ranking";
-import { cn } from "@/lib/utils";
 import {
   confidenceBarFillClass,
   confidenceTier,
@@ -28,13 +27,6 @@ export function vitrinaPriorityAsTier(
   if (priority === "high") return "high";
   if (priority === "medium") return "medium";
   return "low";
-}
-
-export function vitrinaCardRootClass() {
-  return cn(
-    "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-3 bg-white shadow-1",
-    "transition-all duration-250 ease-out hover:-translate-y-1 hover:border-gray-4 hover:shadow-lg"
-  );
 }
 
 export function vitrinaPriorityStripClass(priority: VitrinaMarketingPriority) {
