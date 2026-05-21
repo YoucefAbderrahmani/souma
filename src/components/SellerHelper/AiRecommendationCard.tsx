@@ -169,16 +169,13 @@ export function AiRecommendationCard({
 
         {/* Recommendation content */}
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <h3 className="text-right text-sm font-bold leading-snug text-dark sm:text-[15px]">{rec.title}</h3>
+
           <div className={recommendationPanelClass}>
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-3">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-sm bg-teal" aria-hidden />
-                Recommendation
-              </span>
-              <h3 className="max-w-[min(100%,20rem)] text-right text-sm font-bold leading-snug text-dark sm:text-[15px]">
-                {rec.title}
-              </h3>
-            </div>
+            <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-3">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-sm bg-teal" aria-hidden />
+              Recommendation
+            </span>
             <p
               className={cn(
                 "text-sm leading-relaxed text-dark-3",
@@ -210,7 +207,7 @@ export function AiRecommendationCard({
             </div>
             <div className="text-center">
               <span className="text-[9px] font-bold uppercase tracking-wide text-dark-4">Impact</span>
-              <p className="text-xs font-bold text-dark sm:text-sm">{rec.impact}</p>
+              <p className="text-[10px] font-semibold leading-snug text-dark sm:text-[11px]">{rec.impact}</p>
             </div>
           </div>
         </div>
