@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Settings2, X } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { readJsonResponse } from "@/lib/admin-api-response";
 import type {
   ConceptionAlertRule,
