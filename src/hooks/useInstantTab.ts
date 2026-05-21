@@ -9,7 +9,6 @@ export function useInstantTab<T extends string>(initial: T) {
   const select = useCallback((tab: T) => {
     setActive(tab);
     setVisited((current) => {
-      if (current.has(tab)) return current;
       const next = new Set(current);
       next.add(tab);
       return next;
@@ -18,7 +17,6 @@ export function useInstantTab<T extends string>(initial: T) {
 
   const ensureVisited = useCallback((tab: T) => {
     setVisited((current) => {
-      if (current.has(tab)) return current;
       const next = new Set(current);
       next.add(tab);
       return next;

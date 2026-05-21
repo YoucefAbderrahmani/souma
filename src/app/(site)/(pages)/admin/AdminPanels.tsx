@@ -2,7 +2,6 @@
 
 import React, { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { AdminTabBar, type AdminMainTab } from "./AdminTabBar";
-import { useInstantTab } from "@/hooks/useInstantTab";
 import { InstantPanel } from "@/components/ui/InstantPanel";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
@@ -81,8 +80,12 @@ export default function AdminPanels({
   conceptionInitialData,
   conceptionInitialError = null,
 }: Props) {
-  const { active: activeTab, visited: visitedTabs, select: switchTab } =
-    useInstantTab<AdminMainTab>(readAdminTabFromUrl());
+  const [activeTab, setActiveTab] = useState<AdminMainTab>(() =>
+    typeof window === "undefined" ? "users" : readAdminTabFromUrl()
+  );
+  const [visitedTabs, setVisitedTabs] = useState<Set<AdminMainTab>>(
+    () => new Set([typeof window === "undefined" ? "users" : readAdminTabFromUrl()])
+  );
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
   const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
@@ -157,10 +160,18 @@ export default function AdminPanels({
   }, []);
 
   useEffect(() => {
-    const onPopState = () => switchTab(readAdminTabFromUrl());
+    const onPopState = () => {
+      const tab = readAdminTabFromUrl();
+      setActiveTab(tab);
+      setVisitedTabs((current) => {
+        const next = new Set(current);
+        next.add(tab);
+        return next;
+      });
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [switchTab]);
+  }, []);
 
   const renderTab = (tab: AdminMainTab, content: React.ReactNode) => {
     if (!visitedTabs.has(tab)) return null;
@@ -178,15 +189,17 @@ export default function AdminPanels({
     }
   }, [productCategoryTab, productCategoryNames]);
 
-  const onSelectTab = useCallback(
-    (tab: AdminMainTab) => {
-      switchTab(tab);
-      if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", `/admin?tab=${tab}`);
-      }
-    },
-    [switchTab]
-  );
+  const onSelectTab = useCallback((tab: AdminMainTab) => {
+    setActiveTab(tab);
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add(tab);
+      return next;
+    });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/admin?tab=${tab}`);
+    }
+  }, []);
 
   return (
     <div className="mt-10 space-y-6">
