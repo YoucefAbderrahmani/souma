@@ -154,19 +154,6 @@ export function AiRecommendationCard({
               />
             </div>
           </div>
-
-          <div
-            className={cn(
-              "mt-3 flex items-start gap-2 rounded-md border-l-[3px] px-3 py-2.5 text-xs leading-relaxed text-dark-4",
-              implementationTimeClass(rec.tier)
-            )}
-          >
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-dark-4" aria-hidden />
-            <span>
-              <span className="font-semibold text-dark-3">Implementation: </span>
-              {rec.implementation}
-            </span>
-          </div>
         </aside>
 
         {/* Analysis + recommendation (uses remaining width) */}
@@ -226,6 +213,19 @@ export function AiRecommendationCard({
               <p className="mt-3 text-sm leading-[1.7] text-dark-3">{rec.recommendation}</p>
             </div>
           : null}
+
+          <div
+            className={cn(
+              "flex items-start gap-2.5 rounded-lg border border-gray-2 px-4 py-3 text-xs leading-relaxed text-dark-4 sm:text-sm",
+              implementationTimeClass(rec.tier)
+            )}
+          >
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-dark-4" aria-hidden />
+            <span>
+              <span className="font-semibold text-dark-3">Implementation: </span>
+              {rec.implementation}
+            </span>
+          </div>
         </div>
       </div>
     </article>
