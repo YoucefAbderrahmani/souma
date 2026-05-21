@@ -25,6 +25,8 @@ import {
   sellerPanel,
   sellerPanelPadding,
   sellerPlaceholder,
+  vitrinaSectionShell,
+  vitrinaSectionEmpty,
   sellerIconButton,
   sellerPrimaryButton,
   sellerSecondaryButton,
@@ -365,13 +367,11 @@ export function VitrinaRecommendationsContent({
           No Vitrina recommendations yet. Run analysis to generate storefront merchandising suggestions.
         </div>
       : <div className="space-y-4">
-          <section
-            className={cn(sellerPlaceholder, "space-y-4 p-4 text-left sm:p-5")}
-            aria-label="Featured highlights"
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide text-dark-4">Featured highlights</p>
+          <section className={vitrinaSectionShell} aria-label="Featured highlights">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-2 pb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-dark">Featured highlights</p>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <p className="text-xs font-medium uppercase tracking-wide text-dark-4">
                 {visibleRecommendations.length} item{visibleRecommendations.length === 1 ? "" : "s"}
               </p>
@@ -394,10 +394,11 @@ export function VitrinaRecommendationsContent({
                 </button>
               </div>
             </div>
+            </div>
 
             {visibleRecommendations.length === 0 ?
-              <div className={sellerPlaceholder}>No products match your search or filters.</div>
-            : <div className="overflow-hidden px-4 sm:px-5">
+              <div className={vitrinaSectionEmpty}>No products match your search or filters.</div>
+            : <div className="-mx-1 overflow-hidden px-1">
                 <Swiper
                   key={sliderKey}
                   onSwiper={(swiper) => {
@@ -425,11 +426,10 @@ export function VitrinaRecommendationsContent({
             }
           </section>
 
-          <section
-            className={cn(sellerPlaceholder, "space-y-4 p-4 text-left sm:p-5")}
-            aria-label="Full catalog"
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide text-dark-4">Full catalog</p>
+          <section className={vitrinaSectionShell} aria-label="Full catalog">
+            <p className="border-b border-gray-2 pb-3 text-xs font-semibold uppercase tracking-wide text-dark">
+              Full catalog
+            </p>
 
             <div className="space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -512,7 +512,7 @@ export function VitrinaRecommendationsContent({
                 {visibleRecommendations.length} item{visibleRecommendations.length === 1 ? "" : "s"}
               </p>
               {visibleRecommendations.length === 0 ?
-                <div className={sellerPlaceholder}>No products match your search or filters.</div>
+                <div className={vitrinaSectionEmpty}>No products match your search or filters.</div>
               : <div className={sellerHelperGrid.three}>
                   {visibleRecommendations.map((item) => (
                     <VitrinaProductCard

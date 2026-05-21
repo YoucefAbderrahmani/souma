@@ -89,6 +89,16 @@ export const sellerPlaceholder = cn(
   "rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-3 text-center text-custom-sm text-dark-4"
 );
 
+/** Section frame for Vitrina carousel / catalog (solid panel, not dashed placeholder). */
+export const vitrinaSectionShell = cn(
+  sellerPanelMuted,
+  "space-y-4 text-left"
+);
+
+export const vitrinaSectionEmpty = cn(
+  "rounded-lg border border-gray-3 bg-white px-4 py-6 text-center text-custom-sm text-dark-4"
+);
+
 export const sellerTableWrap = "overflow-x-auto -mx-1 px-1";
 
 export const sellerTable = "w-full min-w-[520px] text-left text-custom-sm";
