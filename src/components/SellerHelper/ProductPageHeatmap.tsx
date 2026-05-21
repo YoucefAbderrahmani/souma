@@ -16,7 +16,7 @@ import {
   PRODUCT_HEATMAP_SURFACE_ATTR,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncParentDocumentHeatmapOverlay } from "@/lib/product-heatmap-overlay";
+import { syncStageHeatmapOverlay } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -61,6 +61,7 @@ function HeatmapPagePreview({
   productTitle: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const layoutLockedRef = useRef(false);
   const [layout, setLayout] = useState(() => toPreviewLayoutState(createPreviewFallbackLayout()));
@@ -102,9 +103,9 @@ function HeatmapPagePreview({
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    iframe.style.width = `${HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX}px`;
-    iframe.style.height = `${Math.max(1, Math.round(layout.surfaceHeight))}px`;
-  }, [layout.surfaceHeight, previewSrc]);
+    iframe.style.width = `${Math.max(1, Math.round(layout.documentWidth))}px`;
+    iframe.style.height = `${Math.max(1, Math.round(layout.documentHeight))}px`;
+  }, [layout.documentHeight, layout.documentWidth, previewSrc]);
 
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
@@ -132,12 +133,22 @@ function HeatmapPagePreview({
   ]);
 
   useLayoutEffect(() => {
-    const container = containerRef.current;
+    const stage = stageRef.current;
     const iframe = iframeRef.current;
-    if (!container || !iframe) return () => {};
+    if (!stage || !iframe) return () => {};
 
-    return syncParentDocumentHeatmapOverlay(container, iframe, heatmap);
-  }, [heatmap, fit.height, fit.scale, fit.width, layout, previewSrc]);
+    return syncStageHeatmapOverlay(
+      stage,
+      iframe,
+      {
+        surfaceWidth: layout.surfaceWidth,
+        surfaceHeight: layout.surfaceHeight,
+        surfaceOffsetLeft: layout.surfaceOffsetLeft,
+        surfaceOffsetTop: layout.surfaceOffsetTop,
+      },
+      heatmap
+    );
+  }, [heatmap, fit.scale, layout, previewSrc]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -249,8 +260,6 @@ function HeatmapPagePreview({
     };
   }, [previewSrc]);
 
-  const cropWidth = layout.surfaceWidth;
-  const cropHeight = layout.surfaceHeight;
   const displayScale = fit.scale;
 
   return (
@@ -260,14 +269,15 @@ function HeatmapPagePreview({
     >
       <div className="flex h-full w-full items-center justify-center">
         <div
-          className="relative overflow-hidden bg-white"
+          className="relative overflow-hidden rounded-sm border border-gray-3 bg-white shadow-sm"
           style={{ width: fit.width, height: fit.height }}
         >
           <div
+            ref={stageRef}
             className="relative overflow-hidden"
             style={{
-              width: cropWidth,
-              height: cropHeight,
+              width: layout.surfaceWidth,
+              height: layout.surfaceHeight,
               transform: `scale(${displayScale})`,
               transformOrigin: "top left",
             }}
@@ -278,10 +288,10 @@ function HeatmapPagePreview({
               title={`Heatmap preview for ${productTitle}`}
               src={previewSrc}
               scrolling="no"
-              className="absolute left-0 top-0 border-0 bg-white"
+              className="absolute left-0 top-0 block border-0 bg-white"
               style={{
-                width: HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
-                height: layout.surfaceHeight,
+                width: layout.documentWidth,
+                height: layout.documentHeight,
               }}
             />
           </div>
