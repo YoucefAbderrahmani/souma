@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import { parseProductContent } from "@/lib/product-content";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
-import { updateProductFullAction, type UpdateProductState } from "@/app/(site)/(pages)/admin/actions";
+import { updateProductFullAction, type UpdateProductState } from "@/app/(site)/(pages)/(admin-shell)/admin/actions";
 import { sellerGhostButton, sellerPrimaryButton, sellerSecondaryButton } from "./layout";
 
 const initialUpdateState: UpdateProductState = {};

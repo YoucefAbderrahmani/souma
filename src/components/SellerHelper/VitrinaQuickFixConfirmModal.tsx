@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   applyVitrinaQuickFixesAction,
   type ApplyVitrinaQuickFixesState,
-} from "@/app/(site)/(pages)/admin/actions";
+} from "@/app/(site)/(pages)/(admin-shell)/admin/actions";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 import { sellerGhostButton, sellerPrimaryButton, sellerSecondaryButton } from "./layout";
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   applySecurityQuickFixesAction,
   type ApplySecurityQuickFixesState,
-} from "@/app/(site)/(pages)/admin/actions";
+} from "@/app/(site)/(pages)/(admin-shell)/admin/actions";
 import type {
   ConceptionSecurityBlockedIdentity,
   ConceptionSecurityIncident,
