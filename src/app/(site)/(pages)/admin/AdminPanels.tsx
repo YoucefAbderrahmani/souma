@@ -2,6 +2,11 @@
 
 import React, { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { AdminTabBar, type AdminMainTab } from "./AdminTabBar";
+import {
+  ADMIN_TAB_SELECT_EVENT,
+  navigateAdminTab,
+  readAdminTabFromUrl,
+} from "./admin-tab-client-nav";
 import { InstantPanel } from "@/components/ui/InstantPanel";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
@@ -48,23 +53,6 @@ type Props = {
   conceptionInitialData?: ConceptionAdminInitialData;
   conceptionInitialError?: string | null;
 };
-
-function readAdminTabFromUrl(): AdminMainTab {
-  if (typeof window === "undefined") return "users";
-  const tab = new URLSearchParams(window.location.search).get("tab");
-  if (tab === "conception") return "seller-helper";
-  if (
-    tab === "users" ||
-    tab === "add-product" ||
-    tab === "products" ||
-    tab === "tracking" ||
-    tab === "role-emails" ||
-    tab === "seller-helper"
-  ) {
-    return tab;
-  }
-  return "users";
-}
 
 const initialState: CreateProductState = {};
 
@@ -159,19 +147,28 @@ export default function AdminPanels({
     }
   }, []);
 
-  useEffect(() => {
-    const onPopState = () => {
-      const tab = readAdminTabFromUrl();
-      setActiveTab(tab);
-      setVisitedTabs((current) => {
-        const next = new Set(current);
-        next.add(tab);
-        return next;
-      });
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+  const applyTab = useCallback((tab: AdminMainTab) => {
+    setActiveTab(tab);
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add(tab);
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    const onTabSelect = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab: AdminMainTab }>).detail.tab;
+      applyTab(tab);
+    };
+    const onPopState = () => applyTab(readAdminTabFromUrl());
+    window.addEventListener(ADMIN_TAB_SELECT_EVENT, onTabSelect);
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener(ADMIN_TAB_SELECT_EVENT, onTabSelect);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [applyTab]);
 
   const renderTab = (tab: AdminMainTab, content: React.ReactNode) => {
     if (!visitedTabs.has(tab)) return null;
@@ -190,15 +187,7 @@ export default function AdminPanels({
   }, [productCategoryTab, productCategoryNames]);
 
   const onSelectTab = useCallback((tab: AdminMainTab) => {
-    setActiveTab(tab);
-    setVisitedTabs((current) => {
-      const next = new Set(current);
-      next.add(tab);
-      return next;
-    });
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/admin?tab=${tab}`);
-    }
+    navigateAdminTab(tab);
   }, []);
 
   return (
