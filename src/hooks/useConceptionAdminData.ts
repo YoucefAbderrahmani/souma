@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLiveDataRefresh } from "@/hooks/useLiveDataRefresh";
 import type {
   ConceptionAlertDto,
@@ -64,6 +64,7 @@ export function useConceptionAdminData(
 ) {
   const liveRefreshIntervalMs = options?.liveRefreshIntervalMs ?? 5_000;
   const liveRefreshEnabled = options?.liveRefreshEnabled ?? true;
+  const loadGenerationRef = useRef(0);
   const [state, setState] = useState<State>({
     overview: initialData?.overview ?? null,
     alerts: initialData?.alerts ?? [],
@@ -79,6 +80,7 @@ export function useConceptionAdminData(
   });
 
   const load = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
+    const generation = ++loadGenerationRef.current;
     if (!background) {
       setState((s) => ({ ...s, loading: true, error: null }));
     }
@@ -117,6 +119,8 @@ export function useConceptionAdminData(
       if (r.error) throw new Error(r.message || r.error);
       if (inboxBody.error) throw new Error(inboxBody.message || inboxBody.error);
 
+      if (generation !== loadGenerationRef.current) return;
+
       setState((s) => ({
         ...s,
         overview: o.overview as ConceptionOverviewDto,
@@ -129,6 +133,7 @@ export function useConceptionAdminData(
         error: background ? s.error : null,
       }));
     } catch (e) {
+      if (generation !== loadGenerationRef.current) return;
       setState((s) => ({
         ...s,
         loading: false,
@@ -177,7 +182,11 @@ export function useConceptionAdminData(
   }, []);
 
   const refreshLive = useCallback(() => load({ background: true }), [load]);
-  useLiveDataRefresh(refreshLive, liveRefreshEnabled, liveRefreshIntervalMs);
+  useLiveDataRefresh(
+    refreshLive,
+    liveRefreshEnabled && !state.analyzeBusy,
+    liveRefreshIntervalMs
+  );
 
   const dismissAlert = useCallback(async (id: string, disposition: "resolved" | "ignored" = "resolved") => {
     setState((s) => ({ ...s, actionMessage: null }));
@@ -441,6 +450,7 @@ export function useConceptionAdminData(
   }, [load]);
 
   const runAnalyze = useCallback(async () => {
+    loadGenerationRef.current += 1;
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));
     try {
       const res = await fetch("/api/admin/conception/analyze", {
@@ -479,7 +489,7 @@ export function useConceptionAdminData(
 
       let analyzeMessage = `Analysis complete — ${insertedAlerts} alert(s), ${insertedRecommendations} recommendation(s), ${vitrinaRecommendations.length} storefront recommendation(s).`;
       if (emailsSent > 0) {
-        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically via Brevo.`;
+        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically (BREVO_AUTO_SEND_ON_ANALYZE=true).`;
       }
       if (emailsFailed > 0) {
         analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) could not be sent (check BREVO_API_KEY, EMAIL_FROM, and role addresses).`;

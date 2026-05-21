@@ -21,6 +21,7 @@ export type AiRecommendationCardModel = {
   assignedRoleKey: string;
   assignedRoleLabel: string;
   roleEmailConfigured: boolean;
+  emailSentAt: string | null;
 };
 
 export function mapConceptionRecommendationToCard(
@@ -60,6 +61,7 @@ export function mapConceptionRecommendationToCard(
     assignedRoleKey: rec.assignedRoleKey,
     assignedRoleLabel: rec.assignedRoleLabel,
     roleEmailConfigured: rec.roleEmailConfigured,
+    emailSentAt: rec.emailSentAt,
   };
 }
 

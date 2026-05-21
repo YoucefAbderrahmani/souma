@@ -253,6 +253,27 @@ export async function dismissConceptionRecommendationById(id: string): Promise<b
   return true;
 }
 
+/** Records a successful Brevo send while keeping the card in AI Recommendations (Analyze auto-send). */
+export async function markConceptionRecommendationEmailSent(id: string): Promise<boolean> {
+  const now = new Date();
+  const rows = await db
+    .update(conceptionRecommendationTable)
+    .set({ emailSentAt: now })
+    .where(
+      and(
+        eq(conceptionRecommendationTable.id, id),
+        isNull(conceptionRecommendationTable.dismissedAt),
+        or(
+          eq(conceptionRecommendationTable.workflowStatus, RECOMMENDATION_WORKFLOW_ACTIVE),
+          isNull(conceptionRecommendationTable.workflowStatus)
+        )
+      )
+    )
+    .returning({ id: conceptionRecommendationTable.id });
+
+  return rows.length > 0;
+}
+
 export async function moveConceptionRecommendationToInbox(id: string): Promise<boolean> {
   const now = new Date();
   const rows = await db

@@ -9,8 +9,6 @@ import { writeVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
-import { autoSendRecommendationEmails } from "@/server/email/auto-send-recommendation-emails";
-import { isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 import { getConceptionAlertRuleSettings } from "@/server/conception/alert-rule-settings";
 
 function dayFingerprint(prefix: string): string {
@@ -381,26 +379,11 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     console.error("[conception/analyze][vitrina]", error);
   }
 
-  let emailsSent = 0;
-  let emailsFailed = 0;
-  const autoSendOnAnalyze =
-    isBrevoAutomatedEmailEnabled() &&
-    process.env.BREVO_AUTO_SEND_ON_ANALYZE?.trim().toLowerCase() !== "false";
-
-  if (autoSendOnAnalyze && newRecommendationIds.length > 0) {
-    const emailResult = await autoSendRecommendationEmails(newRecommendationIds);
-    emailsSent = emailResult.sent;
-    emailsFailed = emailResult.failed;
-    if (emailResult.errors.length > 0) {
-      console.warn("[conception/analyze][auto-email]", emailResult.errors.join("; "));
-    }
-  }
-
   return {
     insertedAlerts,
     insertedRecommendations,
-    emailsSent,
-    emailsFailed,
+    emailsSent: 0,
+    emailsFailed: 0,
     llmUsed,
     llmSummary,
     llmError,

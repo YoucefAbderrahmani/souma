@@ -32,6 +32,14 @@ export function parseEmailFromAddress(from: string): { email: string; name: stri
   return { name: from || "Vitrina Store", email: "" };
 }
 
+/** Analyze never auto-sends; only the Send email button on a card sends and moves to Inbox. */
+export function isAutoSendOnAnalyzeEnabled(): boolean {
+  return (
+    isBrevoAutomatedEmailEnabled() &&
+    process.env.BREVO_AUTO_SEND_ON_ANALYZE?.trim().toLowerCase() === "true"
+  );
+}
+
 export function brevoNotConfiguredMessage(): string {
   return (
     "AI recommendation email is not configured. In Brevo → SMTP & API → API keys, create a key and set BREVO_API_KEY in .env.local (starts with xkeysib-)."

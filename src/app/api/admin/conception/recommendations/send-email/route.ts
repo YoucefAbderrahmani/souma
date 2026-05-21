@@ -60,15 +60,23 @@ export async function POST(req: NextRequest) {
     }
 
     const movedToInbox = await moveConceptionRecommendationToInbox(recommendationId);
+    if (!movedToInbox) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Email was sent via Brevo, but the recommendation could not be moved to Inbox. Refresh the page and contact support if it still appears in AI Recommendations.",
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       ok: true,
       method: "brevo",
       messageId: result.messageId ?? null,
-      movedToInbox,
-      message: movedToInbox ?
-        `Email sent to ${rec.assignedRoleLabel} (${rec.roleEmail}). Moved to Inbox.`
-      : `Email sent to ${rec.assignedRoleLabel} (${rec.roleEmail}).`,
+      movedToInbox: true,
+      message: `Email sent to ${rec.assignedRoleLabel} (${rec.roleEmail}). Moved to Inbox.`,
     });
   } catch (e) {
     console.error("[recommendations/send-email]", e);
