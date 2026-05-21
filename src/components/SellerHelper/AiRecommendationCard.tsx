@@ -60,7 +60,7 @@ export function AiRecommendationCard({
     >
       <div className={cn("absolute left-0 right-0 top-0 z-[2] h-1", priorityTopStripClass(rec.tier))} />
 
-      <div className="flex flex-col gap-4 p-4 pt-5 sm:p-5 lg:flex-row lg:items-stretch lg:gap-0">
+      <div className="flex flex-col gap-4 p-4 pt-5 sm:p-5 lg:flex-row lg:items-center lg:gap-0">
         {/* Identity + confidence */}
         <div className="shrink-0 border-gray-2 pb-4 lg:w-[min(100%,280px)] lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5 xl:w-[300px]">
           <span
@@ -168,8 +168,9 @@ export function AiRecommendationCard({
           </div>
         </div>
 
-        {/* Actions column */}
-        <div className="flex shrink-0 flex-col gap-2 border-gray-2 pt-4 lg:w-[200px] lg:border-l lg:pt-0 lg:pl-5 xl:w-[220px]">
+        {/* Actions column — vertically centered in the card */}
+        <div className="flex w-full shrink-0 flex-col items-center justify-center gap-2 border-gray-2 pt-4 lg:w-[220px] lg:border-l lg:pt-0 lg:pl-5 xl:w-[240px]">
+          <div className="flex w-full max-w-[220px] flex-col items-center gap-2">
           <button
             type="button"
             disabled={busy}
@@ -206,7 +207,7 @@ export function AiRecommendationCard({
             </button>
           : null}
 
-          <div className="flex gap-2">
+          <div className="flex w-full justify-center gap-2">
             <button type="button" onClick={onToggleExpand} className={actionBtnSecondary}>
               {expanded ? "Hide" : "Details"}
             </button>
@@ -221,14 +222,15 @@ export function AiRecommendationCard({
           </div>
 
           {onSendEmail && !rec.roleEmailConfigured ?
-            <p className="text-center text-[10px] leading-snug text-dark-4 lg:text-left">
+            <p className="w-full text-center text-[10px] leading-snug text-dark-4">
               Configure email for {rec.assignedRoleLabel} in Admin.
             </p>
           : null}
+          </div>
 
           <div
             className={cn(
-              "flex items-start gap-2 rounded-md border-l-[3px] px-3 py-2 text-xs leading-relaxed text-dark-4 lg:hidden",
+              "flex w-full max-w-[220px] items-start gap-2 rounded-md border-l-[3px] px-3 py-2 text-xs leading-relaxed text-dark-4 lg:hidden",
               implementationTimeClass(rec.tier)
             )}
           >
