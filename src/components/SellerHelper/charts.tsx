@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   APPLIED_ACTION_KIND_META,
@@ -324,6 +324,34 @@ function buildSmoothAreaPath(points: ChartPoint[], baseY: number): string {
   return `${line} L ${last.x.toFixed(2)} ${baseY.toFixed(2)} L ${first.x.toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
 
+/** Map screen pointer to SVG viewBox coords (accounts for preserveAspectRatio letterboxing). */
+function clientPointToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+  const point = svg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  const svgPoint = point.matrixTransform(matrix.inverse());
+  return { x: svgPoint.x, y: svgPoint.y };
+}
+
+/** Map a viewBox point to pixels from the left of the chart container. */
+function svgPointToContainerLeft(
+  svg: SVGSVGElement,
+  container: HTMLElement,
+  svgX: number,
+  svgY: number
+) {
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+  const point = svg.createSVGPoint();
+  point.x = svgX;
+  point.y = svgY;
+  const screen = point.matrixTransform(matrix);
+  const rect = container.getBoundingClientRect();
+  return screen.x - rect.left;
+}
+
 export function TimelineChart({
   buckets,
   series,
@@ -332,8 +360,12 @@ export function TimelineChart({
   onAppliedActionClick,
 }: TimelineChartProps) {
   const chartId = useId().replace(/:/g, "");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hoverCheckpointId, setHoverCheckpointId] = useState<string | null>(null);
+  const [tooltipLeftPx, setTooltipLeftPx] = useState<number | null>(null);
+  const [checkpointTooltipLeftPx, setCheckpointTooltipLeftPx] = useState<number | null>(null);
   const w = 720;
   const h = 340;
   const pad = { top: 28, right: 28, bottom: 58, left: 58 };
@@ -434,34 +466,54 @@ export function TimelineChart({
 
   const labelStride = Math.max(1, Math.ceil(totalBuckets / 8));
 
-  const handleMove = (event: React.PointerEvent<SVGElement>) => {
-    const svg = event.currentTarget as SVGSVGElement;
-    const rect = svg.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const relativeX = ((event.clientX - rect.left) / rect.width) * w;
-    const innerOffset = Math.min(innerW, Math.max(0, relativeX - pad.left));
-    const idx = totalBuckets === 1 ? 0 : Math.round((innerOffset / innerW) * (totalBuckets - 1));
-    setHoverIndex(Math.min(totalBuckets - 1, Math.max(0, idx)));
+  const handleMove = (event: React.PointerEvent<SVGSVGElement>) => {
+    const svg = event.currentTarget;
+    const container = containerRef.current;
+    const coords = clientPointToSvg(svg, event.clientX, event.clientY);
+    if (!coords) return;
+
+    const innerOffset = Math.min(innerW, Math.max(0, coords.x - pad.left));
+    const idx =
+      totalBuckets === 1 ? 0 : Math.round((innerOffset / innerW) * (totalBuckets - 1));
+    const clampedIdx = Math.min(totalBuckets - 1, Math.max(0, idx));
+    setHoverIndex(clampedIdx);
+
+    if (container) {
+      const anchorX = scaleX(clampedIdx);
+      const left = svgPointToContainerLeft(svg, container, anchorX, pad.top + innerH / 2);
+      setTooltipLeftPx(left);
+    }
   };
 
-  const handleLeave = () => setHoverIndex(null);
+  const handleLeave = () => {
+    setHoverIndex(null);
+    setTooltipLeftPx(null);
+  };
 
   const tooltipIndex = hoveredCheckpoint ? null : hoverIndex;
   const tooltipBucket = tooltipIndex != null ? buckets[tooltipIndex] : null;
   const tooltipX = tooltipIndex != null ? scaleX(tooltipIndex) : 0;
-  const tooltipAlignRight = tooltipX > pad.left + innerW * 0.7;
+  const containerWidth = containerRef.current?.offsetWidth ?? 0;
+  const tooltipAlignRight =
+    tooltipLeftPx != null && containerWidth > 0 && tooltipLeftPx > containerWidth * 0.68;
   const tooltipShiftX = tooltipAlignRight ? -132 : 12;
 
-  const checkpointTooltipX = hoveredCheckpoint?.x ?? 0;
-  const checkpointTooltipAlignRight = checkpointTooltipX > pad.left + innerW * 0.7;
+  const checkpointTooltipAlignRight =
+    checkpointTooltipLeftPx != null &&
+    containerWidth > 0 &&
+    checkpointTooltipLeftPx > containerWidth * 0.62;
   const checkpointTooltipShiftX = checkpointTooltipAlignRight ? -180 : 12;
 
   const plotClipId = `timelinePlotClip-${chartId}`;
   const plotBgId = `timelinePlotBg-${chartId}`;
 
   return (
-    <div className="relative w-full rounded-xl border border-gray-3 bg-white p-3 shadow-sm sm:p-4">
+    <div
+      ref={containerRef}
+      className="relative w-full rounded-xl border border-gray-3 bg-white p-3 shadow-sm sm:p-4"
+    >
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${w} ${h}`}
         className="h-[18.5rem] w-full max-w-full sm:h-80"
         preserveAspectRatio="xMidYMid meet"
@@ -635,8 +687,22 @@ export function TimelineChart({
             <g
               key={`cp-${entry.action.id}`}
               transform={`translate(${entry.x}, 0)`}
-              onPointerEnter={() => setHoverCheckpointId(entry.action.id)}
-              onPointerLeave={() => setHoverCheckpointId(null)}
+              onPointerEnter={() => {
+                setHoverCheckpointId(entry.action.id);
+                setHoverIndex(null);
+                setTooltipLeftPx(null);
+                const svg = svgRef.current;
+                const container = containerRef.current;
+                if (svg && container) {
+                  setCheckpointTooltipLeftPx(
+                    svgPointToContainerLeft(svg, container, entry.x, markerY + 7)
+                  );
+                }
+              }}
+              onPointerLeave={() => {
+                setHoverCheckpointId(null);
+                setCheckpointTooltipLeftPx(null);
+              }}
               onClick={(event) => {
                 event.stopPropagation();
                 onAppliedActionClick?.(entry.action);
@@ -695,11 +761,11 @@ export function TimelineChart({
         })}
       </svg>
 
-      {tooltipIndex != null && tooltipBucket ? (
+      {tooltipIndex != null && tooltipBucket && tooltipLeftPx != null ? (
         <div
           className="pointer-events-none absolute top-3 z-10 w-[8.25rem] rounded-lg border border-gray-3 bg-white/95 p-2.5 shadow-lg backdrop-blur-sm"
           style={{
-            left: `calc(${(tooltipX / w) * 100}% + ${tooltipShiftX}px)`,
+            left: `${tooltipLeftPx + tooltipShiftX}px`,
           }}
           aria-hidden
         >
@@ -728,11 +794,11 @@ export function TimelineChart({
         </div>
       ) : null}
 
-      {hoveredCheckpoint ? (
+      {hoveredCheckpoint && checkpointTooltipLeftPx != null ? (
         <div
           className="pointer-events-none absolute top-2 z-20 w-[10.5rem] rounded-lg border border-gray-3 bg-white/95 p-2.5 shadow-lg backdrop-blur-sm"
           style={{
-            left: `calc(${(hoveredCheckpoint.x / w) * 100}% + ${checkpointTooltipShiftX}px)`,
+            left: `${checkpointTooltipLeftPx + checkpointTooltipShiftX}px`,
           }}
           aria-hidden
         >
