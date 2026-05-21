@@ -106,16 +106,18 @@ export default function AlertRuleSettingsModal({ open, onClose, onSaved }: Props
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dark/55 p-3 backdrop-blur-[2px] sm:p-6"
+      className="fixed inset-0 z-[10080] overflow-y-auto bg-dark/55 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="alert-rule-settings-title"
       onClick={onClose}
     >
-      <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-3 bg-white p-5 shadow-1 sm:p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="flex min-h-full items-start justify-center px-3 pb-8 pt-28 sm:px-6 sm:pt-32 lg:pt-36">
+        <div
+          className="flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-3 bg-white shadow-1 max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-10rem)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="overflow-y-auto p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-orange-dark">
@@ -285,16 +287,20 @@ export default function AlertRuleSettingsModal({ open, onClose, onSaved }: Props
           </div>
         }
 
-        <div className="mt-6 flex flex-wrap gap-2 border-t border-gray-3 pt-4">
-          <button type="button" disabled={saving || loading} onClick={() => void save()} className={sellerPrimaryButton}>
-            {saving ? "Saving…" : "Save rules"}
-          </button>
-          <button type="button" disabled={saving || loading} onClick={resetDefaults} className={sellerSecondaryButton}>
-            Reset to defaults
-          </button>
-          <button type="button" onClick={onClose} className={sellerGhostButton}>
-            Cancel
-          </button>
+          </div>
+          <div className="shrink-0 border-t border-gray-3 bg-white px-5 py-4 sm:px-6">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={saving || loading} onClick={() => void save()} className={sellerPrimaryButton}>
+                {saving ? "Saving…" : "Save rules"}
+              </button>
+              <button type="button" disabled={saving || loading} onClick={resetDefaults} className={sellerSecondaryButton}>
+                Reset to defaults
+              </button>
+              <button type="button" onClick={onClose} className={sellerGhostButton}>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
