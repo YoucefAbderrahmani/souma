@@ -253,6 +253,8 @@ export type ConceptionAlertDetailAnalysisDto = {
   llmEnhanced: boolean;
 };
 
+export type RecommendationWorkflowStatus = "active" | "inbox" | "implemented";
+
 export type ConceptionRecommendationDto = {
   id: string;
   priority: "critical" | "high" | "medium" | "low";
@@ -268,6 +270,9 @@ export type ConceptionRecommendationDto = {
   assignedRoleKey: string;
   assignedRoleLabel: string;
   roleEmailConfigured: boolean;
+  workflowStatus: RecommendationWorkflowStatus;
+  inboxAt: string | null;
+  emailSentAt: string | null;
   createdAt: string;
 };
 

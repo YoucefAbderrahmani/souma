@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/server/lib/require-admin-api";
-import { getConceptionRecommendationById } from "@/server/conception/conception-db";
+import {
+  getConceptionRecommendationById,
+  moveConceptionRecommendationToInbox,
+} from "@/server/conception/conception-db";
 import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-email";
 import { brevoNotConfiguredMessage, isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
@@ -56,11 +59,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 503 });
     }
 
+    const movedToInbox = await moveConceptionRecommendationToInbox(recommendationId);
+
     return NextResponse.json({
       ok: true,
       method: "brevo",
       messageId: result.messageId ?? null,
-      message: `Email sent via Brevo to ${rec.assignedRoleLabel} (${rec.roleEmail}).`,
+      movedToInbox,
+      message: movedToInbox ?
+        `Email sent to ${rec.assignedRoleLabel} (${rec.roleEmail}). Moved to Inbox.`
+      : `Email sent to ${rec.assignedRoleLabel} (${rec.roleEmail}).`,
     });
   } catch (e) {
     console.error("[recommendations/send-email]", e);

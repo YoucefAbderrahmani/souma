@@ -5,6 +5,7 @@ export const SELLER_HELPER_NAV = [
   "Conversion Funnel",
   "Vitrina Recommendation",
   "AI Recommendations",
+  "Inbox",
   "Alerts",
   "Security",
 ] as const;
@@ -38,6 +39,10 @@ export const SELLER_HELPER_NAV_META: Record<
   "AI Recommendations": {
     label: "AI",
     description: "Prioritized actions from your analytics signals.",
+  },
+  Inbox: {
+    label: "Inbox",
+    description: "Recommendations emailed to each role — mark implemented or dismiss.",
   },
   Alerts: {
     label: "Alerts",

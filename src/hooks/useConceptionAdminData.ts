@@ -23,6 +23,7 @@ export type ConceptionAdminInitialData = {
   alerts: ConceptionAlertDto[];
   resolvedAlerts: ConceptionResolvedAlertDto[];
   recommendations: ConceptionRecommendationDto[];
+  inbox?: ConceptionRecommendationDto[];
   vitrinaRecommendations?: VitrinaProductMarketingRecommendation[];
 };
 
@@ -31,6 +32,7 @@ type State = {
   alerts: ConceptionAlertDto[];
   resolvedAlerts: ConceptionResolvedAlertDto[];
   recommendations: ConceptionRecommendationDto[];
+  inbox: ConceptionRecommendationDto[];
   vitrinaRecommendations: VitrinaProductMarketingRecommendation[];
   loading: boolean;
   error: string | null;
@@ -67,6 +69,7 @@ export function useConceptionAdminData(
     alerts: initialData?.alerts ?? [],
     resolvedAlerts: initialData?.resolvedAlerts ?? [],
     recommendations: initialData?.recommendations ?? [],
+    inbox: initialData?.inbox ?? [],
     vitrinaRecommendations: getInitialVitrinaRecommendations(),
     loading: !initialData,
     error: initialError,
@@ -80,10 +83,11 @@ export function useConceptionAdminData(
       setState((s) => ({ ...s, loading: true, error: null }));
     }
     try {
-      const [overviewRes, alertsRes, recommendationsRes] = await Promise.all([
+      const [overviewRes, alertsRes, recommendationsRes, inboxRes] = await Promise.all([
         fetch("/api/admin/conception/overview", fetchOptions),
         fetch("/api/admin/conception/alerts", fetchOptions),
         fetch("/api/admin/conception/recommendations", fetchOptions),
+        fetch("/api/admin/conception/inbox", fetchOptions),
       ]);
 
       const o = await readJsonResponse<{
@@ -102,10 +106,16 @@ export function useConceptionAdminData(
         message?: string;
         recommendations?: ConceptionRecommendationDto[];
       }>(recommendationsRes, "Recommendations API");
+      const inboxBody = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        inbox?: ConceptionRecommendationDto[];
+      }>(inboxRes, "Inbox API");
 
       if (o.error) throw new Error(o.message || o.error);
       if (a.error) throw new Error(a.message || a.error);
       if (r.error) throw new Error(r.message || r.error);
+      if (inboxBody.error) throw new Error(inboxBody.message || inboxBody.error);
 
       setState((s) => ({
         ...s,
@@ -113,6 +123,7 @@ export function useConceptionAdminData(
         alerts: (a.alerts ?? []) as ConceptionAlertDto[],
         resolvedAlerts: (a.resolvedAlerts ?? []) as ConceptionResolvedAlertDto[],
         recommendations: (r.recommendations ?? []) as ConceptionRecommendationDto[],
+        inbox: (inboxBody.inbox ?? []) as ConceptionRecommendationDto[],
         vitrinaRecommendations: s.vitrinaRecommendations,
         loading: false,
         error: background ? s.error : null,
@@ -232,9 +243,28 @@ export function useConceptionAdminData(
         throw new Error(body.message || body.error || "Failed to send email");
       }
 
-      const successMessage = body.message || "Email sent automatically via Brevo.";
+      const successMessage =
+        body.message || "Email sent via Brevo. Open Inbox to track follow-up.";
 
-      setState((s) => ({ ...s, actionMessage: successMessage }));
+      setState((s) => ({
+        ...s,
+        recommendations: s.recommendations.filter((recommendation) => recommendation.id !== id),
+        actionMessage: successMessage,
+      }));
+
+      try {
+        const inboxRes = await fetch("/api/admin/conception/inbox", fetchOptions);
+        const inboxJson = await readJsonResponse<{
+          error?: string;
+          inbox?: ConceptionRecommendationDto[];
+        }>(inboxRes, "Inbox API");
+        if (!inboxJson.error && Array.isArray(inboxJson.inbox)) {
+          setState((s) => ({ ...s, inbox: inboxJson.inbox as ConceptionRecommendationDto[] }));
+        }
+      } catch {
+        /* inbox refresh is best-effort */
+      }
+
       return true;
     } catch (e) {
       setState((s) => ({
@@ -271,6 +301,45 @@ export function useConceptionAdminData(
     }
   }, []);
 
+  const patchInboxItem = useCallback(async (id: string, action: "implement" | "dismiss") => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/inbox", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      const body = await readJsonResponse<{ error?: string; message?: string }>(res, "Inbox API");
+      if (!res.ok) throw new Error(body.message || body.error || "Inbox action failed");
+      setState((s) => ({
+        ...s,
+        inbox: s.inbox.filter((item) => item.id !== id),
+        actionMessage:
+          action === "implement" ?
+            "Marked as implemented."
+          : "Inbox item dismissed.",
+      }));
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, []);
+
+  const markInboxImplemented = useCallback(
+    (id: string) => patchInboxItem(id, "implement"),
+    [patchInboxItem]
+  );
+
+  const dismissInboxItem = useCallback(
+    (id: string) => patchInboxItem(id, "dismiss"),
+    [patchInboxItem]
+  );
+
   const clearAllRecommendations = useCallback(async () => {
     setState((s) => ({ ...s, actionMessage: null }));
     try {
@@ -288,6 +357,7 @@ export function useConceptionAdminData(
       setState((s) => ({
         ...s,
         recommendations: [],
+        inbox: [],
         actionMessage:
           deleted > 0 ?
             `Cleared ${deleted} recommendation(s) from the database. Click Analyze now to start fresh.`
@@ -485,6 +555,8 @@ export function useConceptionAdminData(
     dismissAlert,
     dismissRecommendation,
     sendRecommendationEmail,
+    markInboxImplemented,
+    dismissInboxItem,
     clearAllRecommendations,
     clearAllAlerts,
     clearAllSecurity,

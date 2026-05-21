@@ -38,20 +38,24 @@ export function AiRecommendationCard({
   expanded,
   busy,
   onToggleExpand,
-  onImplement,
   onDismiss,
   onSendEmail,
+  onMarkImplemented,
   emailBusy,
+  markImplementedBusy,
+  showEmailSentBadge,
 }: {
   rec: AiRecommendationCardModel;
   animationIndex: number;
   expanded: boolean;
   busy: boolean;
   emailBusy?: boolean;
+  markImplementedBusy?: boolean;
+  showEmailSentBadge?: boolean;
   onToggleExpand: () => void;
-  onImplement: () => void;
   onDismiss: () => void;
   onSendEmail?: () => void;
+  onMarkImplemented?: () => void;
 }) {
   const confTier = confidenceTier(rec.confidence);
   const confPct = Math.min(100, Math.max(0, rec.confidence));
@@ -83,21 +87,29 @@ export function AiRecommendationCard({
             </span>
           </p>
 
+          {showEmailSentBadge ?
+            <p className="mt-3 rounded-lg border border-teal/30 bg-teal/10 px-3 py-2 text-center text-[11px] font-semibold text-teal-dark">
+              Email sent — awaiting action
+            </p>
+          : null}
+
           <div className="mt-4 flex flex-col gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onImplement}
-              className={cn(
-                "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5",
-                "bg-orange text-sm font-bold uppercase tracking-wide text-white shadow-[0_2px_8px_rgba(242,122,26,0.35)]",
-                "transition-all duration-150 hover:bg-orange-dark",
-                "disabled:cursor-not-allowed disabled:opacity-60"
-              )}
-            >
-              <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
-              Implement
-            </button>
+            {onMarkImplemented ?
+              <button
+                type="button"
+                disabled={busy || markImplementedBusy}
+                onClick={onMarkImplemented}
+                className={cn(
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5",
+                  "bg-orange text-sm font-bold uppercase tracking-wide text-white shadow-[0_2px_8px_rgba(242,122,26,0.35)]",
+                  "transition-all duration-150 hover:bg-orange-dark",
+                  "disabled:cursor-not-allowed disabled:opacity-60"
+                )}
+              >
+                <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                {markImplementedBusy ? "Saving…" : "Mark as implemented"}
+              </button>
+            : null}
 
             {onSendEmail ?
               <button

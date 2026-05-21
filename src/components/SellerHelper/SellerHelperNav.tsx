@@ -11,6 +11,9 @@ const SECTION_PREFETCH: Partial<Record<SellerHelperNavItem, () => void>> = {
   "AI Recommendations": () => {
     void import("./sections");
   },
+  Inbox: () => {
+    void import("./inbox-tab");
+  },
   Alerts: () => {
     void import("./sections");
   },

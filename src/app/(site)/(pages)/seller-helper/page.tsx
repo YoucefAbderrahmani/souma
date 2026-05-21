@@ -12,6 +12,7 @@ import {
   listConceptionAlertsForAdmin,
   listDismissedConceptionAlertsForAdmin,
   listConceptionRecommendationsForAdmin,
+  listConceptionInboxForAdmin,
 } from "@/server/conception/conception-db";
 import {
   sellerHelperContainer,
@@ -53,13 +54,14 @@ export default async function SellerHelperPage() {
   let initialError: string | null = null;
   if (isAdmin) {
     try {
-      const [overview, alerts, resolvedAlerts, recommendations] = await Promise.all([
+      const [overview, alerts, resolvedAlerts, recommendations, inbox] = await Promise.all([
         buildConceptionOverview(),
         listConceptionAlertsForAdmin({ limit: 50 }),
         listDismissedConceptionAlertsForAdmin({ limit: 12 }),
         listConceptionRecommendationsForAdmin({ limit: 40 }),
+        listConceptionInboxForAdmin({ limit: 40 }),
       ]);
-      initialData = { overview, alerts, resolvedAlerts, recommendations };
+      initialData = { overview, alerts, resolvedAlerts, recommendations, inbox };
     } catch (error) {
       initialError = error instanceof Error ? error.message : String(error);
     }

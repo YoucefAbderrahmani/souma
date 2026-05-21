@@ -60,6 +60,11 @@ const AlertsContent = dynamic(
   { loading: () => <SectionLoading label="alerts" /> }
 );
 
+const InboxContent = dynamic(
+  () => import("./inbox-tab").then((m) => m.InboxContent),
+  { loading: () => <SectionLoading label="inbox" /> }
+);
+
 function SectionHeading({
   title,
   description,
@@ -332,6 +337,7 @@ function SellerHelperDashboardInner({
     alerts,
     resolvedAlerts,
     recommendations,
+    inbox,
     vitrinaRecommendations,
     loading,
     error,
@@ -343,6 +349,8 @@ function SellerHelperDashboardInner({
     dismissAlert,
     dismissRecommendation,
     sendRecommendationEmail,
+    markInboxImplemented,
+    dismissInboxItem,
     clearAllRecommendations,
     clearAllAlerts,
     clearAllSecurity,
@@ -502,10 +510,17 @@ function SellerHelperDashboardInner({
           <AiRecommendationsContent
             recommendations={recommendations}
             overview={overview}
-            onNavigateSection={handleNavigateSection}
             onDismissRecommendation={dismissRecommendation}
             onSendRecommendationEmail={sendRecommendationEmail}
             onClearAllRecommendations={clearAllRecommendations}
+          />
+        )}
+        {showPanel(
+          "Inbox",
+          <InboxContent
+            inbox={inbox}
+            onMarkImplemented={markInboxImplemented}
+            onDismiss={dismissInboxItem}
           />
         )}
         {showPanel(

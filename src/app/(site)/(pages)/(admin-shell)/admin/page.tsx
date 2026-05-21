@@ -16,6 +16,7 @@ import {
   listConceptionAlertsForAdmin,
   listDismissedConceptionAlertsForAdmin,
   listConceptionRecommendationsForAdmin,
+  listConceptionInboxForAdmin,
 } from "@/server/conception/conception-db";
 
 export const metadata: Metadata = {
@@ -79,13 +80,14 @@ const AdminPage = async () => {
   let conceptionInitialData: ConceptionAdminInitialData | undefined;
   let conceptionInitialError: string | null = null;
   try {
-    const [overview, alerts, resolvedAlerts, recommendations] = await Promise.all([
+    const [overview, alerts, resolvedAlerts, recommendations, inbox] = await Promise.all([
       buildConceptionOverview(),
       listConceptionAlertsForAdmin({ limit: 50 }),
       listDismissedConceptionAlertsForAdmin({ limit: 12 }),
       listConceptionRecommendationsForAdmin({ limit: 40 }),
+      listConceptionInboxForAdmin({ limit: 40 }),
     ]);
-    conceptionInitialData = { overview, alerts, resolvedAlerts, recommendations };
+    conceptionInitialData = { overview, alerts, resolvedAlerts, recommendations, inbox };
   } catch (error) {
     conceptionInitialError = error instanceof Error ? error.message : String(error);
   }

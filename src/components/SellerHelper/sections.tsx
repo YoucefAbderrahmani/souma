@@ -397,14 +397,12 @@ export function UserBehaviorContent({
 export function AiRecommendationsContent({
   recommendations,
   overview,
-  onNavigateSection,
   onDismissRecommendation,
   onSendRecommendationEmail,
   onClearAllRecommendations,
 }: {
   recommendations: ConceptionRecommendationDto[];
   overview: ConceptionOverviewDto | null;
-  onNavigateSection?: (section: SellerHelperNavItem) => void;
   onDismissRecommendation?: (id: string) => Promise<boolean>;
   onSendRecommendationEmail?: (id: string) => Promise<boolean>;
   onClearAllRecommendations?: () => Promise<boolean>;
@@ -465,7 +463,7 @@ export function AiRecommendationsContent({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeading
           title="AI Recommendations"
-          description="Saved recommendations from the last LLM analysis (OpenRouter / Gemini), grounded in live telemetry and your product catalogue from the database. Run Analyze now to refresh."
+          description="Saved recommendations from the last LLM analysis. Send email to notify the assigned role — the item then moves to Inbox. Run Analyze now to refresh."
           icon={Lightbulb}
           count={recs.length}
         />
@@ -515,9 +513,6 @@ export function AiRecommendationsContent({
                 busy={busyKey === rec.key}
                 onToggleExpand={() =>
                   setExpandedKey((current) => (current === rec.key ? null : rec.key))
-                }
-                onImplement={() =>
-                  onNavigateSection?.(resolveImplementationSection(rec.title, rec.recommendation))
                 }
                 onDismiss={() => void dismissRecommendation(rec.key)}
                 emailBusy={emailBusyKey === rec.key}

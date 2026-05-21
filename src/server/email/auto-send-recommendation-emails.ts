@@ -1,4 +1,7 @@
-import { getConceptionRecommendationById } from "@/server/conception/conception-db";
+import {
+  getConceptionRecommendationById,
+  moveConceptionRecommendationToInbox,
+} from "@/server/conception/conception-db";
 import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-email";
 import { isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
@@ -63,6 +66,7 @@ export async function autoSendRecommendationEmails(
     });
 
     if (sendResult.ok === true && sendResult.method === "brevo") {
+      await moveConceptionRecommendationToInbox(id);
       result.sent += 1;
       continue;
     }

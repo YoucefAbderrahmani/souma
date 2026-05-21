@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import { compareImportance, normalizeImportanceTier, sortByImportance } from "@/lib/importance-ranking";
@@ -12,7 +12,40 @@ import type {
   ConceptionAlertDto,
   ConceptionRecommendationDto,
   ConceptionResolvedAlertDto,
+  RecommendationWorkflowStatus,
 } from "@/types/conception-admin";
+
+export const RECOMMENDATION_WORKFLOW_ACTIVE = "active" as const;
+export const RECOMMENDATION_WORKFLOW_INBOX = "inbox" as const;
+export const RECOMMENDATION_WORKFLOW_IMPLEMENTED = "implemented" as const;
+
+function mapWorkflowStatus(value: string | null | undefined): RecommendationWorkflowStatus {
+  if (value === RECOMMENDATION_WORKFLOW_INBOX || value === RECOMMENDATION_WORKFLOW_IMPLEMENTED) {
+    return value;
+  }
+  return RECOMMENDATION_WORKFLOW_ACTIVE;
+}
+
+function activeRecommendationWhere() {
+  return and(
+    isNull(conceptionRecommendationTable.dismissedAt),
+    or(
+      eq(conceptionRecommendationTable.workflowStatus, RECOMMENDATION_WORKFLOW_ACTIVE),
+      isNull(conceptionRecommendationTable.workflowStatus)
+    )
+  );
+}
+
+function inboxRecommendationWhere(roleKey?: string) {
+  const filters = [
+    isNull(conceptionRecommendationTable.dismissedAt),
+    eq(conceptionRecommendationTable.workflowStatus, RECOMMENDATION_WORKFLOW_INBOX),
+  ];
+  if (roleKey?.trim()) {
+    filters.push(eq(conceptionRecommendationTable.assignedRoleKey, roleKey.trim()));
+  }
+  return and(...filters);
+}
 
 function mapSeverity(t: string): ConceptionAlertDto["severity"] {
   if (t === "critical" || t === "high" || t === "medium" || t === "low") return t;
@@ -199,10 +232,79 @@ export async function dismissConceptionRecommendationById(id: string): Promise<b
 
   await logAppliedAction({
     kind: "ai_recommendation",
-    title: `Recommendation applied · ${existing.title}`,
+    title: `Recommendation dismissed · ${existing.title}`,
     summary: existing.recommendation,
     sourceRefId: id,
     occurredAt: dismissedAt,
+    details: {
+      recommendationId: id,
+      workflowStatus: existing.workflowStatus,
+      priority: existing.priority,
+      impactLabel: existing.impactLabel,
+      analysis: existing.analysis,
+      recommendation: existing.recommendation,
+      confidence: existing.confidence,
+      revenueHint: existing.revenueHint,
+      implementationHint: existing.implementationHint,
+      roiHint: existing.roiHint,
+    },
+  });
+
+  return true;
+}
+
+export async function moveConceptionRecommendationToInbox(id: string): Promise<boolean> {
+  const now = new Date();
+  const rows = await db
+    .update(conceptionRecommendationTable)
+    .set({
+      workflowStatus: RECOMMENDATION_WORKFLOW_INBOX,
+      inboxAt: now,
+      emailSentAt: now,
+    })
+    .where(
+      and(
+        eq(conceptionRecommendationTable.id, id),
+        isNull(conceptionRecommendationTable.dismissedAt),
+        or(
+          eq(conceptionRecommendationTable.workflowStatus, RECOMMENDATION_WORKFLOW_ACTIVE),
+          isNull(conceptionRecommendationTable.workflowStatus)
+        )
+      )
+    )
+    .returning({ id: conceptionRecommendationTable.id });
+
+  return rows.length > 0;
+}
+
+export async function markConceptionRecommendationImplemented(id: string): Promise<boolean> {
+  const [existing] = await db
+    .select()
+    .from(conceptionRecommendationTable)
+    .where(eq(conceptionRecommendationTable.id, id))
+    .limit(1);
+
+  if (!existing || existing.dismissedAt) return false;
+  if (existing.workflowStatus !== RECOMMENDATION_WORKFLOW_INBOX) return false;
+
+  const implementedAt = new Date();
+  const rows = await db
+    .update(conceptionRecommendationTable)
+    .set({
+      workflowStatus: RECOMMENDATION_WORKFLOW_IMPLEMENTED,
+      implementedAt,
+    })
+    .where(eq(conceptionRecommendationTable.id, id))
+    .returning({ id: conceptionRecommendationTable.id });
+
+  if (rows.length === 0) return false;
+
+  await logAppliedAction({
+    kind: "ai_recommendation",
+    title: `Recommendation implemented · ${existing.title}`,
+    summary: existing.recommendation,
+    sourceRefId: id,
+    occurredAt: implementedAt,
     details: {
       recommendationId: id,
       priority: existing.priority,
@@ -213,6 +315,7 @@ export async function dismissConceptionRecommendationById(id: string): Promise<b
       revenueHint: existing.revenueHint,
       implementationHint: existing.implementationHint,
       roiHint: existing.roiHint,
+      assignedRoleKey: existing.assignedRoleKey,
     },
   });
 
@@ -231,17 +334,10 @@ export async function deleteAllConceptionRecommendations(): Promise<number> {
   return rows.length;
 }
 
-export async function listConceptionRecommendationsForAdmin(options?: {
-  limit?: number;
-}): Promise<ConceptionRecommendationDto[]> {
-  const limit = Math.min(100, Math.max(1, options?.limit ?? 30));
-  const [rows, economicsCtx, roleMap, roleDefinitions] = await Promise.all([
-    db
-      .select()
-      .from(conceptionRecommendationTable)
-      .where(isNull(conceptionRecommendationTable.dismissedAt))
-      .orderBy(desc(conceptionRecommendationTable.createdAt))
-      .limit(limit),
+async function mapConceptionRecommendationRows(
+  rows: (typeof conceptionRecommendationTable.$inferSelect)[]
+): Promise<ConceptionRecommendationDto[]> {
+  const [economicsCtx, roleMap, roleDefinitions] = await Promise.all([
     buildRecommendationEconomicsContext(),
     getRoleEmailMap(),
     getRoleDefinitionList(),
@@ -282,12 +378,44 @@ export async function listConceptionRecommendationsForAdmin(options?: {
         assignedRoleKey,
         assignedRoleLabel: roleMeta?.displayName ?? assignedRoleKey.replace(/_/g, " "),
         roleEmailConfigured: Boolean(roleMeta?.email?.trim()),
+        workflowStatus: mapWorkflowStatus(r.workflowStatus),
+        inboxAt: r.inboxAt?.toISOString() ?? null,
+        emailSentAt: r.emailSentAt?.toISOString() ?? null,
         createdAt: r.createdAt.toISOString(),
       };
     })
   );
 
   return sortByImportance(recommendations, (item) => item.priority);
+}
+
+export async function listConceptionRecommendationsForAdmin(options?: {
+  limit?: number;
+}): Promise<ConceptionRecommendationDto[]> {
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 30));
+  const rows = await db
+    .select()
+    .from(conceptionRecommendationTable)
+    .where(activeRecommendationWhere())
+    .orderBy(desc(conceptionRecommendationTable.createdAt))
+    .limit(limit);
+
+  return mapConceptionRecommendationRows(rows);
+}
+
+export async function listConceptionInboxForAdmin(options?: {
+  limit?: number;
+  roleKey?: string;
+}): Promise<ConceptionRecommendationDto[]> {
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 40));
+  const rows = await db
+    .select()
+    .from(conceptionRecommendationTable)
+    .where(inboxRecommendationWhere(options?.roleKey))
+    .orderBy(desc(conceptionRecommendationTable.inboxAt), desc(conceptionRecommendationTable.createdAt))
+    .limit(limit);
+
+  return mapConceptionRecommendationRows(rows);
 }
 
 export async function getConceptionRecommendationById(id: string) {
@@ -297,6 +425,8 @@ export async function getConceptionRecommendationById(id: string) {
     .where(eq(conceptionRecommendationTable.id, id))
     .limit(1);
   if (!row || row.dismissedAt) return null;
+  const workflow = mapWorkflowStatus(row.workflowStatus);
+  if (workflow !== RECOMMENDATION_WORKFLOW_ACTIVE) return null;
 
   const [roleMap, roleDefinitions, economicsCtx] = await Promise.all([
     getRoleEmailMap(),
@@ -338,6 +468,9 @@ export async function getConceptionRecommendationById(id: string) {
     assignedRoleLabel: roleMeta?.displayName ?? assignedRoleKey.replace(/_/g, " "),
     roleEmail: roleMeta?.email?.trim() ?? "",
     roleEmailConfigured: Boolean(roleMeta?.email?.trim()),
+    workflowStatus: workflow,
+    inboxAt: row.inboxAt?.toISOString() ?? null,
+    emailSentAt: row.emailSentAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
