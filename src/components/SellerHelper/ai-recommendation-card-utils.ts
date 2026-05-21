@@ -98,7 +98,7 @@ export function implementationTimeClass(tier: ConceptionRecommendationDto["prior
 
 export function aiRecommendationCardRootClass(_tier: ConceptionRecommendationDto["priority"]) {
   return cn(
-    "group relative flex w-full flex-col overflow-hidden rounded-2xl border border-gray-3 bg-white shadow-1",
+    "group relative flex w-full flex-col overflow-hidden rounded-xl border border-gray-3 bg-white shadow-1",
     "transition-all duration-250 ease-out hover:border-gray-4 hover:shadow-md",
     "motion-safe:animate-ai-rec-slide-in motion-safe:opacity-0"
   );

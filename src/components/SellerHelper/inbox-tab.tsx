@@ -125,7 +125,7 @@ export function InboxContent({
             "No items in any role inbox yet. Send a recommendation email from AI Recommendations to move one here."
           : "No inbox items for this role. Choose another role or send a new email."}
         </div>
-      : <div className="flex flex-col gap-5">
+      : <div className="flex flex-col gap-3">
           {filtered.map((rec, index) => (
             <AiRecommendationCard
               key={rec.key}
