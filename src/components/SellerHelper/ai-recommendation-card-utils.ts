@@ -96,10 +96,10 @@ export function implementationTimeClass(tier: ConceptionRecommendationDto["prior
   return "border-l-gray-4 bg-gray-1";
 }
 
-export function aiRecommendationCardRootClass(tier: ConceptionRecommendationDto["priority"]) {
+export function aiRecommendationCardRootClass(_tier: ConceptionRecommendationDto["priority"]) {
   return cn(
-    "group relative flex flex-col overflow-hidden rounded-2xl border border-gray-3 bg-white shadow-1",
-    "transition-all duration-250 ease-out hover:-translate-y-1 hover:border-gray-4 hover:shadow-lg",
+    "group relative flex w-full flex-col overflow-hidden rounded-2xl border border-gray-3 bg-white shadow-1",
+    "transition-all duration-250 ease-out hover:border-gray-4 hover:shadow-md",
     "motion-safe:animate-ai-rec-slide-in motion-safe:opacity-0"
   );
 }
