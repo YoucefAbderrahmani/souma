@@ -505,7 +505,7 @@ export function AiRecommendationsContent({
           <div className="rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-6 text-center text-custom-sm text-dark-4">
             No active recommendations right now.
           </div>
-        : <div className="flex flex-col gap-4">
+        : <div className="flex flex-col gap-5">
             {recs.map((rec, index) => (
               <AiRecommendationCard
                 key={rec.key}
