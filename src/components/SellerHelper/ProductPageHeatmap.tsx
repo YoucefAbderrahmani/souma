@@ -16,7 +16,7 @@ import {
   PRODUCT_HEATMAP_SURFACE_ATTR,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncProductHeatmapOverlay } from "@/lib/product-heatmap-overlay";
+import { syncParentDocumentHeatmapOverlay } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -121,18 +121,7 @@ function HeatmapPagePreview({
     };
 
     applyProductHeatmapPreviewFrame(doc, measure);
-
-    let cleanup = () => {};
-    const frame = window.requestAnimationFrame(() => {
-      cleanup = syncProductHeatmapOverlay(doc, heatmap);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      cleanup();
-    };
   }, [
-    heatmap,
     layout.documentHeight,
     layout.documentWidth,
     layout.surfaceHeight,
@@ -141,6 +130,14 @@ function HeatmapPagePreview({
     layout.surfaceWidth,
     previewSrc,
   ]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const iframe = iframeRef.current;
+    if (!container || !iframe) return () => {};
+
+    return syncParentDocumentHeatmapOverlay(container, iframe, heatmap);
+  }, [heatmap, fit.height, fit.scale, fit.width, layout, previewSrc]);
 
   useEffect(() => {
     const container = containerRef.current;

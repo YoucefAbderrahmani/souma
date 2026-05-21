@@ -8,8 +8,8 @@ function clampPct(value: number) {
 
 export function productHeatmapPointerPct(surface: HTMLElement, event: MouseEvent) {
   const rect = surface.getBoundingClientRect();
-  const width = Math.max(rect.width, 1);
-  const height = Math.max(rect.height, 1);
+  const width = Math.max(rect.width, surface.offsetWidth, 1);
+  const height = Math.max(rect.height, surface.offsetHeight, 1);
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
 
