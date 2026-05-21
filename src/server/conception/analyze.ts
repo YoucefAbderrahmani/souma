@@ -11,6 +11,7 @@ import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 import { autoSendRecommendationEmails } from "@/server/email/auto-send-recommendation-emails";
 import { isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
+import { getConceptionAlertRuleSettings } from "@/server/conception/alert-rule-settings";
 
 function dayFingerprint(prefix: string): string {
   const d = new Date();
@@ -134,6 +135,7 @@ async function insertBaselineRecommendationsIfEmpty(
  */
 export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResult> {
   const s = await buildConceptionAnalyzeSignals();
+  const ruleSettings = await getConceptionAlertRuleSettings();
 
   let insertedAlerts = 0;
   let insertedRecommendations = 0;
@@ -141,12 +143,18 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
 
   const alerts: (typeof conceptionAlertTable.$inferInsert)[] = [];
 
-  if (s.rateOld > 0.001 && s.rateNow < s.rateOld * 0.8) {
+  const conv = ruleSettings.CONVERSION_DROP;
+  if (
+    conv.enabled &&
+    s.rateOld > conv.minReferenceRate &&
+    s.rateNow < s.rateOld * conv.dropRatioThreshold
+  ) {
+    const dropPct = Math.round((1 - conv.dropRatioThreshold) * 100);
     alerts.push({
       alertType: "CONVERSION_DROP",
       severity: "critical",
       title: "Conversion drop",
-      description: "Conversion rate more than 20% below the previous window average (7 days).",
+      description: `Conversion rate more than ${dropPct}% below the previous window average (7 days).`,
       detail: `Current rate ${(100 * s.rateNow).toFixed(2)}% vs reference ${(100 * s.rateOld).toFixed(2)}%.`,
       affectedSessionsEstimate: null,
       metadataJson: JSON.stringify({ rateNow: s.rateNow, rateOld: s.rateOld }),
@@ -154,12 +162,13 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     });
   }
 
-  if (s.events15m > s.baseline15 * 4) {
+  const traffic = ruleSettings.TRAFFIC_SPIKE;
+  if (traffic.enabled && s.events15m > s.baseline15 * traffic.spikeMultiplier) {
     alerts.push({
       alertType: "TRAFFIC_SPIKE",
       severity: "high",
       title: "Abnormal traffic",
-      description: "Sharp increase in event volume over the last 15 minutes.",
+      description: `Sharp increase in event volume (>${traffic.spikeMultiplier}× baseline) over the last 15 minutes.`,
       detail: `${s.events15m} events vs ~${Math.round(s.baseline15)} expected per 15-minute window (90 min baseline).`,
       affectedSessionsEstimate: null,
       metadataJson: JSON.stringify({ events15m: s.events15m, baseline15: s.baseline15 }),
@@ -167,12 +176,13 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     });
   }
 
-  if (s.cart2h >= 8 && s.cartAbandon2h >= 0.8) {
+  const cart = ruleSettings.CART_ABANDON_MASS;
+  if (cart.enabled && s.cart2h >= cart.minCartSessions && s.cartAbandon2h >= cart.abandonRateThreshold) {
     alerts.push({
       alertType: "CART_ABANDON_MASS",
       severity: "medium",
       title: "Mass cart abandonment",
-      description: "Cart abandonment rate above 80% over a 2-hour window.",
+      description: `Cart abandonment rate above ${Math.round(cart.abandonRateThreshold * 100)}% over a 2-hour window.`,
       detail: `${s.cart2h} sessions with add-to-cart, ${s.final2h} confirmed purchases (pa_purchase).`,
       affectedSessionsEstimate: Math.max(0, s.cart2h - s.final2h),
       metadataJson: JSON.stringify({ cart2h: s.cart2h, final2h: s.final2h }),
@@ -180,12 +190,17 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
     });
   }
 
-  if (s.sessionsCheckout2h > 0 && s.jsErrorSessions / s.sessionsCheckout2h >= 0.05) {
+  const js = ruleSettings.JS_ERROR_BURST;
+  if (
+    js.enabled &&
+    s.sessionsCheckout2h > 0 &&
+    s.jsErrorSessions / s.sessionsCheckout2h >= js.errorRateThreshold
+  ) {
     alerts.push({
       alertType: "JS_ERROR_BURST",
       severity: "high",
       title: "Technical error (client)",
-      description: "JavaScript errors detected on more than 5% of sessions touching checkout (2 h).",
+      description: `JavaScript errors detected on more than ${Math.round(js.errorRateThreshold * 100)}% of sessions touching checkout (2 h).`,
       detail: `${s.jsErrorSessions} session(s) with pa_js_error out of ${s.sessionsCheckout2h} checkout sessions.`,
       affectedSessionsEstimate: s.jsErrorSessions,
       metadataJson: JSON.stringify({ jsErrorSessions: s.jsErrorSessions, sessionsCheckout2h: s.sessionsCheckout2h }),
@@ -194,7 +209,8 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
   }
 
   const perfSessions = s.slowNavSessions + s.lcpSlowSessions;
-  if (perfSessions >= 5) {
+  const perf = ruleSettings.PERF_SLOW;
+  if (perf.enabled && perfSessions >= perf.minSlowSessions) {
     alerts.push({
       alertType: "PERF_SLOW",
       severity: "low",

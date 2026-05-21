@@ -295,6 +295,13 @@ export const sellerHelperAppliedActionTable = pgTable("seller_helper_applied_act
   occurredAt: timestamp("occurred_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+/** Singleton JSON store for Seller Helper alert rule thresholds (id = default). */
+export const conceptionAlertSettingsTable = pgTable("conception_alert_settings", {
+  id: varchar("id", { length: 16 }).primaryKey().default("default"),
+  settingsJson: text("settings_json").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 /** Admin-configured email targets for AI recommendation handoff (e.g. marketing_agent). */
 export const recommendationRoleEmailTable = pgTable("recommendation_role_email", {
   roleKey: varchar("role_key", { length: 64 }).primaryKey(),

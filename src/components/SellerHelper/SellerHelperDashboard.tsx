@@ -517,6 +517,7 @@ function SellerHelperDashboardInner({
             onNavigateSection={handleNavigateSection}
             onDismissAlert={dismissAlert}
             onClearAllAlerts={clearAllAlerts}
+            onAlertRulesSaved={() => void refresh()}
           />
         )}
         {showPanel(

@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
-import { CONCEPTION_ALERT_RULES } from "@/server/conception/alert-rules";
+import { getConceptionAlertRuleSettings, settingsToAlertRules } from "@/server/conception/alert-rule-settings";
 import { buildConceptionSecurityBrief } from "@/server/conception/security-intel";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
@@ -684,6 +684,7 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
   ];
 
   const hasEventData = events7d > 0;
+  const alertRuleSettings = await getConceptionAlertRuleSettings();
 
   return {
     source: hasEventData ? "live" : "empty",
@@ -700,7 +701,7 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     totalEvents7d: events7d,
     security,
     userBehavior,
-    alertRules: CONCEPTION_ALERT_RULES,
+    alertRules: settingsToAlertRules(alertRuleSettings),
     computedAt: new Date().toISOString(),
   };
 }

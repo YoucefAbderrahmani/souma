@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -26,6 +26,7 @@ import type {
 import { sortByImportance } from "@/lib/importance-ranking";
 import { cn } from "@/lib/utils";
 import { ProductPageHeatmap } from "./ProductPageHeatmap";
+import AlertRuleSettingsModal from "./AlertRuleSettingsModal";
 import { AiRecommendationCard } from "./AiRecommendationCard";
 import { mapConceptionRecommendationToCard } from "./ai-recommendation-card-utils";
 import type { SellerHelperNavItem } from "./nav";
@@ -757,6 +758,7 @@ export function AlertsContent({
   onNavigateSection,
   onDismissAlert,
   onClearAllAlerts,
+  onAlertRulesSaved,
 }: {
   alerts: ConceptionAlertDto[];
   resolvedAlerts: ConceptionResolvedAlertDto[];
@@ -764,9 +766,16 @@ export function AlertsContent({
   onNavigateSection?: (section: SellerHelperNavItem) => void;
   onDismissAlert?: (id: string, disposition: "resolved" | "ignored") => Promise<boolean>;
   onClearAllAlerts?: () => Promise<boolean>;
+  onAlertRulesSaved?: (rules: ConceptionAlertRule[]) => void;
 }) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [clearAllBusy, setClearAllBusy] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [displayRules, setDisplayRules] = useState(alertRules);
+
+  useEffect(() => {
+    setDisplayRules(alertRules);
+  }, [alertRules]);
   const [detailAlert, setDetailAlert] = useState<ConceptionAlertDto | null>(null);
   const [detailAnalysis, setDetailAnalysis] = useState<ConceptionAlertDetailAnalysisDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -858,7 +867,7 @@ export function AlertsContent({
     },
     {
       label: "Active rules",
-      value: String(alertRules.length),
+      value: String(displayRules.filter((r) => r.enabled).length),
       icon: "zap" as const,
       sub: null,
       tag: "Engine",
@@ -885,20 +894,30 @@ export function AlertsContent({
           description="Incidents and signals that need attention"
           icon={Bell}
         />
-        {onClearAllAlerts ?
+        <div className="flex flex-wrap gap-2 shrink-0">
           <button
             type="button"
-            disabled={clearAllBusy}
-            onClick={handleClearAllAlerts}
-            className={cn(
-              sellerGhostButton,
-              "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
-            )}
+            onClick={() => setRulesOpen(true)}
+            className={sellerSecondaryButton}
           >
-            <RotateCcw className={cn("h-4 w-4", clearAllBusy && "animate-spin")} aria-hidden />
-            {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+            <Settings2 className="h-4 w-4" aria-hidden />
+            Alert rules
           </button>
-        : null}
+          {onClearAllAlerts ?
+            <button
+              type="button"
+              disabled={clearAllBusy}
+              onClick={handleClearAllAlerts}
+              className={cn(
+                sellerGhostButton,
+                "border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+              )}
+            >
+              <RotateCcw className={cn("h-4 w-4", clearAllBusy && "animate-spin")} aria-hidden />
+              {clearAllBusy ? "Clearing…" : "Clear all & start fresh"}
+            </button>
+          : null}
+        </div>
       </div>
       {alerts.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
@@ -1042,19 +1061,38 @@ export function AlertsContent({
         </Panel>
 
         <Panel>
-          <h4 className="inline-flex items-center gap-2 text-base font-semibold text-dark">
-            <Settings2 className="h-4 w-4 text-orange" aria-hidden />
-            Alert Rules
-          </h4>
-          <p className="mt-1 text-custom-sm text-dark-4">Trigger configuration</p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h4 className="inline-flex items-center gap-2 text-base font-semibold text-dark">
+                <Settings2 className="h-4 w-4 text-orange" aria-hidden />
+                Alert Rules
+              </h4>
+              <p className="mt-1 text-custom-sm text-dark-4">Trigger configuration</p>
+            </div>
+            <button type="button" onClick={() => setRulesOpen(true)} className={sellerGhostButton}>
+              Edit
+            </button>
+          </div>
           <ul className="mt-3 divide-y divide-gray-3">
-            {alertRules.length === 0 ?
+            {displayRules.length === 0 ?
               <li className="py-4">
                 <div className={sellerPlaceholder}>No rules configured.</div>
               </li>
-            : alertRules.map((rule) => (
-              <li key={rule.name} className="flex flex-col gap-0.5 py-2 first:pt-0">
-                <span className="text-custom-sm font-medium text-dark">{rule.name}</span>
+            : displayRules.map((rule) => (
+              <li key={rule.key} className="flex flex-col gap-0.5 py-2 first:pt-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-custom-sm font-medium text-dark">{rule.name}</span>
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      rule.enabled ?
+                        "bg-green-light-5 text-green-dark"
+                      : "bg-gray-2 text-dark-4"
+                    )}
+                  >
+                    {rule.enabled ? "On" : "Off"}
+                  </span>
+                </div>
                 <span className="text-xs text-dark-4 sm:text-custom-sm">{rule.condition}</span>
               </li>
             ))}
@@ -1072,6 +1110,15 @@ export function AlertsContent({
           onViewFunnel={viewConversionFunnel}
         />
       : null}
+
+      <AlertRuleSettingsModal
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        onSaved={(rules) => {
+          setDisplayRules(rules);
+          onAlertRulesSaved?.(rules);
+        }}
+      />
     </div>
   );
 }

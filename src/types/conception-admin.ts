@@ -145,9 +145,47 @@ export type ConceptionUserBehaviorBrief = {
   productPageLabel: string | null;
 };
 
+export type ConceptionAlertRuleKey =
+  | "CONVERSION_DROP"
+  | "TRAFFIC_SPIKE"
+  | "CART_ABANDON_MASS"
+  | "JS_ERROR_BURST"
+  | "PERF_SLOW";
+
 export type ConceptionAlertRule = {
+  key: ConceptionAlertRuleKey;
   name: string;
   condition: string;
+  enabled: boolean;
+};
+
+export type ConceptionAlertRuleSettings = {
+  CONVERSION_DROP: {
+    enabled: boolean;
+    /** Fire when current rate < reference × this ratio (default 0.8 = 20% drop). */
+    dropRatioThreshold: number;
+    minReferenceRate: number;
+  };
+  TRAFFIC_SPIKE: {
+    enabled: boolean;
+    /** Fire when 15m events exceed baseline × this multiplier. */
+    spikeMultiplier: number;
+  };
+  CART_ABANDON_MASS: {
+    enabled: boolean;
+    minCartSessions: number;
+    /** 0–1 cart abandonment rate threshold. */
+    abandonRateThreshold: number;
+  };
+  JS_ERROR_BURST: {
+    enabled: boolean;
+    /** 0–1 share of checkout sessions with pa_js_error. */
+    errorRateThreshold: number;
+  };
+  PERF_SLOW: {
+    enabled: boolean;
+    minSlowSessions: number;
+  };
 };
 
 export type ConceptionResolvedAlertDto = {
