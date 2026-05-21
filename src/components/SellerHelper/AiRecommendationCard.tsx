@@ -119,9 +119,9 @@ export function AiRecommendationCard({
                   : `Configure an email for ${rec.assignedRoleLabel} in Admin → Assign role emails`
                 }
                 className={cn(
-                  "inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-2.5 py-2",
-                  "text-xs font-semibold text-teal-dark transition-colors",
-                  "hover:border-teal hover:bg-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  "inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2",
+                  "bg-orange text-xs font-bold uppercase tracking-wide text-white",
+                  "transition-colors hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60"
                 )}
               >
                 <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -169,7 +169,7 @@ export function AiRecommendationCard({
 
         {/* Recommendation content */}
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-          <h3 className="text-right text-sm font-bold leading-snug text-dark sm:text-[15px]">{rec.title}</h3>
+          <h3 className="text-left text-sm font-bold leading-snug text-dark sm:text-[15px]">{rec.title}</h3>
 
           <div className={recommendationPanelClass}>
             <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-3">
