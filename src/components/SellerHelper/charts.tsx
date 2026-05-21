@@ -281,15 +281,47 @@ function formatCheckpointTimestamp(iso: string): string {
   }).format(date);
 }
 
-function buildLinePath(values: number[], scaleY: (value: number) => number, scaleX: (index: number) => number) {
-  if (values.length === 0) return "";
-  return values
-    .map((value, index) => {
-      const x = scaleX(index);
-      const y = scaleY(value);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
+type ChartPoint = { x: number; y: number };
+
+function toChartPoints(
+  values: number[],
+  scaleY: (value: number) => number,
+  scaleX: (index: number) => number
+): ChartPoint[] {
+  return values.map((value, index) => ({
+    x: scaleX(index),
+    y: scaleY(value),
+  }));
+}
+
+/** Smooth cubic Bézier path (Catmull–Rom style) for softer timeline curves. */
+function buildSmoothLinePath(points: ChartPoint[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) {
+    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  }
+
+  let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
+function buildSmoothAreaPath(points: ChartPoint[], baseY: number): string {
+  const line = buildSmoothLinePath(points);
+  if (!line || points.length === 0) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${line} L ${last.x.toFixed(2)} ${baseY.toFixed(2)} L ${first.x.toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
 
 export function TimelineChart({
@@ -299,11 +331,12 @@ export function TimelineChart({
   appliedActions,
   onAppliedActionClick,
 }: TimelineChartProps) {
+  const chartId = useId().replace(/:/g, "");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hoverCheckpointId, setHoverCheckpointId] = useState<string | null>(null);
   const w = 720;
-  const h = 320;
-  const pad = { top: 24, right: 24, bottom: 56, left: 56 };
+  const h = 340;
+  const pad = { top: 28, right: 28, bottom: 58, left: 58 };
   const innerW = w - pad.left - pad.right;
   const innerH = h - pad.top - pad.bottom;
   const visibleSeries = series.filter((entry) => entry.values.some((value) => value !== 0));
@@ -423,46 +456,84 @@ export function TimelineChart({
   const checkpointTooltipAlignRight = checkpointTooltipX > pad.left + innerW * 0.7;
   const checkpointTooltipShiftX = checkpointTooltipAlignRight ? -180 : 12;
 
+  const plotClipId = `timelinePlotClip-${chartId}`;
+  const plotBgId = `timelinePlotBg-${chartId}`;
+
   return (
-    <div className="relative w-full">
+    <div className="relative w-full rounded-xl border border-gray-3 bg-white p-3 shadow-sm sm:p-4">
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="h-72 w-full max-w-full"
+        className="h-[18.5rem] w-full max-w-full sm:h-80"
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Timeline chart"
         onPointerMove={handleMove}
         onPointerLeave={handleLeave}
       >
+        <defs>
+          <linearGradient id={plotBgId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FFF8F3" stopOpacity="1" />
+            <stop offset="45%" stopColor="#FFFBF7" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
+          </linearGradient>
+          <clipPath id={plotClipId}>
+            <rect x={pad.left} y={pad.top} width={innerW} height={innerH} rx="8" ry="8" />
+          </clipPath>
+          {renderSeries.map((entry) => (
+            <linearGradient
+              key={`area-${entry.metric}`}
+              id={`timelineArea-${chartId}-${entry.metric}`}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop offset="0%" stopColor={entry.color} stopOpacity="0.22" />
+              <stop offset="100%" stopColor={entry.color} stopOpacity="0.02" />
+            </linearGradient>
+          ))}
+        </defs>
+
         <rect
           x={pad.left}
           y={pad.top}
           width={innerW}
           height={innerH}
-          fill="url(#timelinePlotBg)"
-          stroke="none"
+          rx="8"
+          ry="8"
+          fill={`url(#${plotBgId})`}
+          stroke="#E8ECF0"
+          strokeWidth="1"
         />
-        <defs>
-          <linearGradient id="timelinePlotBg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFF7ED" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
-          </linearGradient>
-        </defs>
 
         {yGrid.map((t) => {
           const y = pad.top + innerH * t;
           const countLabel = formatTimelineValue(countMax * (1 - t), "count");
           const percentLabel = formatTimelineValue(percentMax * (1 - t), "percent");
+          const isBaseline = t === 1;
           return (
             <g key={t}>
-              <line x1={pad.left} y1={y} x2={pad.left + innerW} y2={y} stroke="#E5E7EB" strokeWidth="1" />
+              <line
+                x1={pad.left}
+                y1={y}
+                x2={pad.left + innerW}
+                y2={y}
+                stroke={isBaseline ? "#D1D5DB" : "#ECEFF3"}
+                strokeWidth={isBaseline ? 1.25 : 1}
+                strokeDasharray={isBaseline ? undefined : "5 7"}
+              />
               {countSeries.length > 0 ? (
-                <text x={pad.left - 8} y={y + 3} textAnchor="end" className="fill-dark-4 text-[10px]">
+                <text x={pad.left - 10} y={y + 4} textAnchor="end" className="fill-dark-4 text-[10px] tabular-nums">
                   {countLabel}
                 </text>
               ) : null}
               {percentSeries.length > 0 ? (
-                <text x={pad.left + innerW + 8} y={y + 3} textAnchor="start" className="fill-dark-4 text-[10px]">
+                <text
+                  x={pad.left + innerW + 10}
+                  y={y + 4}
+                  textAnchor="start"
+                  className="fill-dark-4 text-[10px] tabular-nums"
+                >
                   {percentLabel}
                 </text>
               ) : null}
@@ -501,32 +572,47 @@ export function TimelineChart({
           </text>
         ) : null}
 
-        {renderSeries.map((entry) => {
-          const scaleY = entry.unit === "percent" ? scalePercent : scaleCount;
-          const d = buildLinePath(entry.values, scaleY, scaleX);
-          return (
-            <g key={`series-${entry.metric}`}>
-              <path
-                d={d}
-                fill="none"
-                stroke={entry.color}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {entry.values.map((value, index) => (
-                <circle
-                  key={`pt-${entry.metric}-${index}`}
-                  cx={scaleX(index)}
-                  cy={scaleY(value)}
-                  r={tooltipIndex === index ? 4 : 2.2}
-                  fill={entry.color}
-                  stroke="#fff"
-                  strokeWidth={tooltipIndex === index ? 1.4 : 1}
+        <g clipPath={`url(#${plotClipId})`}>
+          {renderSeries.map((entry) => {
+            const scaleY = entry.unit === "percent" ? scalePercent : scaleCount;
+            const points = toChartPoints(entry.values, scaleY, scaleX);
+            const lineD = buildSmoothLinePath(points);
+            const areaD = buildSmoothAreaPath(points, baseY);
+            const areaFillId = `timelineArea-${chartId}-${entry.metric}`;
+            return (
+              <g key={`series-${entry.metric}`}>
+                {areaD ?
+                  <path d={areaD} fill={`url(#${areaFillId})`} stroke="none" />
+                : null}
+                <path
+                  d={lineD}
+                  fill="none"
+                  stroke={entry.color}
+                  strokeWidth="2.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
-              ))}
-            </g>
-          );
+              </g>
+            );
+          })}
+        </g>
+
+        {renderSeries.flatMap((entry) => {
+          const scaleY = entry.unit === "percent" ? scalePercent : scaleCount;
+          return entry.values.flatMap((value, index) => {
+            if (tooltipIndex !== index) return [];
+            return [
+              <circle
+                key={`pt-${entry.metric}-${index}`}
+                cx={scaleX(index)}
+                cy={scaleY(value)}
+                r={5}
+                fill={entry.color}
+                stroke="#fff"
+                strokeWidth={2}
+              />,
+            ];
+          });
         })}
 
         {tooltipIndex != null ? (
@@ -535,9 +621,10 @@ export function TimelineChart({
             y1={pad.top}
             x2={tooltipX}
             y2={baseY}
-            stroke="#0F172A"
-            strokeOpacity="0.25"
-            strokeDasharray="3 3"
+            stroke="#F27430"
+            strokeOpacity="0.35"
+            strokeWidth="1.5"
+            strokeDasharray="4 5"
           />
         ) : null}
 
@@ -610,7 +697,7 @@ export function TimelineChart({
 
       {tooltipIndex != null && tooltipBucket ? (
         <div
-          className="pointer-events-none absolute top-2 z-10 w-[7.75rem] rounded-md border border-gray-3 bg-white p-2 shadow-md"
+          className="pointer-events-none absolute top-3 z-10 w-[8.25rem] rounded-lg border border-gray-3 bg-white/95 p-2.5 shadow-lg backdrop-blur-sm"
           style={{
             left: `calc(${(tooltipX / w) * 100}% + ${tooltipShiftX}px)`,
           }}
@@ -643,7 +730,7 @@ export function TimelineChart({
 
       {hoveredCheckpoint ? (
         <div
-          className="pointer-events-none absolute top-1 z-20 w-[10.5rem] rounded-md border border-gray-3 bg-white p-2 shadow-lg"
+          className="pointer-events-none absolute top-2 z-20 w-[10.5rem] rounded-lg border border-gray-3 bg-white/95 p-2.5 shadow-lg backdrop-blur-sm"
           style={{
             left: `calc(${(hoveredCheckpoint.x / w) * 100}% + ${checkpointTooltipShiftX}px)`,
           }}

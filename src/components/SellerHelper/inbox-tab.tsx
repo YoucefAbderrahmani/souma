@@ -14,6 +14,15 @@ const ALL_INBOX_ROLES = "all" as const;
 
 type InboxRoleFilter = typeof ALL_INBOX_ROLES | string;
 
+function inboxRoleFilterButtonClass(active: boolean) {
+  return cn(
+    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors duration-150",
+    active ?
+      "border-orange bg-orange text-white shadow-sm"
+    : "border-gray-3 bg-white text-dark hover:border-orange hover:bg-orange/10 hover:text-orange"
+  );
+}
+
 export function InboxContent({
   inbox,
   onMarkImplemented,
@@ -40,6 +49,14 @@ export function InboxContent({
       }
     }
     return defs;
+  }, [inbox]);
+
+  const countByRole = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of inbox) {
+      counts.set(item.assignedRoleKey, (counts.get(item.assignedRoleKey) ?? 0) + 1);
+    }
+    return counts;
   }, [inbox]);
 
   const filtered = useMemo(() => {
@@ -92,22 +109,55 @@ export function InboxContent({
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex flex-col gap-1.5 text-custom-sm text-dark-4 sm:flex-row sm:items-center sm:gap-3">
-          <span className="font-medium text-dark-3">View inbox for</span>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as InboxRoleFilter)}
-            className="min-w-[12rem] rounded-lg border border-gray-3 bg-white px-3 py-2 text-sm font-medium text-dark focus:border-orange focus:outline-none focus:ring-1 focus:ring-orange/30"
+      <div className="space-y-2">
+        <p className="text-custom-sm font-medium text-dark-3">View inbox for</p>
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filter inbox by role"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={roleFilter === ALL_INBOX_ROLES}
+            onClick={() => setRoleFilter(ALL_INBOX_ROLES)}
+            className={inboxRoleFilterButtonClass(roleFilter === ALL_INBOX_ROLES)}
           >
-            <option value={ALL_INBOX_ROLES}>All roles</option>
-            {roleOptions.map((role) => (
-              <option key={role.roleKey} value={role.roleKey}>
+            All roles
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                roleFilter === ALL_INBOX_ROLES ? "bg-white/25 text-white" : "bg-gray-2 text-dark-4"
+              )}
+            >
+              {inbox.length}
+            </span>
+          </button>
+          {roleOptions.map((role) => {
+            const active = roleFilter === role.roleKey;
+            const count = countByRole.get(role.roleKey) ?? 0;
+            return (
+              <button
+                key={role.roleKey}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setRoleFilter(role.roleKey)}
+                className={inboxRoleFilterButtonClass(active)}
+              >
                 {role.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    active ? "bg-white/25 text-white" : "bg-gray-2 text-dark-4"
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className={sellerHelperGrid.three}>
