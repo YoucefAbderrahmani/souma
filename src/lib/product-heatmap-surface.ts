@@ -9,23 +9,27 @@ function clampPct(value: number) {
 /** Paint box shared by pointer tracking and heatmap overlay (border-box of the surface). */
 export function getProductHeatmapSurfacePaintSize(surface: HTMLElement) {
   const rect = surface.getBoundingClientRect();
+  const width = Math.max(1, surface.offsetWidth || rect.width);
+  const height = Math.max(1, surface.offsetHeight || rect.height);
   return {
-    width: Math.max(1, Math.round(rect.width)),
-    height: Math.max(1, Math.round(rect.height)),
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
   };
 }
 
 export function productHeatmapPointerPct(surface: HTMLElement, event: MouseEvent) {
   const rect = surface.getBoundingClientRect();
-  const { width, height } = getProductHeatmapSurfacePaintSize(surface);
+  const width = Math.max(1, rect.width);
+  const height = Math.max(1, rect.height);
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
+  const paint = getProductHeatmapSurfacePaintSize(surface);
 
   return {
     x_pct: Number(clampPct((100 * x) / width).toFixed(3)),
     y_pct: Number(clampPct((100 * y) / height).toFixed(3)),
-    surface_width: width,
-    surface_height: height,
+    surface_width: paint.width,
+    surface_height: paint.height,
   };
 }
 
@@ -111,8 +115,8 @@ export function measureProductHeatmapSurface(
   return {
     width,
     height,
-    offsetLeft: scrollX + rect.left,
-    offsetTop: scrollY + rect.top,
+    offsetLeft: Math.round(scrollX + rect.left),
+    offsetTop: Math.round(scrollY + rect.top),
     documentWidth: viewportWidth,
     documentHeight,
   };
@@ -143,7 +147,7 @@ export function measureProductHeatmapPreviewSurface(
 
   return {
     ...measured,
-    documentWidth: Math.max(measured.documentWidth, innerWidth, HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX),
+    documentWidth: Math.max(measured.documentWidth, innerWidth),
   };
 }
 
@@ -160,21 +164,12 @@ export function mergeProductHeatmapPreviewLayout(
     measured.width < current.width * 0.92 && current.width >= PREVIEW_MIN_SURFACE_WIDTH_PX ?
       current.width
     : measured.width;
-  const offsetLeft =
-    measured.width < current.width * 0.92 && current.width >= PREVIEW_MIN_SURFACE_WIDTH_PX ?
-      current.offsetLeft
-    : measured.offsetLeft;
-  const offsetTop =
-    measured.width < current.width * 0.92 && current.width >= PREVIEW_MIN_SURFACE_WIDTH_PX ?
-      current.offsetTop
-    : measured.offsetTop;
-
   return {
     layout: {
       width,
       height: Math.max(current.height, measured.height),
-      offsetLeft,
-      offsetTop,
+      offsetLeft: measured.offsetLeft,
+      offsetTop: measured.offsetTop,
       documentWidth: Math.max(current.documentWidth, measured.documentWidth),
       documentHeight: Math.max(current.documentHeight, measured.documentHeight),
     },

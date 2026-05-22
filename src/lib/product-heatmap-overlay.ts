@@ -184,9 +184,10 @@ export function syncProductHeatmapOverlay(
         mountHost = document.createElement("div");
         mountHost.setAttribute(IFRAME_OVERLAY_LAYER_ATTR, "");
         mountHost.style.position = "absolute";
-        mountHost.style.inset = "0";
-        mountHost.style.width = "100%";
-        mountHost.style.height = "100%";
+        mountHost.style.left = "0";
+        mountHost.style.top = "0";
+        mountHost.style.right = "auto";
+        mountHost.style.bottom = "auto";
         mountHost.style.pointerEvents = "none";
         mountHost.style.zIndex = "2147483646";
         mountHost.style.overflow = "hidden";

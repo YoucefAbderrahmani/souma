@@ -16,7 +16,7 @@ import {
   resetProductHeatmapPreviewViewport,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncProductHeatmapOverlay } from "@/lib/product-heatmap-overlay";
+import { syncStageHeatmapOverlay, type HeatmapStageLayout } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -50,6 +50,13 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
 
 const PREVIEW_FALLBACK_WIDTH_PX = HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX;
 const PREVIEW_FALLBACK_HEIGHT_PX = 1800;
+
+function isPreviewLayoutMeasured(layout: ReturnType<typeof toPreviewLayoutState>) {
+  return (
+    layout.surfaceWidth < PREVIEW_FALLBACK_WIDTH_PX - 2 ||
+    layout.surfaceHeight < PREVIEW_FALLBACK_HEIGHT_PX - 2
+  );
+}
 
 function createPreviewFallbackLayout(): ProductHeatmapSurfaceMeasure {
   return {
@@ -144,9 +151,25 @@ function HeatmapPagePreview({
     previewSrc,
   ]);
 
+  const stageLayout = useMemo<HeatmapStageLayout>(
+    () => ({
+      surfaceWidth: layout.surfaceWidth,
+      surfaceHeight: layout.surfaceHeight,
+      surfaceOffsetLeft: layout.surfaceOffsetLeft,
+      surfaceOffsetTop: layout.surfaceOffsetTop,
+    }),
+    [
+      layout.surfaceHeight,
+      layout.surfaceOffsetLeft,
+      layout.surfaceOffsetTop,
+      layout.surfaceWidth,
+    ]
+  );
+
   useLayoutEffect(() => {
+    const stage = stageRef.current;
     const iframe = iframeRef.current;
-    if (!iframe || !heatmap) return () => {};
+    if (!stage || !iframe || !heatmap || !isPreviewLayoutMeasured(layout)) return () => {};
 
     let cleanup = () => {};
     let pollId: number | null = null;
@@ -155,11 +178,9 @@ function HeatmapPagePreview({
 
     const attachOverlay = () => {
       const doc = iframe.contentDocument;
-      if (!doc) return false;
-      const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`);
-      if (!surface) return false;
+      if (!doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`)) return false;
       cleanup();
-      cleanup = syncProductHeatmapOverlay(doc, heatmap);
+      cleanup = syncStageHeatmapOverlay(stage, iframe, stageLayout, heatmap);
       return true;
     };
 
@@ -176,7 +197,7 @@ function HeatmapPagePreview({
       if (pollId != null) window.clearInterval(pollId);
       cleanup();
     };
-  }, [heatmap, layout.surfaceHeight, layout.surfaceWidth, previewSrc]);
+  }, [heatmap, layout, previewSrc, stageLayout]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -304,8 +325,8 @@ function HeatmapPagePreview({
             ref={stageRef}
             className="relative overflow-hidden"
             style={{
-              width: layout.surfaceWidth,
-              height: layout.surfaceHeight,
+              width: Math.round(layout.surfaceWidth),
+              height: Math.round(layout.surfaceHeight),
               transform: `scale(${displayScale})`,
               transformOrigin: "top left",
             }}
@@ -320,9 +341,9 @@ function HeatmapPagePreview({
               style={{
                 width: layout.documentWidth,
                 height: layout.documentHeight,
-                left: -layout.surfaceOffsetLeft,
-                top: -layout.surfaceOffsetTop,
-                zIndex: 1,
+                left: -Math.round(layout.surfaceOffsetLeft),
+                top: -Math.round(layout.surfaceOffsetTop),
+                zIndex: 0,
               }}
             />
           </div>

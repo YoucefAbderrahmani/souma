@@ -104,16 +104,20 @@ export async function createGaussianHeatmapRenderer(
     repaint(heatmap, width, height) {
       if (width <= 0 || height <= 0) return;
 
-      container.style.width = `${Math.round(width)}px`;
-      container.style.height = `${Math.round(height)}px`;
+      const paintWidth = Math.round(width);
+      const paintHeight = Math.round(height);
+      container.style.width = `${paintWidth}px`;
+      container.style.height = `${paintHeight}px`;
 
-      const radius = heatmapRadiusForSize(width, height);
+      const radius = heatmapRadiusForSize(paintWidth, paintHeight);
+      const blur = heatmap.metric === "click" ? 0.82 : 0.94;
       instance.configure({
         radius,
+        blur,
         gradient: METRIC_GRADIENTS[heatmap.metric],
       });
 
-      const { points, max } = cellsToHeatmapPoints(heatmap, width, height);
+      const { points, max } = cellsToHeatmapPoints(heatmap, paintWidth, paintHeight);
       if (points.length === 0) {
         instance.setData({ max: 1, min: 0, data: [] });
         instance.repaint();
