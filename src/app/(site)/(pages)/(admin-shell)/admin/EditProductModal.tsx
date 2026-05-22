@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import { parseProductContent } from "@/lib/product-content";
 import { updateProductFullAction, type UpdateProductState } from "./actions";
+import AdminColorVariantsPanel, {
+  newAdminColorFormRow,
+} from "@/components/Admin/AdminColorVariantsPanel";
 import {
   pf,
   productFormSectionIds,
   ProductFormField,
   ProductFormJumpNav,
   ProductFormSection,
-  ProductImageDropZone,
 } from "./product-form-ui";
 
 export type AdminProductEditable = {
@@ -35,28 +37,21 @@ type Props = {
   onClose: () => void;
 };
 
-type EditColorFormRow = { id: string; name: string; price: string; imageUrl: string };
-
-function newEditColorFormRow(): EditColorFormRow {
-  return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
-}
-
 export default function EditProductModal({ product, onClose }: Props) {
   const router = useRouter();
   const [updateState, updateAction, isUpdating] = useActionState(updateProductFullAction, initialUpdateState);
-  const [selectedFileName, setSelectedFileName] = useState("Keep current image");
   const [specRows, setSpecRows] = useState([
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState<EditColorFormRow[]>([newEditColorFormRow()]);
+  const [colorRows, setColorRows] = useState(() => [newAdminColorFormRow()]);
+  const [defaultColorName, setDefaultColorName] = useState("");
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editVitrinaMode, setEditVitrinaMode] = useState(false);
   const [editPriceInput, setEditPriceInput] = useState("");
 
   useEffect(() => {
     const parsed = parseProductContent(product.description);
-    setSelectedFileName("Keep current image");
     setColorHasPriceOverride(Boolean(parsed.colorHasPriceOverride));
     const colors = parsed.colors?.length
       ? parsed.colors.map((c) => ({
@@ -65,8 +60,9 @@ export default function EditProductModal({ product, onClose }: Props) {
           price: c.price != null && !Number.isNaN(c.price) ? String(c.price) : "",
           imageUrl: c.imageUrl?.trim() ?? "",
         }))
-      : [newEditColorFormRow()];
+      : [newAdminColorFormRow()];
     setColorRows(colors);
+    setDefaultColorName(colors[0]?.name.trim() ?? "");
     if (parsed.specifications?.length) {
       setSpecRows(
         parsed.specifications.map((s) => ({
@@ -111,20 +107,20 @@ export default function EditProductModal({ product, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-3 backdrop-blur-[2px] sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-dark/50 p-3 backdrop-blur-[2px] sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-product-title"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[min(92vh,880px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl shadow-stone-900/20"
+        className="flex max-h-[min(92vh,880px)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-3 bg-white shadow-1"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-100 bg-gradient-to-r from-stone-50 to-[#fff7ed]/35 px-4 py-4 sm:px-6">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-3 bg-gray-1 px-4 py-4 sm:px-6">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Editing</p>
-            <h2 id="edit-product-title" className="mt-0.5 truncate text-lg font-semibold text-stone-900 sm:text-xl">
+            <h2 id="edit-product-title" className="mt-0.5 truncate text-lg font-semibold text-dark sm:text-xl">
               {product.title}
             </h2>
             <p className="mt-1 text-xs text-dark-4 sm:text-sm">
@@ -134,7 +130,7 @@ export default function EditProductModal({ product, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-lg border border-stone-200 bg-white p-2 text-stone-500 transition hover:border-[#FB923C] hover:text-stone-800"
+            className="shrink-0 rounded-lg border border-gray-3 bg-white p-2 text-dark-4 transition hover:border-orange hover:text-dark"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
@@ -146,8 +142,8 @@ export default function EditProductModal({ product, onClose }: Props) {
         <form action={updateAction} encType="multipart/form-data" className="flex min-h-0 flex-1 flex-col">
           <input type="hidden" name="productId" value={product.id} />
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-stone-50/40 px-4 py-3 sm:px-6 sm:py-4">
-            <ProductFormJumpNav className="!-mx-0 rounded-xl border border-stone-200/90 bg-white/95 px-3 py-3 sm:px-4" />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gray-2/50 px-4 py-3 sm:px-6 sm:py-4">
+            <ProductFormJumpNav className="!-mx-0 rounded-xl border border-gray-3 bg-white/95 px-3 py-3 sm:px-4" />
 
             <div className="mt-5 space-y-5 pb-4">
               <ProductFormSection
@@ -321,158 +317,27 @@ export default function EditProductModal({ product, onClose }: Props) {
               </ProductFormSection>
 
               <ProductFormSection
+                id={productFormSectionIds.colors}
+                title="Colors & catalog image"
+                description="Pick the default color for shop listings. Upload or paste a URL per color."
+              >
+                <AdminColorVariantsPanel
+                  colorRows={colorRows}
+                  setColorRows={setColorRows}
+                  defaultColorName={defaultColorName}
+                  setDefaultColorName={setDefaultColorName}
+                  colorHasPriceOverride={colorHasPriceOverride}
+                  setColorHasPriceOverride={setColorHasPriceOverride}
+                  previewMainImageUrl={product.mainimage}
+                />
+              </ProductFormSection>
+
+              <ProductFormSection
                 id={productFormSectionIds.variants}
-                title="Colors, specifications & extra fields"
-                description="Same structure as when creating a product. Leave blocks empty if not needed."
+                title="Specifications & extra fields"
+                description="Optional. Same structure as when creating a product."
               >
                 <div className="space-y-6">
-                  <div className={pf.cardMuted}>
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-stone-800">Color options</p>
-                        <p className="text-xs text-dark-4">
-                          Per color: optional image URL and/or file upload (upload replaces URL). The product page swaps
-                          images when shoppers pick a variant.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setColorRows((prev) => [...prev, newEditColorFormRow()])}
-                        className={pf.btnAccent}
-                      >
-                        + Add color
-                      </button>
-                    </div>
-                    <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                        checked={colorHasPriceOverride}
-                        onChange={(event) => setColorHasPriceOverride(event.target.checked)}
-                      />
-                      Different price per color
-                    </label>
-                    <div className="space-y-2">
-                      {colorRows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
-                        >
-                          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                            <label className="flex flex-col gap-1 text-xs text-stone-600">
-                              <span className="font-medium text-stone-800">Color name</span>
-                              <input
-                                type="text"
-                                placeholder="Color name"
-                                value={row.name}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, name: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={pf.input}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-stone-600">
-                              <span className="font-medium text-stone-800">Price (DZD)</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                disabled={!colorHasPriceOverride}
-                                placeholder="Price"
-                                value={row.price}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, price: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={`${pf.input} disabled:bg-stone-100`}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
-                              <span className="font-medium text-stone-800">Variant image URL (optional)</span>
-                              <span className="text-[11px] text-dark-4">
-                                Paste a hosted link or an existing <code className="rounded bg-stone-100 px-0.5">/uploads/</code> path.
-                                Leave empty if you only use the file upload below.
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="url"
-                                autoComplete="off"
-                                placeholder="https://… or /uploads/products/…"
-                                value={row.imageUrl}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, imageUrl: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={pf.input}
-                              />
-                            </label>
-                            <div className="sm:col-span-2">
-                              {row.imageUrl ?
-                                <p className="mb-1 text-[11px] text-dark-4">
-                                  Current variant image:{" "}
-                                  <a href={row.imageUrl} className="text-blue underline" target="_blank" rel="noreferrer">
-                                    view
-                                  </a>
-                                  . Upload a new file below to replace it.
-                                </p>
-                              : (
-                                <p className="mb-1 text-[11px] text-dark-4">
-                                  No variant image yet — optional; the main product image is used until you upload one.
-                                </p>
-                              )}
-                              <label className="flex flex-col gap-1 text-xs text-stone-600">
-                                <span className="font-medium text-stone-800">Upload photo for this color (optional)</span>
-                                <input
-                                  type="file"
-                                  name={`colorImage_${row.id}`}
-                                  accept="image/jpeg,image/png,image/webp,image/gif"
-                                  className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setColorRows((prev) =>
-                                prev.length === 1 ? prev : prev.filter((item) => item.id !== row.id)
-                              )
-                            }
-                            className={pf.btnDanger}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <input
-                      type="hidden"
-                      name="colors"
-                      value={JSON.stringify(
-                        colorRows
-                          .map((row) => ({
-                            rowKey: row.id,
-                            name: row.name.trim(),
-                            price:
-                              colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
-                            ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
-                          }))
-                          .filter((row) => row.name)
-                      )}
-                    />
-                    <input type="hidden" name="colorHasPriceOverride" value={String(colorHasPriceOverride)} />
-                  </div>
-
                   <div className={pf.cardMuted}>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -714,43 +579,14 @@ export default function EditProductModal({ product, onClose }: Props) {
                   </div>
                 </div>
               </ProductFormSection>
-
-              <ProductFormSection
-                id={productFormSectionIds.media}
-                title="Main image"
-                description="Replace the photo only if needed; otherwise leave the file picker unchanged."
-              >
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,220px)_1fr] lg:items-start">
-                  <div className="rounded-xl border border-stone-200 bg-white p-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Current</p>
-                    <div className="mt-2 aspect-square overflow-hidden rounded-lg bg-stone-100">
-                      <img
-                        src={product.mainimage}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <ProductImageDropZone
-                      inputId="edit-product-image"
-                      fileName={selectedFileName}
-                      onFileChange={(file) => setSelectedFileName(file?.name ?? "Keep current image")}
-                      helper="Optional. Supported: JPG, PNG, WebP, GIF. Replaces the main listing image."
-                    />
-                  </div>
-                </div>
-              </ProductFormSection>
             </div>
 
             {updateState.error ? (
-              <p className="mx-4 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:mx-6">
-                {updateState.error}
-              </p>
+              <p className={`mx-4 mb-2 sm:mx-6 ${pf.alertError}`}>{updateState.error}</p>
             ) : null}
           </div>
 
-          <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-stone-200 bg-white px-4 py-4 sm:px-6">
+          <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-gray-3 bg-white px-4 py-4 sm:px-6">
             <button type="button" onClick={onClose} className={pf.btnSecondary}>
               Cancel
             </button>

@@ -129,39 +129,39 @@ const AdminPage = async () => {
   ]);
 
   return (
-    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
+    <main className="overflow-hidden bg-gray-2 pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
       <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="mb-8 rounded-xl border border-gray-3 bg-white p-5 sm:p-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Admin dashboard</p>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative mb-8 overflow-hidden rounded-xl border border-gray-3 bg-white p-5 shadow-1 before:pointer-events-none before:absolute before:inset-0 before:bg-gradient-to-br before:from-orange/10 before:via-white before:to-orange/5 sm:p-6">
+          <div className="relative z-[1] flex flex-wrap items-center justify-between gap-3">
             <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Admin dashboard</p>
               <p className="text-sm text-dark-4">Welcome back</p>
               <h1 className="text-2xl font-semibold text-dark">Admin Panel</h1>
             </div>
-            <span className="rounded-full bg-[#FFF7F0] px-3 py-1 text-xs font-medium text-[#FB923C]">
+            <span className="rounded-md border border-orange/25 bg-orange/10 px-3 py-1 text-xs font-semibold text-orange-dark">
               Role: admin
             </span>
           </div>
         </div>
 
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-dark">Store overview</h2>
-            <p className="text-sm text-dark-4">Quick counts and shortcuts for daily operations.</p>
+            <p className="text-custom-sm text-dark-4">Quick counts and shortcuts for daily operations.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
-            <p className="text-sm text-dark-4">Users</p>
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-1">
+            <p className="text-custom-sm text-dark-4">Users</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.users ?? 0)}</p>
           </div>
-          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
-            <p className="text-sm text-dark-4">Products</p>
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-1">
+            <p className="text-custom-sm text-dark-4">Products</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.products ?? 0)}</p>
           </div>
-          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-sm">
-            <p className="text-sm text-dark-4">Categories</p>
+          <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-1">
+            <p className="text-custom-sm text-dark-4">Categories</p>
             <p className="mt-2 text-2xl font-semibold text-dark">{Number(basicStats[0]?.categories ?? 0)}</p>
           </div>
         </div>

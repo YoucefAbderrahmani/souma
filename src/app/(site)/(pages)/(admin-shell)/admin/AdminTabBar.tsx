@@ -1,6 +1,8 @@
 "use client";
 
 import { memo } from "react";
+import { cn } from "@/lib/utils";
+import { sellerNav, sellerNavButton } from "@/components/SellerHelper/layout";
 import { useOptimisticTabIndicator } from "@/hooks/useOptimisticTabIndicator";
 
 export type AdminMainTab =
@@ -36,7 +38,7 @@ function AdminTabBarInner({
   const { indicatorTab, selectTab } = useOptimisticTabIndicator(activeTab);
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <nav className={cn(sellerNav, "top-24")} aria-label="Admin sections">
       {TABS.map(({ id, label }) => (
         <button
           key={id}
@@ -44,16 +46,12 @@ function AdminTabBarInner({
           onMouseEnter={() => TAB_PREFETCH[id]?.()}
           onFocus={() => TAB_PREFETCH[id]?.()}
           onClick={() => selectTab(id, onSelect)}
-          className={`rounded-lg px-4 py-2 text-sm font-medium outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-            indicatorTab === id
-              ? "bg-orange text-white shadow-sm"
-              : "border border-gray-3 bg-white text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-          }`}
+          className={sellerNavButton(indicatorTab === id)}
         >
           {label}
         </button>
       ))}
-    </div>
+    </nav>
   );
 }
 

@@ -15,13 +15,15 @@ import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTr
 import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
 import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
 import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
+import AdminColorVariantsPanel, {
+  newAdminColorFormRow,
+} from "@/components/Admin/AdminColorVariantsPanel";
 import {
   pf,
   productFormSectionIds,
   ProductFormField,
   ProductFormSection,
   ProductFormShell,
-  ProductImageDropZone,
 } from "./product-form-ui";
 
 type AdminUser = {
@@ -56,12 +58,6 @@ type Props = {
 
 const initialState: CreateProductState = {};
 
-type AdminColorFormRow = { id: string; name: string; price: string; imageUrl: string };
-
-function newAdminColorFormRow(): AdminColorFormRow {
-  return { id: crypto.randomUUID(), name: "", price: "", imageUrl: "" };
-}
-
 export default function AdminPanels({
   users,
   products,
@@ -75,12 +71,12 @@ export default function AdminPanels({
     () => new Set([typeof window === "undefined" ? "users" : readAdminTabFromUrl()])
   );
   const [createState, createAction, isCreating] = useActionState(createProductAction, initialState);
-  const [selectedFileName, setSelectedFileName] = useState("No file selected");
   const [specRows, setSpecRows] = useState([
     { name: "", hasPriceOverride: false, options: [{ label: "", price: "" }] },
   ]);
   const [additionalRows, setAdditionalRows] = useState([{ key: "", value: "" }]);
-  const [colorRows, setColorRows] = useState<AdminColorFormRow[]>(() => [newAdminColorFormRow()]);
+  const [colorRows, setColorRows] = useState(() => [newAdminColorFormRow()]);
+  const [defaultColorName, setDefaultColorName] = useState("");
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
@@ -413,149 +409,27 @@ export default function AdminPanels({
               </ProductFormSection>
 
               <ProductFormSection
+                id={productFormSectionIds.colors}
+                title="Colors & catalog image"
+                description="Required. Each color needs a photo. Choose which color is the default — its image appears in shop listings."
+                badge="Required"
+              >
+                <AdminColorVariantsPanel
+                  colorRows={colorRows}
+                  setColorRows={setColorRows}
+                  defaultColorName={defaultColorName}
+                  setDefaultColorName={setDefaultColorName}
+                  colorHasPriceOverride={colorHasPriceOverride}
+                  setColorHasPriceOverride={setColorHasPriceOverride}
+                />
+              </ProductFormSection>
+
+              <ProductFormSection
                 id={productFormSectionIds.variants}
-                title="Colors, specifications & extra fields"
-                description="Optional. Use specs for storage sizes, RAM, etc. Additional info shows as label/value rows on the product page."
+                title="Specifications & extra fields"
+                description="Optional. Specs for storage, RAM, etc. Additional info shows as label/value rows on the product page."
               >
                 <div className="space-y-6">
-                  <div className={pf.cardMuted}>
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-stone-800">Color options</p>
-                        <p className="text-xs text-dark-4">
-                          For each color, set a name, then link a picture with an image URL and/or a file upload. Upload
-                          wins if both are set. The storefront swaps the main photo when shoppers pick that color.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setColorRows((prev) => [...prev, newAdminColorFormRow()])}
-                        className={pf.btnAccent}
-                      >
-                        + Add color
-                      </button>
-                    </div>
-                    <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-stone-300 text-orange outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                        checked={colorHasPriceOverride}
-                        onChange={(event) => setColorHasPriceOverride(event.target.checked)}
-                      />
-                      Different price per color
-                    </label>
-                    <div className="space-y-2">
-                      {colorRows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end"
-                        >
-                          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                            <label className="flex flex-col gap-1 text-xs text-stone-600">
-                              <span className="font-medium text-stone-800">Color name</span>
-                              <input
-                                type="text"
-                                placeholder="e.g. Midnight blue"
-                                value={row.name}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, name: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={pf.input}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-stone-600">
-                              <span className="font-medium text-stone-800">
-                                {colorHasPriceOverride ? "Price (DZD)" : "Price"}
-                              </span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                disabled={!colorHasPriceOverride}
-                                placeholder={colorHasPriceOverride ? "Price" : "—"}
-                                value={row.price}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, price: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={`${pf.input} disabled:bg-stone-100 disabled:text-dark-4`}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
-                              <span className="font-medium text-stone-800">Variant image URL (optional)</span>
-                              <span className="text-[11px] text-dark-4">
-                                Paste a link if the photo is already online; leave empty and use the file upload below
-                                instead.
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="url"
-                                autoComplete="off"
-                                placeholder="https://… or /uploads/products/…"
-                                value={row.imageUrl}
-                                onChange={(event) =>
-                                  setColorRows((prev) =>
-                                    prev.map((item) =>
-                                      item.id === row.id ? { ...item, imageUrl: event.target.value } : item
-                                    )
-                                  )
-                                }
-                                className={pf.input}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-stone-600 sm:col-span-2">
-                              <span className="font-medium text-stone-800">Upload photo for this color (optional)</span>
-                              <span className="text-[11px] text-dark-4">
-                                When the product looks different in this color, shoppers see this image when they select
-                                it. Upload overrides the URL above.
-                              </span>
-                              <input
-                                type="file"
-                                name={`colorImage_${row.id}`}
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                                className="text-custom-sm file:mr-2 file:rounded file:border-0 file:bg-orange file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
-                              />
-                            </label>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setColorRows((prev) =>
-                                prev.length === 1 ? prev : prev.filter((item) => item.id !== row.id)
-                              )
-                            }
-                            className={pf.btnDanger}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <input
-                      type="hidden"
-                      name="colors"
-                      value={JSON.stringify(
-                        colorRows
-                          .map((row) => ({
-                            rowKey: row.id,
-                            name: row.name.trim(),
-                            price:
-                              colorHasPriceOverride && row.price !== "" ? Number(row.price) : undefined,
-                            ...(row.imageUrl?.trim() ? { imageUrl: row.imageUrl.trim() } : {}),
-                          }))
-                          .filter((row) => row.name)
-                      )}
-                    />
-                    <input type="hidden" name="colorHasPriceOverride" value={String(colorHasPriceOverride)} />
-                  </div>
-
                   <div className={pf.cardMuted}>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -797,46 +671,10 @@ export default function AdminPanels({
                   </div>
                 </div>
               </ProductFormSection>
-
-              <ProductFormSection
-                id={productFormSectionIds.media}
-                title="Main image"
-                description="Upload a file or paste a public image URL (URL works on Vercel when file upload is not configured)."
-                badge="File or URL"
-              >
-                <div className="space-y-4">
-                  <ProductImageDropZone
-                    inputId="admin-product-image"
-                    fileName={selectedFileName}
-                    onFileChange={(file) => setSelectedFileName(file?.name ?? "No file selected")}
-                    helper="JPG, PNG, WebP or GIF up to 4 MB. On Vercel, files are stored in your database if Blob is not configured."
-                  />
-                  <ProductFormField
-                    label="Image URL (optional)"
-                    hint="Full https:// link or /uploads/… path. Use this instead of upload on production if needed."
-                  >
-                    <input
-                      name="mainImageUrl"
-                      type="url"
-                      className={pf.input}
-                      placeholder="https://…"
-                      autoComplete="off"
-                    />
-                  </ProductFormField>
-                </div>
-              </ProductFormSection>
             </ProductFormShell>
 
-            {createState.error ? (
-              <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {createState.error}
-              </p>
-            ) : null}
-            {createState.success ? (
-              <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                {createState.message}
-              </p>
-            ) : null}
+            {createState.error ? <p className={`mt-4 ${pf.alertError}`}>{createState.error}</p> : null}
+            {createState.success ? <p className={`mt-4 ${pf.alertSuccess}`}>{createState.message}</p> : null}
           </form>
           </section>
         )}
@@ -856,7 +694,7 @@ export default function AdminPanels({
               <div>
                 <h2 className="text-lg font-medium text-dark">Products by category</h2>
                 <p className="mt-1 text-sm text-dark-4">
-                  Switch tabs to list products in each category. Use Edit to change details, price, stock, and image.
+                  Switch tabs to list products in each category. Use Edit to change details, price, stock, and colors.
                 </p>
               </div>
               <input
@@ -991,8 +829,8 @@ export default function AdminPanels({
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-gray-3 bg-white p-5">
-      <p className="text-sm text-dark-4">{label}</p>
+    <div className="rounded-xl border border-gray-3 bg-white p-5 shadow-1">
+      <p className="text-custom-sm text-dark-4">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-dark">{value}</p>
     </div>
   );

@@ -6,7 +6,7 @@ import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
-import { normalizeProductImageUrl, saveProductImageFile } from "@/lib/product-image-storage";
+import { mainImageFromColors, reorderColorsWithDefault } from "@/lib/admin-product-colors";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
@@ -171,9 +171,8 @@ export async function createProductAction(
     }
     const { price, jomlaPrice } = parsedPrice;
     const instock = Number(formData.get("instock") ?? 0);
-    const image = formData.get("image");
-    const mainImageUrlRaw = String(formData.get("mainImageUrl") ?? "").trim();
     const colorsJson = String(formData.get("colors") ?? "[]");
+    const defaultColorName = String(formData.get("defaultColorName") ?? "").trim();
     const colorHasPriceOverride = String(formData.get("colorHasPriceOverride") ?? "false") === "true";
     const specificationsParsed = parseJsonField<
       Array<{
@@ -203,9 +202,16 @@ export async function createProductAction(
       return { error: "Stock must be a valid positive number." };
     }
 
-    const hasUpload = image instanceof File && image.size > 0;
-    if (!hasUpload && !mainImageUrlRaw) {
-      return { error: "Please upload a product image or paste an image URL." };
+    let parsedColorRows: ParsedColorRow[];
+    try {
+      parsedColorRows = JSON.parse(colorsJson) as ParsedColorRow[];
+    } catch {
+      return { error: "Invalid colors payload." };
+    }
+    if (!Array.isArray(parsedColorRows) || !parsedColorRows.some((r) => String(r?.name ?? "").trim())) {
+      return {
+        error: "Add at least one color with a name and photo (upload or image URL).",
+      };
     }
 
     const existingCategory = await db
@@ -238,25 +244,22 @@ export async function createProductAction(
       return { error: resolvedColors.error };
     }
 
+    const orderedColors = reorderColorsWithDefault(resolvedColors.colors, defaultColorName);
+    const heroImage = mainImageFromColors(orderedColors);
+    if ("error" in heroImage) {
+      return { error: heroImage.error };
+    }
+
     const structuredDescription = serializeProductContent({
       description,
       careMaintenance,
-      colors: resolvedColors.colors,
+      colors: orderedColors,
       colorHasPriceOverride,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
     });
 
-    let imageUrl: string;
-    if (hasUpload && image instanceof File) {
-      const saved = await saveProductImageFile({ slug, file: image });
-      if ("error" in saved) return { error: saved.error };
-      imageUrl = saved.url;
-    } else {
-      const normalized = normalizeProductImageUrl(mainImageUrlRaw);
-      if ("error" in normalized) return { error: normalized.error };
-      imageUrl = normalized.url;
-    }
+    const imageUrl = heroImage.url;
 
     const inserted = await db
       .insert(productsTable)
@@ -503,8 +506,8 @@ export async function updateProductFullAction(
     const { price, jomlaPrice } = parsedPrice;
     const instock = Number(formData.get("instock") ?? 0);
     const rating = Math.round(Number(formData.get("rating") ?? 0));
-    const image = formData.get("image");
     const colorsJson = String(formData.get("colors") ?? "[]");
+    const defaultColorName = String(formData.get("defaultColorName") ?? "").trim();
     const colorHasPriceOverride = String(formData.get("colorHasPriceOverride") ?? "false") === "true";
     const specifications = JSON.parse(
       String(formData.get("specifications") ?? "[]")
@@ -543,16 +546,7 @@ export async function updateProductFullAction(
       return { error: "Product not found." };
     }
 
-    let mainimage = existingRow[0].mainimage;
-
-    if (image instanceof File && image.size > 0) {
-      const saved = await saveProductImageFile({
-        slug: existingRow[0].slug,
-        file: image,
-      });
-      if ("error" in saved) return { error: saved.error };
-      mainimage = saved.url;
-    }
+    const prevMainimage = existingRow[0].mainimage;
 
     const existingCategory = await db
       .select({ id: categoryTable.id })
@@ -581,10 +575,14 @@ export async function updateProductFullAction(
       return { error: resolvedColors.error };
     }
 
+    const orderedColors = reorderColorsWithDefault(resolvedColors.colors, defaultColorName);
+    const heroImage = mainImageFromColors(orderedColors, prevMainimage);
+    const mainimage = "error" in heroImage ? prevMainimage : heroImage.url;
+
     const structuredDescription = serializeProductContent({
       description,
       careMaintenance,
-      colors: resolvedColors.colors,
+      colors: orderedColors,
       colorHasPriceOverride,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
@@ -605,7 +603,7 @@ export async function updateProductFullAction(
       })
       .where(eq(productsTable.id, productId));
 
-    if (image instanceof File && image.size > 0) {
+    if (mainimage !== prevMainimage) {
       await db.delete(imageTable).where(eq(imageTable.productId, productId));
       await db.insert(imageTable).values({
         productId,
