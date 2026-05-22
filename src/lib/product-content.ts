@@ -37,7 +37,7 @@ export type ProductStructuredContent = {
   sizes?: ProductSizeOption[];
   specifications: ProductSpec[];
   additionalInfo: ProductAdditionalInfo[];
-  /** When true, catalog skips auto-injecting live review hero overlays after a Vitrina reset. */
+  /** When true, hide the Vitrina hero review banner until Quality & reviews quick fix is applied again. */
   suppressLiveHeroReviewOverlay?: boolean;
 };
 

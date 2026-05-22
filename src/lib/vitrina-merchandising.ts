@@ -110,12 +110,6 @@ export function getVitrinaMerchandisingFromAdditionalInfo(additionalInfo: Produc
   };
 }
 
-export function readHeroReviewSnippetFromDescription(description?: string | null): string | null {
-  if (!description?.trim()) return null;
-  return getVitrinaMerchandisingFromAdditionalInfo(parseProductContent(description).additionalInfo)
-    .heroReviewSnippet;
-}
-
 /**
  * Hero image banner copy: persisted `Merch: Hero review` only (verified quote or ⭐ rating line).
  * Quality / Availability quick-fix lines stay in the Additional Information tab, not on the photo.
@@ -128,17 +122,18 @@ export function getStorefrontMerchHeroStripFromAdditionalInfo(
   return null;
 }
 
-/** Hero review strip for catalog cards and PDP (server field, description, live catalog). */
+/**
+ * Hero review banner on product images — only when the Quality & reviews Vitrina quick fix
+ * wrote `Merch: Hero review` (or reset left `suppressLiveHeroReviewOverlay` blocking display).
+ */
 export function resolveStorefrontHeroReviewSnippet(product: {
-  title: string;
   description?: string | null;
   heroReviewSnippet?: string | null;
 }): string | null {
   const parsed = parseProductContent(product.description ?? "");
   if (parsed.suppressLiveHeroReviewOverlay) return null;
-
-  const fromCatalog = product.heroReviewSnippet?.trim();
-  if (fromCatalog) return fromCatalog;
-
-  return getStorefrontMerchHeroStripFromAdditionalInfo(parsed.additionalInfo);
+  return (
+    product.heroReviewSnippet?.trim() ||
+    getStorefrontMerchHeroStripFromAdditionalInfo(parsed.additionalInfo)
+  );
 }

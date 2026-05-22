@@ -75,10 +75,10 @@ function reorderDefaultSize(sizes: ProductSizeOption[], sizeLabel: string) {
   return [match, ...reordered];
 }
 
+/** Top verified review line — only used when applying the Quality & reviews quick fix. */
 async function heroSnippetFromBestVerifiedReview(
   productDbId: string,
-  productTitle: string,
-  catalogRating: number
+  productTitle: string
 ): Promise<string | null> {
   const aliasIds = getStorefrontInventoryAliasIds(productTitle, productDbId);
   try {
@@ -90,12 +90,7 @@ async function heroSnippetFromBestVerifiedReview(
       }
     }
   } catch {
-    /* fall through to rating line */
-  }
-
-  if (catalogRating > 0) {
-    const stars = Math.max(1, Math.min(5, Math.round(catalogRating)));
-    return `⭐ ${stars}/5 — See customer reviews on the product page.`;
+    return null;
   }
 
   return null;
@@ -388,11 +383,7 @@ export async function applyVitrinaQuickFixes(
         ratingLabel
       );
 
-      const heroSnippet = await heroSnippetFromBestVerifiedReview(
-        product.id,
-        product.title,
-        product.rating
-      );
+      const heroSnippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
       if (heroSnippet) {
         nextAdditionalInfo = upsertAdditionalInfo(
           nextAdditionalInfo,
@@ -433,7 +424,7 @@ export async function applyVitrinaQuickFixes(
     }
 
     if (fix.id === "hero_review_snippet") {
-      const snippet = await heroSnippetFromBestVerifiedReview(product.id, product.title, product.rating);
+      const snippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
       if (!snippet) {
         applied.push("Hero review overlay skipped — add a written storefront review first.");
         continue;

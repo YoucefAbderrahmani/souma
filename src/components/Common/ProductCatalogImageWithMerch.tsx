@@ -5,9 +5,7 @@ import { cn } from "@/lib/utils";
 import { PRODUCT_CARD_IMAGE_SIZES } from "@/lib/product-image-sizes";
 import type { Product } from "@/types/product";
 import { ProductDemoPromoLabels } from "@/components/Common/ProductDemoPromoLabels";
-import { ProductHeroReviewOverlay } from "@/components/Common/ProductHeroReviewOverlay";
 import { ProductHeroReviewSnippet } from "@/components/Common/ProductHeroReviewSnippet";
-import { parseProductContent } from "@/lib/product-content";
 
 export type ProductCatalogImageMerchProduct = Pick<Product, "id" | "title" | "description">;
 
@@ -20,20 +18,13 @@ type Props = {
   /** Extra classes on the outer frame (clips to photo shape) */
   className?: string;
   imageClassName?: string;
-  /** PDP: hero line from merchandising, drawn inside the photo */
+  /** Vitrina Quality & reviews quick fix only — persisted `Merch: Hero review` on the product */
   heroReviewSnippet?: string | null;
-  /** Cards: fetch / description-based hero strip inside the photo */
-  showHeroReviewOverlay?: boolean;
   /** When false, promo pills are omitted here (e.g. rendered in `ProductCardPromoLayer` above hover). */
   showPromoLabels?: boolean;
   priority?: boolean;
   /** Passed to `next/image` so the optimizer requests a sensible width (critical for card grids). */
   sizes?: string;
-  /**
-   * When true (default), hero merchandising fetch waits until the image is near the viewport
-   * so grids do not fire dozens of API calls on first paint.
-   */
-  deferHeroReviewFetch?: boolean;
   /** Fill a square/rect parent (`absolute inset-0`); image is cropped with `object-cover`. */
   fillFrame?: boolean;
 };
@@ -51,16 +42,12 @@ export function ProductCatalogImageWithMerch({
   className,
   imageClassName,
   heroReviewSnippet = null,
-  showHeroReviewOverlay = false,
   showPromoLabels = true,
   priority,
   sizes = PRODUCT_CARD_IMAGE_SIZES,
-  deferHeroReviewFetch = true,
   fillFrame = false,
 }: Props) {
-  const suppressHeroReview = parseProductContent(product.description).suppressLiveHeroReviewOverlay;
-  const snippet = suppressHeroReview ? "" : (heroReviewSnippet?.trim() ?? "");
-  const showReviewOverlay = !suppressHeroReview && showHeroReviewOverlay;
+  const snippet = heroReviewSnippet?.trim() ?? "";
 
   const frameClass = fillFrame
     ? cn("relative isolate block h-full w-full overflow-hidden rounded-lg", className)
@@ -90,13 +77,6 @@ export function ProductCatalogImageWithMerch({
 
       {snippet ?
         <ProductHeroReviewSnippet snippet={snippet} variant="storefront" />
-      : showReviewOverlay ?
-        <ProductHeroReviewOverlay
-          productId={product.id}
-          description={product.description}
-          variant="storefront"
-          deferUntilVisible={deferHeroReviewFetch}
-        />
       : null}
 
       {showPromoLabels ?

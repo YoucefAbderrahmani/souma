@@ -189,10 +189,9 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     () => getVitrinaMerchandisingFromAdditionalInfo(parsedContent.additionalInfo),
     [parsedContent.additionalInfo]
   );
-  const hideImageReviewOverlay = parsedContent.suppressLiveHeroReviewOverlay;
   const heroReviewSnippetForImage = useMemo(
-    () => (hideImageReviewOverlay ? null : resolveStorefrontHeroReviewSnippet(product)),
-    [hideImageReviewOverlay, product]
+    () => resolveStorefrontHeroReviewSnippet(product),
+    [product]
   );
   const colorOptions = useMemo(
     () =>
@@ -555,9 +554,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           sizes={PRODUCT_PDP_HERO_IMAGE_SIZES}
                           priority={previewImg === 0}
                           heroReviewSnippet={heroReviewSnippetForImage}
-                          showHeroReviewOverlay={!hideImageReviewOverlay}
                           showPromoLabels={false}
-                          deferHeroReviewFetch={false}
                         />
                       : null}
                       {displayGalleryUrls[previewImg] ?

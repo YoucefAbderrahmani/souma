@@ -130,7 +130,6 @@ const SingleItem = ({ item }: { item: Product }) => {
                 className="rounded-b-lg"
                 imageClassName="rounded-b-lg"
                 heroReviewSnippet={item.heroReviewSnippet ?? null}
-                showHeroReviewOverlay
                 showPromoLabels={false}
                 sizes={PRODUCT_CARD_IMAGE_SIZES}
               />

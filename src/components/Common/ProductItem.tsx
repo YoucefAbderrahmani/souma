@@ -98,7 +98,6 @@ const ProductItem = ({ item }: { item: Product }) => {
               surface: "card",
             })}
             heroReviewSnippet={item.heroReviewSnippet ?? null}
-            showHeroReviewOverlay
             showPromoLabels={false}
           />
         </button>

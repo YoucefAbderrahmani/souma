@@ -11,13 +11,11 @@ import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
 import {
-  buildHeroReviewSnippetFromVerifiedReview,
   getStorefrontMerchHeroStripFromAdditionalInfo,
   getVitrinaMerchandisingFromAdditionalInfo,
   readCatalogBoostAt,
-  resolveStorefrontHeroReviewSnippet,
 } from "@/lib/vitrina-merchandising";
-import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
+import { getProductReviewAggregatesByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
 const normalize = normalizeStorefrontProductTitle;
@@ -159,31 +157,6 @@ async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Pr
   });
 }
 
-async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Promise<Product[]> {
-  const idsWithReviews = products
-    .filter((p) => {
-      const parsed = parseProductContent(p.description);
-      if (parsed.suppressLiveHeroReviewOverlay) return false;
-      if (p.heroReviewSnippet?.trim()) return false;
-      return (p.reviews ?? 0) > 0;
-    })
-    .map((p) => Math.trunc(Number(p.id)))
-    .filter((id) => Number.isFinite(id) && id > 0);
-  if (idsWithReviews.length === 0) return products;
-
-  const bestById = await getBestProductReviewsForMerchByLocalIds(idsWithReviews);
-  return products.map((p) => {
-    const id = Math.trunc(Number(p.id));
-    if (parseProductContent(p.description).suppressLiveHeroReviewOverlay) {
-      const { heroReviewSnippet: _omit, trendingCountdownEndsAt: _t, ...rest } = p;
-      return rest;
-    }
-    const best = bestById.get(id);
-    if (!best) return p;
-    return { ...p, heroReviewSnippet: buildHeroReviewSnippetFromVerifiedReview(best) };
-  });
-}
-
 export async function getCatalogProducts(): Promise<Product[]> {
   try {
     const dbProducts = await db
@@ -225,8 +198,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withVitrinaStorefrontFieldsFromDescription),
       hiddenTitles
     );
-    const withAgg = await withReviewAggregatesFromDatabase(merged);
-    return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
+    return await withReviewAggregatesFromDatabase(merged);
   } catch {
     const hiddenTitles = await getHiddenStorefrontTitleKeys().catch(() => new Set<string>());
     const deduped = dedupeProductsByTitle(shopData);
@@ -234,8 +206,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       deduped.map(withVitrinaStorefrontFieldsFromDescription),
       hiddenTitles
     );
-    const withAgg = await withReviewAggregatesFromDatabase(merged);
-    return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
+    return await withReviewAggregatesFromDatabase(merged);
   }
 }
 
@@ -345,30 +316,6 @@ export async function getCatalogProductAliasIds(productId: number): Promise<numb
   }
 
   return Array.from(ids);
-}
-
-export async function getHeroReviewSnippetsByStorefrontIds(
-  requestedIds: number[]
-): Promise<Record<number, string>> {
-  const uniqueIds = new Set(
-    requestedIds
-      .map((id) => Math.trunc(Number(id)))
-      .filter((id) => Number.isFinite(id) && id > 0)
-  );
-  if (uniqueIds.size === 0) return {};
-
-  const products = await getCatalogProducts();
-  const snippets: Record<number, string> = {};
-
-  for (const product of products) {
-    if (!uniqueIds.has(product.id)) continue;
-    const snippet = resolveStorefrontHeroReviewSnippet(product);
-    if (snippet) {
-      snippets[product.id] = snippet;
-    }
-  }
-
-  return snippets;
 }
 
 const categorySlugToDisplayName = new Map(categoryData.map((c) => [c.slug, c.title]));

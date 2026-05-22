@@ -90,7 +90,6 @@ const SingleListItem = ({ item }: { item: Product }) => {
               height={250}
               fillFrame
               heroReviewSnippet={item.heroReviewSnippet ?? null}
-              showHeroReviewOverlay
               showPromoLabels={false}
             />
           </button>
