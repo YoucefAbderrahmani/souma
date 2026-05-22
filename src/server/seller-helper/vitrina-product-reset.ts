@@ -13,6 +13,7 @@ import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { clearVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
+import { VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES } from "@/lib/vitrina-merchandising";
 import { loadEarliestVitrinaChokepointsByProductDbId } from "@/server/seller-helper/vitrina-chokepoint";
 
 export function stripVitrinaQuickFixFromStructuredContent(
@@ -88,6 +89,57 @@ export function computeVitrinaDefaultReset(product: {
 
 function normalizeTitleKey(title: string): string {
   return title.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Persist `suppressLiveHeroReviewOverlay` on DB rows so catalog never injects review strips. */
+export async function disableHeroReviewOverlayForExcludedTitles(): Promise<{
+  updatedCount: number;
+  titles: string[];
+}> {
+  const wanted = new Set(
+    VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES.map((title) => normalizeTitleKey(title))
+  );
+
+  const products = await db
+    .select({
+      id: productsTable.id,
+      title: productsTable.title,
+      description: productsTable.description,
+    })
+    .from(productsTable);
+
+  let updatedCount = 0;
+  const titles: string[] = [];
+
+  for (const product of products) {
+    if (!wanted.has(normalizeTitleKey(product.title))) continue;
+    titles.push(product.title);
+
+    const raw = product.description ?? "";
+    if (!isStructuredProductContent(raw)) continue;
+
+    const parsed = parseProductContent(raw);
+    if (parsed.suppressLiveHeroReviewOverlay) continue;
+
+    const next = serializeProductContent({
+      ...parsed,
+      suppressLiveHeroReviewOverlay: true,
+    });
+
+    if (next === raw) continue;
+
+    await db
+      .update(productsTable)
+      .set({ description: next })
+      .where(eq(productsTable.id, product.id));
+    updatedCount += 1;
+  }
+
+  if (updatedCount > 0) {
+    revalidateStorefrontCatalogPaths();
+  }
+
+  return { updatedCount, titles };
 }
 
 /** Reset Vitrina quick-fix fields for specific catalogue titles (no timeline log). */

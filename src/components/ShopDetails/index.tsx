@@ -33,7 +33,11 @@ import {
   productAvailableQuantity,
 } from "@/components/Common/ProductAvailableQuantity";
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
-import { getVitrinaMerchandisingFromAdditionalInfo, isVitrinaMerchandisingKey } from "@/lib/vitrina-merchandising";
+import {
+  getVitrinaMerchandisingFromAdditionalInfo,
+  isVitrinaMerchandisingKey,
+  isVitrinaStorefrontMerchExcluded,
+} from "@/lib/vitrina-merchandising";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
 import { resolveProductImageClassNames } from "@/lib/product-image-display";
 import {
@@ -185,6 +189,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     () => getVitrinaMerchandisingFromAdditionalInfo(parsedContent.additionalInfo),
     [parsedContent.additionalInfo]
   );
+  const hideImageReviewOverlay = isVitrinaStorefrontMerchExcluded(product);
   const colorOptions = useMemo(
     () =>
       parsedContent.colors.length > 0
@@ -545,8 +550,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           imageClassName={heroImageClassName}
                           sizes={PRODUCT_PDP_HERO_IMAGE_SIZES}
                           priority={previewImg === 0}
-                          heroReviewSnippet={vitrinaMerchandising.heroReviewSnippet ?? null}
-                          showHeroReviewOverlay
+                          heroReviewSnippet={
+                            hideImageReviewOverlay ? null : (vitrinaMerchandising.heroReviewSnippet ?? null)
+                          }
+                          showHeroReviewOverlay={!hideImageReviewOverlay}
                           showPromoLabels={false}
                           deferHeroReviewFetch={false}
                         />

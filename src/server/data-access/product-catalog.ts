@@ -10,7 +10,12 @@ import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
-import { getVitrinaMerchandisingFromAdditionalInfo, getStorefrontMerchHeroStripFromAdditionalInfo, buildHeroReviewSnippetFromVerifiedReview } from "@/lib/vitrina-merchandising";
+import {
+  buildHeroReviewSnippetFromVerifiedReview,
+  getStorefrontMerchHeroStripFromAdditionalInfo,
+  getVitrinaMerchandisingFromAdditionalInfo,
+  isVitrinaStorefrontMerchExcluded,
+} from "@/lib/vitrina-merchandising";
 import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
@@ -125,6 +130,11 @@ function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProduct
 }
 
 function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
+  if (isVitrinaStorefrontMerchExcluded(product)) {
+    const { heroReviewSnippet: _h, trendingCountdownEndsAt: _t, ...withoutMerch } = product;
+    return withoutMerch;
+  }
+
   const parsed = parseProductContent(product.description);
   const additional = parsed.additionalInfo;
   const strip =
@@ -156,6 +166,7 @@ async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Pr
 async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Promise<Product[]> {
   const idsWithReviews = products
     .filter((p) => {
+      if (isVitrinaStorefrontMerchExcluded(p)) return false;
       if ((p.reviews ?? 0) <= 0) return false;
       const parsed = parseProductContent(p.description);
       return !parsed.suppressLiveHeroReviewOverlay;
@@ -167,6 +178,10 @@ async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Prom
   const bestById = await getBestProductReviewsForMerchByLocalIds(idsWithReviews);
   return products.map((p) => {
     const id = Math.trunc(Number(p.id));
+    if (isVitrinaStorefrontMerchExcluded(p)) {
+      const { heroReviewSnippet: _omit, ...rest } = p;
+      return rest;
+    }
     if (parseProductContent(p.description).suppressLiveHeroReviewOverlay) {
       const { heroReviewSnippet: _omit, trendingCountdownEndsAt: _t, ...rest } = p;
       return rest;
@@ -355,6 +370,7 @@ export async function getHeroReviewSnippetsByStorefrontIds(
 
   for (const product of products) {
     if (!uniqueIds.has(product.id)) continue;
+    if (isVitrinaStorefrontMerchExcluded(product)) continue;
     const snippet =
       product.heroReviewSnippet?.trim() ||
       getStorefrontMerchHeroStripFromAdditionalInfo(parseProductContent(product.description).additionalInfo);

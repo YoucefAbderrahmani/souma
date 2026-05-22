@@ -1,3 +1,5 @@
+import { isVitrinaStorefrontMerchExcluded } from "@/lib/vitrina-merchandising";
+
 /**
  * Storefront promo pills on product photos. Rendered inside
  * `ProductCatalogImageWithMerch` so labels are clipped to the image frame.
@@ -50,19 +52,6 @@ const DEFAULT_TIMER_DURATION_MS =
  */
 export const PRODUCT_PROMO_LABELS_BY_ID: Record<number, readonly ProductPromoLabel[]> = {};
 
-/** Products that must not show hardcoded demo promo / Vitrina-style overlays. */
-const DEMO_PROMO_EXCLUDED_TITLE_KEYS = new Set(
-  [
-    "Logitech MX Master 3 Mouse",
-    "Apple iMac M1 24-inch 2021",
-    "Pants",
-  ].map((title) => title.trim().toLowerCase())
-);
-
-function isDemoPromoExcluded(product: { title: string }): boolean {
-  return DEMO_PROMO_EXCLUDED_TITLE_KEYS.has(product.title.trim().toLowerCase());
-}
-
 export { DEFAULT_TIMER_DURATION_MS };
 
 export function productPromoLabelPlacement(entry: ProductPromoLabel): PromoLabelPlacement {
@@ -71,7 +60,7 @@ export function productPromoLabelPlacement(entry: ProductPromoLabel): PromoLabel
 }
 
 export function getProductPromoLabels(product: { id: number; title: string }): readonly ProductPromoLabel[] {
-  if (isDemoPromoExcluded(product)) return [];
+  if (isVitrinaStorefrontMerchExcluded(product)) return [];
 
   const fromId = PRODUCT_PROMO_LABELS_BY_ID[product.id];
   if (fromId?.length) return fromId;

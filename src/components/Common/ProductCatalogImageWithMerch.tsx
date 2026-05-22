@@ -7,6 +7,7 @@ import type { Product } from "@/types/product";
 import { ProductDemoPromoLabels } from "@/components/Common/ProductDemoPromoLabels";
 import { ProductHeroReviewOverlay } from "@/components/Common/ProductHeroReviewOverlay";
 import { ProductHeroReviewSnippet } from "@/components/Common/ProductHeroReviewSnippet";
+import { isVitrinaStorefrontMerchExcluded } from "@/lib/vitrina-merchandising";
 
 export type ProductCatalogImageMerchProduct = Pick<Product, "id" | "title" | "description">;
 
@@ -57,7 +58,9 @@ export function ProductCatalogImageWithMerch({
   deferHeroReviewFetch = true,
   fillFrame = false,
 }: Props) {
-  const snippet = heroReviewSnippet?.trim() ?? "";
+  const reviewOverlayDisabled = isVitrinaStorefrontMerchExcluded(product);
+  const snippet = reviewOverlayDisabled ? "" : (heroReviewSnippet?.trim() ?? "");
+  const showReviewOverlay = !reviewOverlayDisabled && showHeroReviewOverlay;
 
   const frameClass = fillFrame
     ? cn("relative isolate block h-full w-full overflow-hidden rounded-lg", className)
@@ -87,7 +90,7 @@ export function ProductCatalogImageWithMerch({
 
       {snippet ?
         <ProductHeroReviewSnippet snippet={snippet} variant="storefront" />
-      : showHeroReviewOverlay ?
+      : showReviewOverlay ?
         <ProductHeroReviewOverlay
           productId={product.id}
           description={product.description}
