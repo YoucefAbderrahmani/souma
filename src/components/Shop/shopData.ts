@@ -109,7 +109,6 @@ const shopData: Product[] = [
     reviews: 15,
     averageRating: 0,
     detailPrice: 99.0,
-    jomlaPrice: 69.3,
     category: "accessories",
     id: 6,
     imgs: {
@@ -207,7 +206,6 @@ const shopData: Product[] = [
     reviews: 4,
     averageRating: 0,
     detailPrice: 20.0,
-    jomlaPrice: 14.0,
     category: "fashion",
     id: 11,
     imgs: {

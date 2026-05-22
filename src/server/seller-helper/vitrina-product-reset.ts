@@ -85,6 +85,80 @@ export function computeVitrinaDefaultReset(product: {
   };
 }
 
+function normalizeTitleKey(title: string): string {
+  return title.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Reset Vitrina quick-fix fields for specific catalogue titles (no timeline log). */
+export async function resetVitrinaForProductTitlesSilent(titles: string[]): Promise<{
+  updatedCount: number;
+  matchedTitles: string[];
+  message: string;
+}> {
+  const wanted = new Set(titles.map(normalizeTitleKey).filter(Boolean));
+  if (wanted.size === 0) {
+    return { updatedCount: 0, matchedTitles: [], message: "No product titles specified." };
+  }
+
+  const products = await db
+    .select({
+      id: productsTable.id,
+      title: productsTable.title,
+      description: productsTable.description,
+      jomlaPrice: productsTable.jomlaPrice,
+    })
+    .from(productsTable);
+
+  const matchedTitles: string[] = [];
+  let updatedCount = 0;
+
+  for (const product of products) {
+    if (!wanted.has(normalizeTitleKey(product.title))) continue;
+    matchedTitles.push(product.title);
+
+    const reset = computeVitrinaDefaultReset(product);
+    let nextDescription = reset.nextDescription;
+    if (isStructuredProductContent(product.description ?? "")) {
+      const parsed = parseProductContent(product.description);
+      const stripped = stripVitrinaQuickFixFromStructuredContent(parsed, {
+        suppressLiveHeroAfterStrip: true,
+      });
+      nextDescription = serializeProductContent(stripped.content);
+    }
+
+    const shouldWrite =
+      reset.changed ||
+      product.jomlaPrice != null ||
+      nextDescription !== (product.description ?? "");
+
+    if (!shouldWrite) continue;
+
+    await db
+      .update(productsTable)
+      .set({
+        jomlaPrice: null,
+        description: nextDescription,
+      })
+      .where(eq(productsTable.id, product.id));
+    updatedCount += 1;
+  }
+
+  if (updatedCount > 0) {
+    revalidateStorefrontCatalogPaths();
+  }
+
+  return {
+    updatedCount,
+    matchedTitles,
+    message:
+      matchedTitles.length === 0 ?
+        "No matching products found in the database."
+      : updatedCount === 0 ?
+        `Found ${matchedTitles.join(", ")}; catalogue rows already had no Vitrina fields (demo overlays removed in code).`
+      : `Reset Vitrina merchandising on: ${matchedTitles.join(", ")}.`,
+  };
+}
+
 /** Store-wide reset of Vitrina quick-fix fields; does not write timeline / activity log rows. */
 export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
   updatedCount: number;

@@ -35,18 +35,6 @@ export type ProductPromoLabel =
 const DEFAULT_TIMER_DURATION_MS =
   2 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000 + 30 * 60 * 1000;
 
-/** Logitech MX Master 3 — demo timer beside Vitrina price; Promo + Limited on the image. */
-const MX_MASTER_PROMO_LABELS: readonly ProductPromoLabel[] = [
-  {
-    kind: "timer",
-    prefix: "Ends in",
-    storageKey: "demo-promo-mx-master-3-showcase",
-    defaultDurationMs: 72 * 60 * 60 * 1000,
-  },
-  { kind: "text", text: "Promo" },
-  { kind: "text", text: "Limited" },
-];
-
 /**
  * Promo label stacks keyed by product `id`. Add new ids here to reuse the same UI.
  *
@@ -60,9 +48,20 @@ const MX_MASTER_PROMO_LABELS: readonly ProductPromoLabel[] = [
  * ```
  * Timers default to `placement: "priceRow"` (beside the orange Vitrina price in the storefront). Use `placement: "image"` for an orange pill countdown on the photo instead.
  */
-export const PRODUCT_PROMO_LABELS_BY_ID: Record<number, readonly ProductPromoLabel[]> = {
-  6: MX_MASTER_PROMO_LABELS,
-};
+export const PRODUCT_PROMO_LABELS_BY_ID: Record<number, readonly ProductPromoLabel[]> = {};
+
+/** Products that must not show hardcoded demo promo / Vitrina-style overlays. */
+const DEMO_PROMO_EXCLUDED_TITLE_KEYS = new Set(
+  [
+    "Logitech MX Master 3 Mouse",
+    "Apple iMac M1 24-inch 2021",
+    "Pants",
+  ].map((title) => title.trim().toLowerCase())
+);
+
+function isDemoPromoExcluded(product: { title: string }): boolean {
+  return DEMO_PROMO_EXCLUDED_TITLE_KEYS.has(product.title.trim().toLowerCase());
+}
 
 export { DEFAULT_TIMER_DURATION_MS };
 
@@ -72,13 +71,10 @@ export function productPromoLabelPlacement(entry: ProductPromoLabel): PromoLabel
 }
 
 export function getProductPromoLabels(product: { id: number; title: string }): readonly ProductPromoLabel[] {
+  if (isDemoPromoExcluded(product)) return [];
+
   const fromId = PRODUCT_PROMO_LABELS_BY_ID[product.id];
   if (fromId?.length) return fromId;
-
-  const t = product.title.toLowerCase();
-  if (t.includes("logitech") && t.includes("mx master")) {
-    return MX_MASTER_PROMO_LABELS;
-  }
 
   return [];
 }
@@ -118,9 +114,7 @@ export function clearAllPromoTimerSessionStorage(): void {
       if (entry.kind === "timer") keys.add(entry.storageKey);
     }
   }
-  for (const entry of MX_MASTER_PROMO_LABELS) {
-    if (entry.kind === "timer") keys.add(entry.storageKey);
-  }
+  keys.add("demo-promo-mx-master-3-showcase");
   for (const key of Array.from(keys)) {
     try {
       sessionStorage.removeItem(key);
