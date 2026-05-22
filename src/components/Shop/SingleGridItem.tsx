@@ -17,6 +17,7 @@ import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjace
 import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
 import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { resolveProductImageClassNames } from "@/lib/product-image-display";
 import { PRODUCT_CARD_IMAGE_FRAME_SHADOW_CLASS } from "@/lib/product-image-sizes";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
@@ -105,6 +106,10 @@ const SingleGridItem = ({ item }: { item: Product }) => {
             width={250}
             height={250}
             fillFrame
+            imageClassName={resolveProductImageClassNames(item.title, {
+              colorName: item.colorImageSlots?.[0]?.colorName,
+              surface: "card",
+            })}
             heroReviewSnippet={item.heroReviewSnippet ?? null}
             showHeroReviewOverlay
             showPromoLabels={false}

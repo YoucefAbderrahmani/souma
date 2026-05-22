@@ -28,6 +28,7 @@ import {
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
 import { getVitrinaMerchandisingFromAdditionalInfo, isVitrinaMerchandisingKey } from "@/lib/vitrina-merchandising";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { resolveProductImageClassNames } from "@/lib/product-image-display";
 import {
   PRODUCT_PDP_HERO_IMAGE_SIZES,
   PRODUCT_PDP_THUMB_IMAGE_SIZES,
@@ -211,6 +212,15 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     const previews = product.imgs?.previews ?? [];
     return previews.length > 0 ? previews : thumbs;
   }, [gallerySlots, product.imgs?.previews, product.imgs?.thumbnails]);
+
+  const heroImageClassName = useMemo(
+    () =>
+      resolveProductImageClassNames(product.title, {
+        colorName: gallerySlots?.[previewImg]?.colorName ?? activeColor,
+        surface: "pdp",
+      }),
+    [product.title, activeColor, gallerySlots, previewImg]
+  );
 
   useEffect(() => {
     setPreviewImg((i) => {
@@ -461,7 +471,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
               <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
                 <div className="lg:max-w-[570px] w-full">
                   <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
-                    <div className="group relative">
+                    <div className="group relative mx-auto aspect-square w-full max-w-[400px]">
                       <button
                         onClick={handlePreviewSlider}
                         aria-label="button for zoom"
@@ -491,6 +501,8 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           alt="products-details"
                           width={400}
                           height={400}
+                          fillFrame
+                          imageClassName={heroImageClassName}
                           sizes={PRODUCT_PDP_HERO_IMAGE_SIZES}
                           priority={previewImg === 0}
                           heroReviewSnippet={vitrinaMerchandising.heroReviewSnippet ?? null}
@@ -517,20 +529,23 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                           }
                         }}
                         key={key}
-                        className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${
+                        className={`relative flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${
                           key === previewImg
                             ? "border-blue"
                             : "border-transparent"
                         }`}
                       >
                         <Image
-                          width={50}
-                          height={50}
+                          fill
                           src={item}
                           alt="thumbnail"
                           sizes={PRODUCT_PDP_THUMB_IMAGE_SIZES}
                           loading="lazy"
                           decoding="async"
+                          className={resolveProductImageClassNames(product.title, {
+                            colorName: gallerySlots?.[key]?.colorName ?? activeColor,
+                            surface: "thumb",
+                          })}
                         />
                       </button>
                     ))}
