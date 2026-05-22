@@ -15,7 +15,10 @@ export function vitrinaTopPriority(
   item: VitrinaProductMarketingRecommendation
 ): VitrinaMarketingPriority {
   if (item.tips.length === 0) return "low";
-  const rank = Math.min(...item.tips.map((t) => IMPORTANCE_RANKS[t.priority]));
+  const rank = Math.min(
+    ...item.tips.map((t) => IMPORTANCE_RANKS[t.priority] ?? IMPORTANCE_RANKS.medium)
+  );
+  if (rank <= IMPORTANCE_RANKS.critical) return "critical";
   if (rank <= IMPORTANCE_RANKS.high) return "high";
   if (rank <= IMPORTANCE_RANKS.medium) return "medium";
   return "low";
@@ -24,6 +27,7 @@ export function vitrinaTopPriority(
 export function vitrinaPriorityAsTier(
   priority: VitrinaMarketingPriority
 ): ConceptionRecommendationDto["priority"] {
+  if (priority === "critical") return "critical";
   if (priority === "high") return "high";
   if (priority === "medium") return "medium";
   return "low";

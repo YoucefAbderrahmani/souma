@@ -2,7 +2,7 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { compareImportanceTiers, IMPORTANCE_RANKS } from "@/lib/importance-ranking";
-import { parseProductContent } from "@/lib/product-content";
+import { getProductSizeOptions, parseProductContent } from "@/lib/product-content";
 import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, salesMicroEventTable } from "@/server/db/schema";
@@ -118,9 +118,12 @@ type SignalAggregate = {
   hoverYTotal: number;
   hoverYCount: number;
   colorCounts: Map<string, number>;
+  sizeCounts: Map<string, number>;
   reviewInteractions: number;
   priceZoneClicks: number;
 };
+
+const SIZE_PURCHASE_SIGNAL_WEIGHT = 2;
 
 function includesColorHint(title: string) {
   const normalized = title.toLowerCase();
@@ -177,22 +180,50 @@ function createEmptySignalAggregate(): SignalAggregate {
     hoverYTotal: 0,
     hoverYCount: 0,
     colorCounts: new Map(),
+    sizeCounts: new Map(),
     reviewInteractions: 0,
     priceZoneClicks: 0,
   };
 }
 
-function topColors(colorCounts: Map<string, number>, limit = 2) {
-  return Array.from(colorCounts.entries())
+function topRankedLabels(counts: Map<string, number>, limit = 2) {
+  return Array.from(counts.entries())
     .sort((left, right) => right[1] - left[1])
     .slice(0, limit)
-    .map(([color]) => color);
+    .map(([label]) => label);
+}
+
+function topColors(colorCounts: Map<string, number>, limit = 2) {
+  return topRankedLabels(colorCounts, limit);
+}
+
+function topSizes(sizeCounts: Map<string, number>, limit = 2) {
+  return topRankedLabels(sizeCounts, limit);
+}
+
+function recordSizePreference(aggregate: SignalAggregate, payload: Record<string, unknown> | null, weight = 1) {
+  const sizeLabel = readString(payload, "size") || readString(payload, "selected_size");
+  if (!sizeLabel) return;
+  aggregate.sizeCounts.set(sizeLabel, (aggregate.sizeCounts.get(sizeLabel) ?? 0) + weight);
 }
 
 function isColorAlreadyDefault(product: ProductRow, colorName: string) {
   const colors = parseProductContent(product.description).colors;
   if (colors.length === 0) return false;
   return colors[0].name.trim().toLowerCase() === colorName.trim().toLowerCase();
+}
+
+function isSizeAlreadyDefault(product: ProductRow, sizeLabel: string) {
+  const content = parseProductContent(product.description);
+  if (!content.sizesEnabled) return true;
+  const sizes = getProductSizeOptions(content);
+  if (sizes.length === 0) return false;
+  return sizes[0].label.trim().toLowerCase() === sizeLabel.trim().toLowerCase();
+}
+
+function productHasSizeOptions(product: ProductRow) {
+  const content = parseProductContent(product.description);
+  return content.sizesEnabled && getProductSizeOptions(content).length > 1;
 }
 
 function buildDisplaySnapshot(product: ProductRow): VitrinaDisplaySnapshot {
@@ -240,6 +271,7 @@ function buildInteractionSnapshot(aggregate: SignalAggregate): VitrinaInteractio
     avgHoverYpct:
       aggregate.hoverYCount > 0 ? Number((aggregate.hoverYTotal / aggregate.hoverYCount).toFixed(1)) : null,
     topSelectedColors: topColors(aggregate.colorCounts),
+    topSelectedSizes: topSizes(aggregate.sizeCounts),
     viewToCartRate: views > 0 ? Number((addToCarts / views).toFixed(3)) : null,
     clickToCartRate: clicks > 0 ? Number((addToCarts / clicks).toFixed(3)) : null,
   };
@@ -362,7 +394,7 @@ function buildTips(
     tips.push({
       label: "Quality & reviews",
       action,
-      priority: priorityHigh ? "high" : "medium",
+      priority: concern ? "critical" : priorityHigh ? "high" : "medium",
       quickFixId: "quality_highlight",
     });
   }
@@ -403,11 +435,31 @@ function buildTips(
         runnerUpColor && topColorSelections > runnerUpSelections ?
           `Shoppers choose "${topColor}" more often than "${runnerUpColor}". Set it as the default color so the product page opens on the most wanted shade.`
         : `"${topColor}" is the most selected color. Move it to the first swatch so the page opens on the shade shoppers want.`,
-      priority:
-        topColorSelections >= 4 || interaction.optionSelects >= 6 || topColorSelections >= runnerUpSelections + 2 ?
-          "high"
-        : "medium",
+      priority: "high",
       quickFixId: "default_color",
+    });
+  }
+
+  const topSize = interaction.topSelectedSizes[0];
+  const runnerUpSize = interaction.topSelectedSizes[1];
+  const topSizeSelections = topSize ? aggregate.sizeCounts.get(topSize) ?? 0 : 0;
+  const runnerUpSizeSelections = runnerUpSize ? aggregate.sizeCounts.get(runnerUpSize) ?? 0 : 0;
+  const hasSizePreferenceSignal =
+    productHasSizeOptions(product) &&
+    topSize &&
+    !isSizeAlreadyDefault(product, topSize) &&
+    (topSizeSelections >= 2 ||
+      interaction.optionSelects >= 3 ||
+      (interaction.views >= 5 && topSizeSelections >= 1));
+  if (hasSizePreferenceSignal) {
+    tips.push({
+      label: "Default size",
+      action:
+        runnerUpSize && topSizeSelections > runnerUpSizeSelections ?
+          `Shoppers view and buy size "${topSize}" more than "${runnerUpSize}". Set it as the default size so the Vitrina product page opens on the most wanted fit.`
+        : `Size "${topSize}" is the most selected and purchased. Move it to the first size option so shoppers land on the fit they want.`,
+      priority: "high",
+      quickFixId: "default_size",
     });
   }
 
@@ -458,6 +510,7 @@ function buildQuickFixes(
   };
 
   const topColor = interaction.topSelectedColors[0];
+  const topSize = interaction.topSelectedSizes[0];
 
   for (const tip of tips) {
     if (!tip.quickFixId) continue;
@@ -467,6 +520,14 @@ function buildQuickFixes(
         label: "Default color",
         summary: `Move "${topColor}" to the first color option so the storefront opens on the most selected shade.`,
         context: { color: topColor },
+      });
+    }
+    if (tip.quickFixId === "default_size" && topSize) {
+      pushFix({
+        id: "default_size",
+        label: "Default size",
+        summary: `Move "${topSize}" to the first size option so the storefront opens on the most viewed and purchased fit.`,
+        context: { size: topSize },
       });
     }
     if (tip.quickFixId === "promo_price" && product.jomlaPrice == null) {
@@ -509,7 +570,10 @@ function opportunityScore(
   tips: VitrinaProductMarketingTip[],
   interaction: VitrinaInteractionSnapshot
 ): number {
-  const priorityWeight = tips.reduce((sum, tip) => sum + (4 - IMPORTANCE_RANKS[tip.priority]), 0);
+  const priorityWeight = tips.reduce(
+    (sum, tip) => sum + (4 - (IMPORTANCE_RANKS[tip.priority] ?? IMPORTANCE_RANKS.medium)),
+    0
+  );
   const trafficWeight = Math.min(12, Math.log2(interaction.views + 2) * 2);
   const frictionWeight =
     interaction.viewToCartRate != null && interaction.viewToCartRate * 100 < VIEW_TO_CART_PCT_FRICTION ?
@@ -520,7 +584,7 @@ function opportunityScore(
 
 function vitrinaProductImportanceRank(item: VitrinaProductMarketingRecommendation): number {
   if (item.tips.length === 0) return IMPORTANCE_RANKS.low;
-  return Math.min(...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority]));
+  return Math.min(...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority] ?? IMPORTANCE_RANKS.medium));
 }
 
 function slugifyCatalogTitle(value: string) {
@@ -719,6 +783,12 @@ async function loadSignalAggregates(storefrontIds: number[], since: Date) {
       if (color) {
         aggregate.colorCounts.set(color, (aggregate.colorCounts.get(color) ?? 0) + 1);
       }
+      recordSizePreference(aggregate, payload, 1);
+      continue;
+    }
+
+    if (eventName === "pa_add_to_cart") {
+      recordSizePreference(aggregate, payload, SIZE_PURCHASE_SIGNAL_WEIGHT);
     }
       }
     } catch (error) {
@@ -898,7 +968,9 @@ export async function listVitrinaProductMarketingRecommendations(options?: {
     })
   .filter((item) => {
       if (!options?.actionableOnly) return item.tips.length > 0;
-      return item.tips.some((tip) => tip.priority === "high" || tip.priority === "medium");
+      return item.tips.some(
+        (tip) => tip.priority === "critical" || tip.priority === "high" || tip.priority === "medium"
+      );
     })
     .sort((left, right) => {
       if (right.score !== left.score) return right.score - left.score;

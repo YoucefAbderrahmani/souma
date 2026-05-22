@@ -22,10 +22,11 @@ export function capVitrinaRecommendationsList(
   return items.map((item) => capVitrinaRecommendationFixes(item, fixesPerItem));
 }
 
-export type VitrinaMarketingPriority = "high" | "medium" | "low";
+export type VitrinaMarketingPriority = "critical" | "high" | "medium" | "low";
 
 export type VitrinaQuickFixId =
   | "default_color"
+  | "default_size"
   | "promo_price"
   | "availability_note"
   | "quality_highlight"
@@ -38,6 +39,7 @@ export type VitrinaQuickFixOption = {
   summary: string;
   context?: {
     color?: string;
+    size?: string;
   };
 };
 

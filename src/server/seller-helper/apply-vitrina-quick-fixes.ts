@@ -5,7 +5,12 @@ import {
   VITRINA_MERCH_KEYS,
   VITRINA_QUICK_FIX_INFO_KEYS,
 } from "@/lib/vitrina-merchandising";
-import { parseProductContent, serializeProductContent } from "@/lib/product-content";
+import {
+  getProductSizeOptions,
+  parseProductContent,
+  type ProductSizeOption,
+  serializeProductContent,
+} from "@/lib/product-content";
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import {
@@ -23,6 +28,7 @@ import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/se
 const VITRINA_STANDARD_MARKUP = 0.2;
 const QUICK_FIX_IDS = new Set<VitrinaQuickFixId>([
   "default_color",
+  "default_size",
   "promo_price",
   "availability_note",
   "quality_highlight",
@@ -55,6 +61,18 @@ function reorderDefaultColor(
   return [match, ...reordered];
 }
 
+function reorderDefaultSize(sizes: ProductSizeOption[], sizeLabel: string) {
+  const normalized = sizeLabel.trim().toLowerCase();
+  if (!normalized) return sizes;
+
+  const index = sizes.findIndex((size) => size.label.trim().toLowerCase() === normalized);
+  if (index <= 0) return sizes;
+
+  const reordered = [...sizes];
+  const [match] = reordered.splice(index, 1);
+  return [match, ...reordered];
+}
+
 async function heroSnippetFromBestVerifiedReview(
   productDbId: string,
   productTitle: string
@@ -81,7 +99,7 @@ function normalizeSubmittedQuickFix(value: unknown): VitrinaQuickFixOption | nul
     id?: unknown;
     label?: unknown;
     summary?: unknown;
-    context?: { color?: unknown };
+    context?: { color?: unknown; size?: unknown };
   };
 
   if (!isQuickFixId(candidate.id)) return null;
@@ -91,11 +109,19 @@ function normalizeSubmittedQuickFix(value: unknown): VitrinaQuickFixOption | nul
   if (!label || !summary) return null;
 
   const color = String(candidate.context?.color ?? "").trim();
+  const size = String(candidate.context?.size ?? "").trim();
   return {
     id: candidate.id,
     label,
     summary,
-    ...(color ? { context: { color } } : {}),
+    ...(color || size ?
+      {
+        context: {
+          ...(color ? { color } : {}),
+          ...(size ? { size } : {}),
+        },
+      }
+    : {}),
   };
 }
 
@@ -168,6 +194,15 @@ export async function resolveVitrinaQuickFixes(
         };
       }
 
+      if (requested.id === "default_size") {
+        const size = requested.context?.size?.trim() || allowedFix.context?.size?.trim();
+        if (!size) return null;
+        return {
+          ...allowedFix,
+          context: { size },
+        };
+      }
+
       return allowedFix;
     })
     .filter((fix): fix is VitrinaQuickFixOption => Boolean(fix))
@@ -225,6 +260,7 @@ export async function applyVitrinaQuickFixes(
   let nextPrice = product.price;
   let nextJomlaPrice = product.jomlaPrice;
   let nextColors = content.colors;
+  let nextSizes = content.sizes ?? [];
   let nextAdditionalInfo = content.additionalInfo;
   let nextDescription = product.description;
   let contentChanged = false;
@@ -242,6 +278,23 @@ export async function applyVitrinaQuickFixes(
         contentChanged = true;
         applied.push(fix.summary);
       } else if (colorIndex === 0) {
+        applied.push(fix.summary);
+      }
+      continue;
+    }
+
+    if (fix.id === "default_size") {
+      const sizeLabel = fix.context?.size?.trim();
+      if (!sizeLabel || !content.sizesEnabled) continue;
+      const sizeOptions = getProductSizeOptions(content);
+      const sizeIndex = sizeOptions.findIndex(
+        (size) => size.label.trim().toLowerCase() === sizeLabel.toLowerCase()
+      );
+      if (sizeIndex > 0) {
+        nextSizes = reorderDefaultSize(sizeOptions, sizeLabel);
+        contentChanged = true;
+        applied.push(fix.summary);
+      } else if (sizeIndex === 0) {
         applied.push(fix.summary);
       }
       continue;
@@ -343,6 +396,7 @@ export async function applyVitrinaQuickFixes(
     const nextContent = {
       ...content,
       colors: nextColors,
+      sizes: nextSizes,
       additionalInfo: nextAdditionalInfo,
     };
     delete nextContent.suppressLiveHeroReviewOverlay;

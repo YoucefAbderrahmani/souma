@@ -14,6 +14,7 @@ import {
   Tag,
   Trash2,
   Zap,
+  AlertTriangle,
 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
@@ -104,7 +105,9 @@ function formatPrice(value: number) {
 
 function vitrinaProductImportanceRank(item: VitrinaProductMarketingRecommendation) {
   if (item.tips.length === 0) return IMPORTANCE_RANKS.low;
-  return Math.min(...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority]));
+  return Math.min(
+    ...item.tips.map((tip) => IMPORTANCE_RANKS[tip.priority] ?? IMPORTANCE_RANKS.medium)
+  );
 }
 
 function primarySuggestionLabel(item: VitrinaProductMarketingRecommendation) {
@@ -152,6 +155,7 @@ function interleaveFeaturedHighlights(
 
 function VitrinaPriorityIcon({ priority }: { priority: VitrinaProductMarketingRecommendation["tips"][number]["priority"] }) {
   const className = "h-3 w-3 shrink-0";
+  if (priority === "critical") return <AlertTriangle className={className} aria-hidden />;
   if (priority === "high") return <Zap className={className} aria-hidden />;
   if (priority === "medium") return <Info className={className} aria-hidden />;
   return null;
@@ -433,12 +437,6 @@ export function VitrinaRecommendationsContent({
         </div>
       </div>
 
-      <VitrinaFixesPerItemSetting
-        value={fixesPerItem}
-        onChange={onFixesPerItemChange}
-        disabled={fixesPerItemBusy}
-      />
-
       {preparedRecommendations.length === 0 ?
         <div className={sellerPlaceholder}>
           No Vitrina recommendations yet.
@@ -605,6 +603,13 @@ export function VitrinaRecommendationsContent({
           </section>
         </div>
       }
+
+      <VitrinaFixesPerItemSetting
+        value={fixesPerItem}
+        onChange={onFixesPerItemChange}
+        disabled={fixesPerItemBusy}
+        className="mt-6 max-w-xs border-t border-gray-2 pt-4"
+      />
 
       {editingProduct ?
         <VitrinaQuickEditModal
