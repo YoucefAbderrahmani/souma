@@ -46,13 +46,28 @@ try {
   const check = await client.query(
     `select 1 from information_schema.tables where table_schema = 'public' and table_name = 'storefront_hidden_product' limit 1`
   );
-  if (check.rowCount > 0) {
+  if (check.rowCount === 0) {
+    const sql = fs.readFileSync(sqlPath, "utf8");
+    await client.query(sql);
+    console.log("[ensure-storefront-hidden-product] created table.");
+  } else {
     console.log("[ensure-storefront-hidden-product] table already exists.");
-    process.exit(0);
   }
-  const sql = fs.readFileSync(sqlPath, "utf8");
-  await client.query(sql);
-  console.log("[ensure-storefront-hidden-product] created table.");
+
+  const retiredTitles = [
+    "Logitech G Pro X Headset",
+    "HyperX Cloud II Headset",
+  ];
+  for (const title of retiredTitles) {
+    const normalizedTitle = title.toLowerCase().trim().replace(/\s+/g, " ");
+    await client.query(
+      `insert into storefront_hidden_product (normalized_title, title, hidden_at)
+       values ($1, $2, now())
+       on conflict (normalized_title) do update set title = excluded.title, hidden_at = now()`,
+      [normalizedTitle, title]
+    );
+  }
+  console.log("[ensure-storefront-hidden-product] ensured retired headset exclusions.");
 } catch (e) {
   console.error("[ensure-storefront-hidden-product]", e);
   process.exit(1);

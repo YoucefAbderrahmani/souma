@@ -230,48 +230,6 @@ const shopData: Product[] = [
       previews: ["/images/products/product-12-bg-1.png", "/images/products/product-12-bg-1.png"],
     },
   },
-  {
-    title: "Logitech G Pro X Headset",
-    description:
-      "Premium wired gaming headset with clear detachable mic, balanced surround sound, and comfortable memory-foam ear cushions for long competitive sessions.",
-    reviews: 9,
-    averageRating: 0,
-    detailPrice: 130.0,
-    jomlaPrice: 91.0,
-    category: "health-sports",
-    id: 13,
-    imgs: {
-      thumbnails: [
-        "/images/products/product-13-headset-logitech.png",
-        "/images/products/product-13-headset-logitech.png",
-      ],
-      previews: [
-        "/images/products/product-13-headset-logitech.png",
-        "/images/products/product-13-headset-logitech.png",
-      ],
-    },
-  },
-  {
-    title: "HyperX Cloud II Headset",
-    description:
-      "Comfortable over-ear gaming headset with immersive audio, noise-reducing microphone, and durable build for daily gaming, calls, and multimedia use.",
-    reviews: 12,
-    averageRating: 0,
-    detailPrice: 90.0,
-    jomlaPrice: 63.0,
-    category: "health-sports",
-    id: 14,
-    imgs: {
-      thumbnails: [
-        "/images/products/product-14-headset-hyperx.png",
-        "/images/products/product-14-headset-hyperx.png",
-      ],
-      previews: [
-        "/images/products/product-14-headset-hyperx.png",
-        "/images/products/product-14-headset-hyperx.png",
-      ],
-    },
-  },
 ];
 
 export default shopData;

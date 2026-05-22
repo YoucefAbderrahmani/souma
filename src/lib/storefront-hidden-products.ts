@@ -3,19 +3,35 @@ import { db } from "@/server/db";
 import { storefrontHiddenProductTable } from "@/server/db/schema";
 import type { Product } from "@/types/product";
 
+/** Bundled or DB products removed from the storefront (still blocked if shopData is re-seeded). */
+export const RETIRED_STOREFRONT_PRODUCT_TITLES = [
+  "Logitech G Pro X Headset",
+  "HyperX Cloud II Headset",
+] as const;
+
 export function normalizeStorefrontProductTitle(value: string): string {
   return value.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
+export function getRetiredStorefrontTitleKeys(): Set<string> {
+  return new Set(
+    RETIRED_STOREFRONT_PRODUCT_TITLES.map((title) => normalizeStorefrontProductTitle(title))
+  );
+}
+
 export async function getHiddenStorefrontTitleKeys(): Promise<Set<string>> {
+  const hidden = getRetiredStorefrontTitleKeys();
   try {
     const rows = await db
       .select({ normalizedTitle: storefrontHiddenProductTable.normalizedTitle })
       .from(storefrontHiddenProductTable);
-    return new Set(rows.map((r) => r.normalizedTitle));
+    for (const row of rows) {
+      hidden.add(row.normalizedTitle);
+    }
   } catch {
-    return new Set();
+    /* table may not exist in some environments */
   }
+  return hidden;
 }
 
 export async function hideStorefrontProductByTitle(title: string): Promise<void> {
