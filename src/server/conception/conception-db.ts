@@ -238,6 +238,7 @@ export async function dismissConceptionRecommendationById(id: string): Promise<b
     occurredAt: dismissedAt,
     details: {
       recommendationId: id,
+      assignedRoleKey: existing.assignedRoleKey,
       workflowStatus: existing.workflowStatus,
       priority: existing.priority,
       impactLabel: existing.impactLabel,
@@ -328,6 +329,7 @@ export async function markConceptionRecommendationImplemented(id: string): Promi
     occurredAt: implementedAt,
     details: {
       recommendationId: id,
+      assignedRoleKey: existing.assignedRoleKey,
       priority: existing.priority,
       impactLabel: existing.impactLabel,
       analysis: existing.analysis,
@@ -336,7 +338,6 @@ export async function markConceptionRecommendationImplemented(id: string): Promi
       revenueHint: existing.revenueHint,
       implementationHint: existing.implementationHint,
       roiHint: existing.roiHint,
-      assignedRoleKey: existing.assignedRoleKey,
     },
   });
 

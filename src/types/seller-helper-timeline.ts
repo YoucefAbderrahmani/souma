@@ -55,6 +55,17 @@ export type AppliedActionKind =
   | "alert_resolved"
   | "ai_recommendation";
 
+export type AppliedActionConversionImpact = {
+  viewsSince: number;
+  purchasesSince: number;
+  rateSincePct: number;
+  viewsBefore: number;
+  purchasesBefore: number;
+  rateBeforePct: number;
+  deltaPctPoints: number | null;
+  sampleLabel: string;
+};
+
 export type AppliedActionDto = {
   id: string;
   kind: AppliedActionKind;
@@ -66,6 +77,11 @@ export type AppliedActionDto = {
   productTitle: string | null;
   sourceRefId: string | null;
   details: Record<string, unknown>;
+  conversionImpact?: AppliedActionConversionImpact;
+  /** UI affordances computed server-side from kind + details. */
+  canRevertToChokepoint?: boolean;
+  canResetToDefault?: boolean;
+  canRequestRevertEmail?: boolean;
 };
 
 export const APPLIED_ACTION_KIND_META: Record<

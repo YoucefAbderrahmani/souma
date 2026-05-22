@@ -11,7 +11,10 @@ import {
 export type RecommendationEmailPayload = {
   to: string;
   roleDisplayName: string;
+  /** Used in body; subject uses `subject` when provided. */
   title: string;
+  /** Optional full subject line (skips default AI recommendation prefix). */
+  subject?: string;
   priority: string;
   analysis: string;
   recommendation: string;
@@ -23,7 +26,9 @@ export type RecommendationEmailPayload = {
 };
 
 function buildEmailBodies(payload: RecommendationEmailPayload) {
-  const subject = `[Vitrina Store] AI recommendation — ${payload.title}`;
+  const subject =
+    payload.subject?.trim() ||
+    `[Vitrina Store] AI recommendation — ${payload.title}`;
   const text = [
     `Hello ${payload.roleDisplayName} team,`,
     "",

@@ -6,6 +6,54 @@ import {
   type AppliedActionDto,
   type AppliedActionKind,
 } from "@/types/seller-helper-timeline";
+import { computeAppliedActionConversionImpact } from "@/server/seller-helper/action-conversion-impact";
+
+function actionCapabilities(
+  kind: AppliedActionKind,
+  details: Record<string, unknown>
+): Pick<AppliedActionDto, "canRevertToChokepoint" | "canResetToDefault" | "canRequestRevertEmail"> {
+  if (details.mode === "chokepoint" || details.mode === "reset_default") {
+    return {
+      canRevertToChokepoint: false,
+      canResetToDefault: false,
+      canRequestRevertEmail: false,
+    };
+  }
+
+  const chokepoint =
+    details.chokepointBefore &&
+    typeof details.chokepointBefore === "object" &&
+    !Array.isArray(details.chokepointBefore) &&
+    typeof (details.chokepointBefore as { description?: unknown }).description === "string";
+
+  switch (kind) {
+    case "vitrina_quick_fix":
+      return {
+        canRevertToChokepoint: Boolean(chokepoint),
+        canResetToDefault: true,
+        canRequestRevertEmail: false,
+      };
+    case "security_block":
+    case "security_unblock":
+      return {
+        canRevertToChokepoint: true,
+        canResetToDefault: false,
+        canRequestRevertEmail: false,
+      };
+    case "ai_recommendation":
+      return {
+        canRevertToChokepoint: false,
+        canResetToDefault: false,
+        canRequestRevertEmail: true,
+      };
+    default:
+      return {
+        canRevertToChokepoint: false,
+        canResetToDefault: false,
+        canRequestRevertEmail: false,
+      };
+  }
+}
 
 const ALL_KINDS = Object.keys(APPLIED_ACTION_KIND_META) as AppliedActionKind[];
 
@@ -133,6 +181,7 @@ export async function listAppliedActionsInRange(
   return rows.map((row) => {
     const kind: AppliedActionKind = isAppliedActionKind(row.kind) ? row.kind : "ai_recommendation";
     const meta = APPLIED_ACTION_KIND_META[kind];
+    const details = safeParseDetails(row.detailsJson);
     return {
       id: row.id,
       kind,
@@ -143,7 +192,39 @@ export async function listAppliedActionsInRange(
       productId: row.productLocalId,
       productTitle: row.productTitle,
       sourceRefId: row.sourceRefId,
-      details: safeParseDetails(row.detailsJson),
+      details,
+      ...actionCapabilities(kind, details),
     } satisfies AppliedActionDto;
   });
+}
+
+export type EnrichAppliedActionsOptions = {
+  productId?: number | null;
+};
+
+/** Attaches conversion impact metrics for timeline log rows (best-effort). */
+export async function enrichAppliedActionsWithImpact(
+  actions: AppliedActionDto[],
+  options?: EnrichAppliedActionsOptions
+): Promise<AppliedActionDto[]> {
+  if (actions.length === 0) return actions;
+
+  const enriched = await Promise.all(
+    actions.map(async (action) => {
+      try {
+        const conversionImpact = await computeAppliedActionConversionImpact({
+          occurredAt: new Date(action.occurredAt),
+          productId:
+            action.productId ??
+            (options?.productId != null && options.productId > 0 ? options.productId : null),
+        });
+        return { ...action, conversionImpact };
+      } catch (error) {
+        console.warn("[enrichAppliedActionsWithImpact]", action.id, error);
+        return action;
+      }
+    })
+  );
+
+  return enriched;
 }

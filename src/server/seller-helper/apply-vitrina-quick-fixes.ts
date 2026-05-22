@@ -209,6 +209,11 @@ export async function applyVitrinaQuickFixes(
     return { applied: [], error: "Product not found." };
   }
 
+  const chokepointBefore = {
+    jomlaPrice: product.jomlaPrice,
+    description: product.description,
+  };
+
   const content = parseProductContent(product.description);
   let nextPrice = product.price;
   let nextJomlaPrice = product.jomlaPrice;
@@ -360,6 +365,7 @@ export async function applyVitrinaQuickFixes(
     productTitle: product.title,
     sourceRefId: clientProductId,
     details: {
+      chokepointBefore,
       productDbId: dbProductId,
       productLocalId: storefrontProductId,
       productTitle: product.title,

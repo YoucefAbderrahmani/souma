@@ -19,6 +19,7 @@ import {
 } from "@/types/seller-helper-timeline";
 import { TimelineChart } from "./charts";
 import { AppliedActionDetailsModal } from "./AppliedActionDetailsModal";
+import { TimelineLogsSection } from "./TimelineLogsSection";
 import {
   sellerAccentStrip,
   sellerGhostButton,
@@ -453,6 +454,12 @@ export function TimelineContent() {
           ))}
         </div>
       : null}
+
+      <TimelineLogsSection
+        actions={timeline?.appliedActions ?? []}
+        loading={loading}
+        onRefreshTimeline={() => void loadTimeline()}
+      />
 
       <AppliedActionDetailsModal action={activeAction} onClose={() => setActiveAction(null)} />
     </div>

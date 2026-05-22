@@ -2,7 +2,10 @@ import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { getCatalogProductAliasIds, getCatalogProducts } from "@/server/data-access/product-catalog";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
-import { listAppliedActionsInRange } from "@/server/seller-helper/applied-actions";
+import {
+  enrichAppliedActionsWithImpact,
+  listAppliedActionsInRange,
+} from "@/server/seller-helper/applied-actions";
 import {
   TIMELINE_METRIC_DEFINITIONS,
   TIMELINE_METRIC_IDS,
@@ -230,7 +233,7 @@ export async function buildTimelineSeries(
     productTitle = product?.title ?? null;
   }
 
-  const [counts, appliedActions] = await Promise.all([
+  const [counts, rawActions] = await Promise.all([
     loadEventCounts(start, end, granularity, aliasIds),
     listAppliedActionsInRange({
       start,
@@ -239,6 +242,8 @@ export async function buildTimelineSeries(
       includeStoreWide: true,
     }),
   ]);
+
+  const appliedActions = await enrichAppliedActionsWithImpact(rawActions, { productId });
   const series = uniqueMetrics.map((metric) => buildSeries(metric, bucketKeys, counts));
   const hasData = series.some((entry) => entry.values.some((value) => value > 0));
 
