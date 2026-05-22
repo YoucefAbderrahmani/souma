@@ -9,12 +9,13 @@ import {
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
+import {
+  readVitrinaChokepoint,
+  type VitrinaChokepointSnapshot,
+} from "@/server/seller-helper/vitrina-chokepoint";
 import type { AppliedActionKind } from "@/types/seller-helper-timeline";
 
-export type VitrinaChokepointSnapshot = {
-  jomlaPrice: number | null;
-  description: string;
-};
+export type { VitrinaChokepointSnapshot };
 
 function safeParseDetails(json: string | null | undefined): Record<string, unknown> {
   if (!json) return {};
@@ -27,21 +28,6 @@ function safeParseDetails(json: string | null | undefined): Record<string, unkno
   } catch {
     return {};
   }
-}
-
-function readChokepoint(details: Record<string, unknown>): VitrinaChokepointSnapshot | null {
-  const raw = details.chokepointBefore;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const snap = raw as { jomlaPrice?: unknown; description?: unknown };
-  const description = typeof snap.description === "string" ? snap.description : "";
-  if (!description.trim()) return null;
-  const jomlaPrice =
-    snap.jomlaPrice === null || snap.jomlaPrice === undefined ?
-      null
-    : typeof snap.jomlaPrice === "number" && Number.isFinite(snap.jomlaPrice) ?
-      snap.jomlaPrice
-    : null;
-  return { jomlaPrice, description };
 }
 
 export async function getAppliedActionRowById(actionId: string) {
@@ -64,7 +50,7 @@ export async function revertAppliedActionToChokepoint(actionId: string): Promise
   const details = safeParseDetails(row.detailsJson);
 
   if (kind === "vitrina_quick_fix") {
-    const chokepoint = readChokepoint(details);
+    const chokepoint = readVitrinaChokepoint(details);
     if (!chokepoint) {
       return {
         ok: false,

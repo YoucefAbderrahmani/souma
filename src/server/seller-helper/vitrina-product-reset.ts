@@ -13,6 +13,7 @@ import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { clearVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
+import { loadEarliestVitrinaChokepointsByProductDbId } from "@/server/seller-helper/vitrina-chokepoint";
 
 export function stripVitrinaQuickFixFromStructuredContent(
   content: ProductStructuredContent,
@@ -100,6 +101,8 @@ export async function resetVitrinaForProductTitlesSilent(titles: string[]): Prom
     return { updatedCount: 0, matchedTitles: [], message: "No product titles specified." };
   }
 
+  const earliestChokepoints = await loadEarliestVitrinaChokepointsByProductDbId();
+
   const products = await db
     .select({
       id: productsTable.id,
@@ -115,6 +118,19 @@ export async function resetVitrinaForProductTitlesSilent(titles: string[]): Prom
   for (const product of products) {
     if (!wanted.has(normalizeTitleKey(product.title))) continue;
     matchedTitles.push(product.title);
+
+    const chokepoint = earliestChokepoints.get(product.id);
+    if (chokepoint && catalogRowDiffersFromChokepoint(product, chokepoint)) {
+      await db
+        .update(productsTable)
+        .set({
+          jomlaPrice: chokepoint.jomlaPrice,
+          description: chokepoint.description,
+        })
+        .where(eq(productsTable.id, product.id));
+      updatedCount += 1;
+      continue;
+    }
 
     const reset = computeVitrinaDefaultReset(product);
     let nextDescription = reset.nextDescription;
@@ -159,11 +175,25 @@ export async function resetVitrinaForProductTitlesSilent(titles: string[]): Prom
   };
 }
 
-/** Store-wide reset of Vitrina quick-fix fields; does not write timeline / activity log rows. */
+function catalogRowDiffersFromChokepoint(
+  product: { description: string | null; jomlaPrice: number | null },
+  chokepoint: { description: string; jomlaPrice: number | null }
+): boolean {
+  return (
+    (product.description ?? "") !== chokepoint.description ||
+    product.jomlaPrice !== chokepoint.jomlaPrice
+  );
+}
+
+/** Full revert of all Vitrina quick-fix changes (chokepoint restore + strip fallback). No timeline log. */
 export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
   updatedCount: number;
+  chokepointRestoredCount: number;
+  strippedCount: number;
   message: string;
 }> {
+  const earliestChokepoints = await loadEarliestVitrinaChokepointsByProductDbId();
+
   const products = await db
     .select({
       id: productsTable.id,
@@ -172,8 +202,26 @@ export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
     })
     .from(productsTable);
 
-  let updatedCount = 0;
+  let chokepointRestoredCount = 0;
+  let strippedCount = 0;
+
   for (const product of products) {
+    const chokepoint = earliestChokepoints.get(product.id);
+
+    if (chokepoint) {
+      if (!catalogRowDiffersFromChokepoint(product, chokepoint)) continue;
+
+      await db
+        .update(productsTable)
+        .set({
+          jomlaPrice: chokepoint.jomlaPrice,
+          description: chokepoint.description,
+        })
+        .where(eq(productsTable.id, product.id));
+      chokepointRestoredCount += 1;
+      continue;
+    }
+
     const reset = computeVitrinaDefaultReset(product);
     if (!reset.changed) continue;
 
@@ -184,8 +232,10 @@ export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
         description: reset.nextDescription,
       })
       .where(eq(productsTable.id, product.id));
-    updatedCount += 1;
+    strippedCount += 1;
   }
+
+  const updatedCount = chokepointRestoredCount + strippedCount;
 
   if (updatedCount > 0) {
     revalidateStorefrontCatalogPaths();
@@ -195,9 +245,11 @@ export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
 
   return {
     updatedCount,
+    chokepointRestoredCount,
+    strippedCount,
     message:
       updatedCount === 0 ?
-        "No Vitrina quick-fix fields were found on catalogue products."
-      : `Reset ${updatedCount} product${updatedCount === 1 ? "" : "s"}: removed promo prices, countdowns, review/quality strips, and related overlays.`,
+        "No Vitrina quick-fix changes were found on catalogue products."
+      : `Reverted Vitrina changes on ${updatedCount} product${updatedCount === 1 ? "" : "s"} (${chokepointRestoredCount} full restore from checkpoint, ${strippedCount} stripped).`,
   };
 }

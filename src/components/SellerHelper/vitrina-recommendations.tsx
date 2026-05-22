@@ -383,7 +383,7 @@ export function VitrinaRecommendationsContent({
   const handleResetCatalog = () => {
     if (
       !window.confirm(
-        "Reset every catalogue product to default Vitrina merchandising (remove promo prices and quick-fix fields)? This does not add a timeline log entry."
+        "Revert every Vitrina quick-fix change on all products (promo prices, countdowns, review strips, default color order, etc.)? Uses saved checkpoints where available. This does not add a timeline log entry."
       )
     ) {
       return;
