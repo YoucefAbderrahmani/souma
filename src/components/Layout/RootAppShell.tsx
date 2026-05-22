@@ -11,6 +11,7 @@ import PreLoader from "@/components/Common/PreLoader";
 import { SessionProvider } from "@/app/context/SessionProvider";
 import { PriceModeProvider } from "@/app/context/PriceModeContext";
 import CartPersistence from "@/components/Common/CartPersistence";
+import WishlistPersistence from "@/components/Common/WishlistPersistence";
 import { SiteChrome } from "@/components/Layout/SiteChrome";
 
 function shouldSkipPreloader(searchParams: URLSearchParams) {
@@ -41,6 +42,7 @@ function RootAppShellInner({ children }: { children: React.ReactNode }) {
       <PriceModeProvider>
         <ReduxProvider>
           <CartPersistence />
+          <WishlistPersistence />
           <CartModalProvider>
             <PreviewSliderProvider>
               <Suspense fallback={children}>
