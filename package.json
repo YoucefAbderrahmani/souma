@@ -36,6 +36,9 @@
     "report:seller-helper-application-fr:merge": "node scripts/merge-application-report-fr.mjs",
     "report:seller-helper-application-fr:docx": "node scripts/build-seller-helper-application-docx.mjs",
     "report:seller-helper-application-fr:docx:humanized": "node scripts/build-seller-helper-application-docx.mjs --humanized",
+    "report:seller-helper-security-fr:html": "node scripts/build-seller-helper-security-tab-report-fr.mjs --html-only",
+    "report:seller-helper-security-fr:pdf": "node scripts/build-seller-helper-security-tab-report-fr.mjs --pdf",
+    "report:seller-helper-pitch:docx": "node scripts/build-seller-helper-pitch-docx.mjs",
     "uml:render": "node scripts/render-uml.mjs",
     "uml:render:svg": "node scripts/render-uml.mjs --svg"
   },

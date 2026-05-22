@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import { getConceptionAlertRuleSettings, settingsToAlertRules } from "@/server/conception/alert-rule-settings";
 import { buildConceptionSecurityBrief } from "@/server/conception/security-intel";
-import { classifyTrafficSource } from "@/lib/classify-traffic-source";
+import { classifyTrafficSource, mergePinnedTrafficSources } from "@/lib/classify-traffic-source";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
   ConceptionDeviceSlice,
@@ -325,7 +325,7 @@ function fmtDuration(seconds: number): string {
 
 function emptyUserBehavior(): ConceptionUserBehaviorBrief {
   return {
-    trafficSources: [],
+    trafficSources: mergePinnedTrafficSources([], 0),
     heatmapBands: [],
     scrollDepth: [],
     scrollInsight: null,
@@ -342,7 +342,9 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
       (array_agg(referrer ORDER BY created_at ASC)
         FILTER (WHERE referrer IS NOT NULL))[1] AS referrer_first,
       (array_agg(payload_json::jsonb->>'source' ORDER BY created_at ASC)
-        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS context_source
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS context_source,
+      (array_agg(payload_json::jsonb->'utm'->>'source' ORDER BY created_at ASC)
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS utm_source
     FROM sales_micro_event
     WHERE created_at >= ${since}
     GROUP BY session_key
@@ -352,6 +354,7 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
     session_key: unknown;
     referrer_first: unknown;
     context_source: unknown;
+    utm_source: unknown;
   }[];
 
   const sourceCounts = new Map<string, number>();
@@ -360,18 +363,21 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
       typeof row.referrer_first === "string" && row.referrer_first.trim() ? row.referrer_first : null;
     const contextSource =
       typeof row.context_source === "string" && row.context_source.trim() ? row.context_source : null;
-    const label = classifyTrafficSource(referrer, contextSource);
+    const utmSource =
+      typeof row.utm_source === "string" && row.utm_source.trim() ? row.utm_source : null;
+    const label = classifyTrafficSource(referrer, contextSource, utmSource);
     sourceCounts.set(label, (sourceCounts.get(label) ?? 0) + 1);
   }
 
   const totalSourceSessions = sourceRows.length;
-  const trafficSources = Array.from(sourceCounts.entries())
+  const rawSlices = Array.from(sourceCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([label, sessions]) => ({
       label,
       sessions,
       ratePct: totalSourceSessions > 0 ? (100 * sessions) / totalSourceSessions : 0,
     }));
+  const trafficSources = mergePinnedTrafficSources(rawSlices, totalSourceSessions);
 
   const scrollRes = await db.execute(sql`
     SELECT
@@ -495,16 +501,20 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
     }
   );
 
+  const hasTrafficData = totalSourceSessions > 0;
   if (
-    trafficSources.length === 0 &&
+    !hasTrafficData &&
     scrollDepth.every((row) => row.sessions === 0) &&
     sessionReplays.length === 0
   ) {
     return emptyUserBehavior();
   }
 
+  const trafficSourcesForBrief =
+    hasTrafficData ? trafficSources : mergePinnedTrafficSources([], 0);
+
   return {
-    trafficSources,
+    trafficSources: trafficSourcesForBrief,
     heatmapBands,
     scrollDepth,
     scrollInsight,

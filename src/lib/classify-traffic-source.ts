@@ -39,13 +39,22 @@ const FACEBOOK_HOSTS = new Set([
   "fb.com",
   "www.fb.com",
   "l.facebook.com",
+  "fb.me",
+  "lm.facebook.com",
 ]);
 
 const INSTAGRAM_HOSTS = new Set([
   "instagram.com",
   "www.instagram.com",
   "l.instagram.com",
+  "lm.instagram.com",
 ]);
+
+/** Always shown in Seller Helper « Sources de trafic » (even at 0 sessions). */
+export const PINNED_TRAFFIC_SOURCE_LABELS: TrafficSourceLabel[] = [
+  TRAFFIC_SOURCE_LABEL.facebook,
+  TRAFFIC_SOURCE_LABEL.instagram,
+];
 
 const OTHER_SOCIAL_HOSTS = new Set([
   "tiktok.com",
@@ -129,10 +138,10 @@ function isSearchEngineHost(host: string): boolean {
   );
 }
 
-function matchesSocialUtm(utmSource: string | null): TrafficSourceLabel | null {
-  if (!utmSource) return null;
-  const u = utmSource.toLowerCase();
-  if (u.includes("facebook") || u === "fb") return TRAFFIC_SOURCE_LABEL.facebook;
+function matchesSocialUtm(utmSource: string | null | undefined): TrafficSourceLabel | null {
+  if (!utmSource?.trim()) return null;
+  const u = utmSource.trim().toLowerCase();
+  if (u.includes("facebook") || u === "fb" || u === "meta") return TRAFFIC_SOURCE_LABEL.facebook;
   if (u.includes("instagram") || u === "ig") return TRAFFIC_SOURCE_LABEL.instagram;
   if (
     u.includes("tiktok") ||
@@ -149,16 +158,24 @@ function matchesSocialUtm(utmSource: string | null): TrafficSourceLabel | null {
   return null;
 }
 
+function isFacebookHost(host: string): boolean {
+  const h = normalizeHost(host);
+  if (FACEBOOK_HOSTS.has(h)) return true;
+  return h.includes("facebook.") || h === "fb" || h.endsWith(".fb.com");
+}
+
+function isInstagramHost(host: string): boolean {
+  const h = normalizeHost(host);
+  if (INSTAGRAM_HOSTS.has(h)) return true;
+  return h.includes("instagram.");
+}
+
 function classifyHost(host: string): TrafficSourceLabel {
   const h = normalizeHost(host);
   if (isGoogleHost(h)) return TRAFFIC_SOURCE_LABEL.google;
   if (isSearchEngineHost(h)) return TRAFFIC_SOURCE_LABEL.searchEngine;
-  if (FACEBOOK_HOSTS.has(h) || FACEBOOK_HOSTS.has(`www.${h}`) || h.includes("facebook.")) {
-    return TRAFFIC_SOURCE_LABEL.facebook;
-  }
-  if (INSTAGRAM_HOSTS.has(h) || INSTAGRAM_HOSTS.has(`www.${h}`) || h.includes("instagram.")) {
-    return TRAFFIC_SOURCE_LABEL.instagram;
-  }
+  if (isFacebookHost(h)) return TRAFFIC_SOURCE_LABEL.facebook;
+  if (isInstagramHost(h)) return TRAFFIC_SOURCE_LABEL.instagram;
   for (const social of Array.from(OTHER_SOCIAL_HOSTS)) {
     const base = normalizeHost(social);
     if (h === base || h.endsWith(`.${base}`)) return TRAFFIC_SOURCE_LABEL.otherSocial;
@@ -185,24 +202,68 @@ function isInternalHost(host: string): boolean {
  * Classify a session's traffic source for Seller Helper (French labels).
  * Prefers the earliest non-null referrer; falls back to `pa_global_context.source`.
  */
+function referrerImpliesSocial(referrer: string): TrafficSourceLabel | null {
+  const lower = referrer.toLowerCase();
+  if (lower.includes("facebook.com") || lower.includes("fb.com") || lower.includes("fb.me")) {
+    return TRAFFIC_SOURCE_LABEL.facebook;
+  }
+  if (lower.includes("instagram.com")) return TRAFFIC_SOURCE_LABEL.instagram;
+  return null;
+}
+
 export function classifyTrafficSource(
   referrer: string | null | undefined,
-  contextSource: string | null | undefined
+  contextSource: string | null | undefined,
+  utmSourceFromPayload?: string | null | undefined
 ): TrafficSourceLabel {
-  const refHost = referrer ? hostFromReferrer(referrer) : null;
-  if (refHost) {
-    if (isInternalHost(refHost)) return TRAFFIC_SOURCE_LABEL.internal;
-    return classifyHost(refHost);
+  if (referrer?.trim()) {
+    const socialFromUrl = referrerImpliesSocial(referrer);
+    if (socialFromUrl) return socialFromUrl;
+    const refHost = hostFromReferrer(referrer);
+    if (refHost) {
+      if (isInternalHost(refHost)) return TRAFFIC_SOURCE_LABEL.internal;
+      return classifyHost(refHost);
+    }
   }
 
-  const { host, utmSource } = parseContextSource(contextSource);
-  const utmLabel = matchesSocialUtm(utmSource);
+  const utmLabel =
+    matchesSocialUtm(utmSourceFromPayload) ?? matchesSocialUtm(parseContextSource(contextSource).utmSource);
   if (utmLabel) return utmLabel;
 
+  const { host } = parseContextSource(contextSource);
   if (host) {
     if (isInternalHost(host)) return TRAFFIC_SOURCE_LABEL.internal;
     return classifyHost(host);
   }
 
   return TRAFFIC_SOURCE_LABEL.direct;
+}
+
+export type TrafficSourceSlice = {
+  label: string;
+  sessions: number;
+  ratePct: number;
+};
+
+/** Ensures Facebook and Instagram rows exist; pins them at the top of the list. */
+export function mergePinnedTrafficSources(slices: TrafficSourceSlice[], totalSessions: number): TrafficSourceSlice[] {
+  const byLabel = new Map(slices.map((s) => [s.label, { ...s }]));
+  for (const label of PINNED_TRAFFIC_SOURCE_LABELS) {
+    if (!byLabel.has(label)) {
+      byLabel.set(label, { label, sessions: 0, ratePct: 0 });
+    }
+  }
+
+  const pinned = PINNED_TRAFFIC_SOURCE_LABELS.map((label) => byLabel.get(label)!);
+  const rest = Array.from(byLabel.values())
+    .filter((s) => !PINNED_TRAFFIC_SOURCE_LABELS.includes(s.label as TrafficSourceLabel))
+    .sort((a, b) => b.sessions - a.sessions);
+
+  const merged = [...pinned, ...rest];
+  if (totalSessions <= 0) return merged;
+
+  return merged.map((s) => ({
+    ...s,
+    ratePct: (100 * s.sessions) / totalSessions,
+  }));
 }
