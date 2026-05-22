@@ -85,6 +85,16 @@ export const sellerBadge = {
   accent: cn(sellerBadgeBase, "border-gray-3 bg-white text-dark shadow-sm"),
 } as const;
 
+/** Hero metrics row (live status + session count). */
+export const sellerHeroMetric = cn(
+  "inline-flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm",
+  "bg-white/90 backdrop-blur-sm"
+);
+
+export const sellerHeroMetricTitle = "text-xs font-semibold leading-tight text-dark";
+
+export const sellerHeroMetricHint = "text-[11px] leading-tight text-dark-4";
+
 export const sellerPlaceholder = cn(
   "rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-3 text-center text-custom-sm text-dark-4"
 );

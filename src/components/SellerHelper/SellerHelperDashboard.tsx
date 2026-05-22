@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { AlertTriangle, BarChart2, Settings, Users, Zap } from "lucide-react";
+import { AlertTriangle, BarChart2, Settings, Users } from "lucide-react";
 import { SellerHelperLogo } from "./SellerHelperLogo";
 import {
   useConceptionAdminData,
@@ -24,10 +24,12 @@ import { useInstantTab } from "@/hooks/useInstantTab";
 import { InstantPanel } from "@/components/ui/InstantPanel";
 import {
   sellerAccentStrip,
-  sellerBadge,
   sellerHelperGrid,
   sellerHero,
   sellerHeroInner,
+  sellerHeroMetric,
+  sellerHeroMetricHint,
+  sellerHeroMetricTitle,
   sellerPanel,
   sellerPanelPadding,
   sellerPlaceholder,
@@ -42,6 +44,11 @@ import {
 
 function SectionLoading({ label }: { label: string }) {
   return <div className={sellerPlaceholder}>Loading {label}…</div>;
+}
+
+function formatSessions15m(count: number) {
+  const label = count === 1 ? "session" : "sessions";
+  return `${new Intl.NumberFormat("en-US").format(count)} ${label}`;
 }
 
 const TimelineContent = dynamic(
@@ -385,27 +392,43 @@ function SellerHelperDashboardInner({
             <h2 className="text-2xl font-semibold text-dark sm:text-custom-2">
               {isAdminEmbed ? "Analysis & recommendation system" : "Your store dashboard"}
             </h2>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className={overview?.hasEventData ? sellerBadge.live : sellerBadge.muted}>
-                <span className="relative flex h-2 w-2">
-                  {overview?.hasEventData ? (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-60" />
-                  ) : null}
+            <div className="flex flex-wrap items-stretch gap-2.5 pt-2">
+              <div
+                className={cn(
+                  sellerHeroMetric,
+                  overview?.hasEventData ?
+                    "border-teal/30"
+                  : "border-gray-3"
+                )}
+              >
+                <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
+                  {overview?.hasEventData ?
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal opacity-50" />
+                  : null}
                   <span
                     className={cn(
-                      "relative inline-flex h-2 w-2 rounded-full",
-                      overview?.hasEventData ? "bg-orange" : "bg-gray-5"
+                      "relative inline-flex h-2.5 w-2.5 rounded-full",
+                      overview?.hasEventData ? "bg-teal" : "bg-gray-4"
                     )}
                   />
                 </span>
-                {overview?.hasEventData ? "Live data · auto-refresh" : "Waiting for data · auto-refresh"}
-              </span>
-              <span className={sellerBadge.accent}>
-                <Zap className="h-3.5 w-3.5 shrink-0 text-orange" aria-hidden />
-                {overview ?
-                  `${new Intl.NumberFormat("en-US").format(overview.activeVisitors15m)} sessions / 15 min`
-                : "Sessions 15 min"}
-              </span>
+                <div className="min-w-0">
+                  <p className={sellerHeroMetricTitle}>
+                    {overview?.hasEventData ? "Live data" : "Waiting for data"}
+                  </p>
+                  <p className={sellerHeroMetricHint}>Auto-refresh on</p>
+                </div>
+              </div>
+
+              <div className={cn(sellerHeroMetric, "border-gray-3")}>
+                <Users className="h-4 w-4 shrink-0 text-orange" aria-hidden />
+                <div className="min-w-0">
+                  <p className={cn(sellerHeroMetricTitle, "tabular-nums")}>
+                    {overview ? formatSessions15m(overview.activeVisitors15m) : "—"}
+                  </p>
+                  <p className={sellerHeroMetricHint}>Last 15 minutes</p>
+                </div>
+              </div>
             </div>
           </div>
 
