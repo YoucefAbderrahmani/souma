@@ -51,11 +51,6 @@ function formatSessions15m(count: number) {
   return `${new Intl.NumberFormat("en-US").format(count)} ${label}`;
 }
 
-const TimelineContent = dynamic(
-  () => import("./timeline-tab").then((m) => m.TimelineContent),
-  { loading: () => <SectionLoading label="timeline" /> }
-);
-
 const AiRecommendationsContent = dynamic(
   () => import("./sections").then((m) => m.AiRecommendationsContent),
   { loading: () => <SectionLoading label="AI recommendations" /> }
@@ -484,7 +479,7 @@ function SellerHelperDashboardInner({
           "Dashboard",
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
         )}
-        {showPanel("Timeline", <TimelineContent />)}
+        {showPanel("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
         {showPanel(
           "User Behavior",
           <UserBehaviorContent
@@ -492,7 +487,6 @@ function SellerHelperDashboardInner({
             onNavigateSection={handleNavigateSection}
           />
         )}
-        {showPanel("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
         {showPanel(
           "Vitrina Recommendation",
           <VitrinaRecommendationsContent
@@ -519,6 +513,10 @@ function SellerHelperDashboardInner({
           />
         )}
         {showPanel(
+          "Security",
+          <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
+        )}
+        {showPanel(
           "Alerts",
           <AlertsContent
             alerts={alerts}
@@ -529,10 +527,6 @@ function SellerHelperDashboardInner({
             onClearAllAlerts={clearAllAlerts}
             onAlertRulesSaved={() => void refresh()}
           />
-        )}
-        {showPanel(
-          "Security",
-          <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />
         )}
       </div>
     </div>

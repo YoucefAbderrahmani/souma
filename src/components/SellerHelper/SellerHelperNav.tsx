@@ -5,9 +5,6 @@ import { sellerNav, sellerNavButton } from "./layout";
 import { SELLER_HELPER_NAV, SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
 
 const SECTION_PREFETCH: Partial<Record<SellerHelperNavItem, () => void>> = {
-  Timeline: () => {
-    void import("./timeline-tab");
-  },
   "AI Recommendations": () => {
     void import("./sections");
   },

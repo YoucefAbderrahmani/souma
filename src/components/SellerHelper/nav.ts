@@ -1,13 +1,12 @@
 export const SELLER_HELPER_NAV = [
   "Dashboard",
-  "Timeline",
-  "User Behavior",
   "Conversion Funnel",
+  "User Behavior",
   "Vitrina Recommendation",
   "AI Recommendations",
   "Inbox",
-  "Alerts",
   "Security",
+  "Alerts",
 ] as const;
 
 export type SellerHelperNavItem = (typeof SELLER_HELPER_NAV)[number];
@@ -20,17 +19,13 @@ export const SELLER_HELPER_NAV_META: Record<
     label: "Overview",
     description: "Traffic, devices, and top pages at a glance.",
   },
-  Timeline: {
-    label: "Timeline",
-    description: "Plot any metric over time — whole store or a specific product.",
+  "Conversion Funnel": {
+    label: "Funnel",
+    description: "Drop-offs from product view to payment.",
   },
   "User Behavior": {
     label: "Behavior",
     description: "Heatmaps, journeys, scroll depth, and session replays.",
-  },
-  "Conversion Funnel": {
-    label: "Funnel",
-    description: "Drop-offs from product view to payment.",
   },
   "Vitrina Recommendation": {
     label: "Vitrina",
@@ -44,12 +39,12 @@ export const SELLER_HELPER_NAV_META: Record<
     label: "Inbox",
     description: "Recommendations emailed to each role — mark implemented or dismiss.",
   },
-  Alerts: {
-    label: "Alerts",
-    description: "Active incidents and recent resolutions.",
-  },
   Security: {
     label: "Security",
     description: "Suspicious sessions and data integrity notes.",
+  },
+  Alerts: {
+    label: "Alerts",
+    description: "Active incidents and recent resolutions.",
   },
 };
