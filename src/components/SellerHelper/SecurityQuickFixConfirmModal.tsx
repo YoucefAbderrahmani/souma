@@ -66,14 +66,14 @@ export default function SecurityQuickFixConfirmModal({ target, onClose }: Props)
         </p>
 
         {fixes.length === 0 ?
-          <p className="mt-4 rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-3 text-custom-sm text-dark-4">
+          <p className="mt-4 text-custom-sm text-dark-4">
             Aucune action rapide disponible pour cette entrée.
           </p>
-        : <ul className="mt-4 space-y-2">
+        : <ul className="mt-4 space-y-3">
             {fixes.map((fix) => (
-              <li key={fix.id} className="rounded-lg border border-gray-3 bg-gray-1 px-3 py-2.5">
+              <li key={fix.id}>
                 <p className="text-xs font-semibold uppercase tracking-wide text-orange-dark">{fix.label}</p>
-                <p className="mt-1 text-custom-sm text-dark-3">{fix.summary}</p>
+                <p className="mt-1 text-custom-sm leading-relaxed text-dark-3">{fix.summary}</p>
               </li>
             ))}
           </ul>

@@ -31,15 +31,6 @@ export function securityIconWrapClass(resolution: SecurityCardResolution) {
     : "bg-yellow-light-3 text-yellow-dark-2";
 }
 
-export function securityDetailPanelClass(resolution: SecurityCardResolution) {
-  return cn(
-    "rounded-md border border-dashed px-3 py-2.5 text-sm leading-relaxed text-dark-3",
-    resolution === "blocked" ?
-      "border-red-light-3 bg-white/80"
-    : "border-yellow-light-1 bg-white/70"
-  );
-}
-
 export function securityActionPrimaryClass(resolution: SecurityCardResolution) {
   return cn(
     "inline-flex w-full min-h-[36px] items-center justify-center rounded-md px-3 py-2",

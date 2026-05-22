@@ -5,7 +5,6 @@ import type { ConceptionSecurityIncident } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
 import {
   securityCardRootClass,
-  securityDetailPanelClass,
   securityIconWrapClass,
   securityResolutionFromStatus,
   securityStatusBadgeClass,
@@ -60,7 +59,7 @@ export function SellerHelperSecurityCard({
 
           <h5 className="mt-2 text-base font-bold leading-snug text-dark">{incident.title}</h5>
 
-          <div className={cn(securityDetailPanelClass(resolution), "mt-3")}>{incident.detail}</div>
+          <p className="mt-2 text-custom-sm leading-relaxed text-dark-3">{incident.detail}</p>
 
           <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-dark-4">
             <span>{incident.displayIdentity}</span>

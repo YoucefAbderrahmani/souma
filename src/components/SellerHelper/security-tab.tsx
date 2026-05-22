@@ -246,11 +246,9 @@ export function SecurityTabContent({
         {(security?.notes ?? []).length > 0 ?
           <Panel>
             <SectionHeading title="Notes du moteur" icon={Shield} />
-            <ul className="mt-4 space-y-2 text-custom-sm text-dark-3">
+            <ul className="mt-4 list-disc space-y-1.5 pl-5 text-custom-sm leading-relaxed text-dark-3">
               {(security?.notes ?? []).map((note) => (
-                <li key={note} className="rounded-lg border border-gray-3 bg-gray-1 px-3 py-2.5">
-                  {note}
-                </li>
+                <li key={note}>{note}</li>
               ))}
             </ul>
           </Panel>
