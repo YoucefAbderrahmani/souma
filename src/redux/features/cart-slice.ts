@@ -11,6 +11,8 @@ export type CartItem = {
   price: number;
   discountedPrice: number;
   quantity: number;
+  selectedColor?: string;
+  selectedSize?: string;
   imgs?: {
     thumbnails: string[];
     previews: string[];
@@ -42,7 +44,17 @@ function normalizeCartItem(input: Partial<CartItem> | null | undefined): CartIte
     discountedPrice,
     quantity,
     imgs: input.imgs,
+    ...(typeof input.selectedColor === "string" && input.selectedColor.trim()
+      ? { selectedColor: input.selectedColor.trim() }
+      : {}),
+    ...(typeof input.selectedSize === "string" && input.selectedSize.trim()
+      ? { selectedSize: input.selectedSize.trim() }
+      : {}),
   };
+}
+
+function cartVariantKey(item: Pick<CartItem, "selectedColor" | "selectedSize">): string {
+  return `${item.selectedColor ?? ""}|${item.selectedSize ?? ""}`;
 }
 
 const initialState: InitialState = {
@@ -57,8 +69,12 @@ export const cart = createSlice({
       const normalizedItem = normalizeCartItem(action.payload);
       if (!normalizedItem) return;
 
-      const { id, title, price, quantity, discountedPrice, imgs } = normalizedItem;
-      const existingItem = state.items.find((item) => item.id === id);
+      const { id, title, price, quantity, discountedPrice, imgs, selectedColor, selectedSize } =
+        normalizedItem;
+      const variantKey = cartVariantKey(normalizedItem);
+      const existingItem = state.items.find(
+        (item) => item.id === id && cartVariantKey(item) === variantKey
+      );
 
       if (existingItem) {
         existingItem.quantity += quantity;
@@ -70,6 +86,8 @@ export const cart = createSlice({
           quantity,
           discountedPrice,
           imgs,
+          selectedColor,
+          selectedSize,
         });
       }
     },

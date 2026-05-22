@@ -17,6 +17,7 @@ type Args = {
   previewImg: number;
   activeTab: string;
   activeColor: string;
+  selectedSize?: string;
   selectedSpecs: Record<string, string>;
   detailPrice: number;
   surfaceReady?: boolean;
@@ -32,6 +33,7 @@ export function useProductAnalyticsTracking({
   previewImg,
   activeTab,
   activeColor,
+  selectedSize = "",
   selectedSpecs,
   detailPrice,
   surfaceReady = true,
@@ -46,6 +48,7 @@ export function useProductAnalyticsTracking({
   const prevImg = useRef(previewImg);
   const lastSpecsJson = useRef<string>("");
   const lastColor = useRef(activeColor);
+  const lastSize = useRef(selectedSize);
   const lastTab = useRef<string | null>(null);
   const pageEnter = useRef<number>(Date.now());
   const specsVisibleSince = useRef<number | null>(null);
@@ -278,16 +281,20 @@ export function useProductAnalyticsTracking({
       optionsPrimed.current = true;
       lastSpecsJson.current = j;
       lastColor.current = activeColor;
+      lastSize.current = selectedSize;
       return;
     }
-    if (lastSpecsJson.current === j && lastColor.current === activeColor) return;
+    if (lastSpecsJson.current === j && lastColor.current === activeColor && lastSize.current === selectedSize)
+      return;
     lastSpecsJson.current = j;
     lastColor.current = activeColor;
+    lastSize.current = selectedSize;
     trackProductAnalytics("pa_select_option", {
       color: activeColor,
+      size: selectedSize || undefined,
       specs: selectedSpecs,
     });
-  }, [activeColor, selectedSpecs]);
+  }, [activeColor, selectedSize, selectedSpecs]);
 
   useEffect(() => {
     if (activeTab === "tabTwo") {

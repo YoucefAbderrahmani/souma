@@ -6,7 +6,11 @@ import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { deleteProductCompletely } from "@/server/data-access/delete-product-completely";
-import { parseProductContent, serializeProductContent } from "@/lib/product-content";
+import {
+  parseProductContent,
+  serializeProductContent,
+  type ProductSizeOption,
+} from "@/lib/product-content";
 import { mainImageFromColors, reorderColorsWithDefault } from "@/lib/admin-product-colors";
 import { unhideStorefrontProductByTitle } from "@/lib/storefront-hidden-products";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
@@ -154,6 +158,27 @@ function parseJsonField<T>(raw: string, label: string): T | { error: string } {
   }
 }
 
+function parseSizesFromForm(
+  formData: FormData
+):
+  | { sizesEnabled: boolean; sizeHasPriceOverride: boolean; sizes: ProductSizeOption[] }
+  | { error: string } {
+  const sizesEnabled = String(formData.get("sizesEnabled") ?? "false") === "true";
+  const sizeHasPriceOverride = String(formData.get("sizeHasPriceOverride") ?? "false") === "true";
+  const sizesParsed = parseJsonField<ProductSizeOption[]>(
+    String(formData.get("sizes") ?? "[]"),
+    "sizes"
+  );
+  if ("error" in sizesParsed) {
+    return sizesParsed;
+  }
+  const sizes = sizesParsed.filter((row) => String(row.label ?? "").trim());
+  if (sizesEnabled && sizes.length === 0) {
+    return { error: "Add at least one size when size selection is enabled." };
+  }
+  return { sizesEnabled, sizeHasPriceOverride, sizes };
+}
+
 function formatActionError(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
     const msg = error.message.trim();
@@ -201,6 +226,10 @@ export async function createProductAction(
     }
     const specifications = specificationsParsed;
     const additionalInfo = additionalInfoParsed;
+    const sizesFields = parseSizesFromForm(formData);
+    if ("error" in sizesFields) {
+      return { error: sizesFields.error };
+    }
 
     if (!title || !description || !manufacturer || !categoryName) {
       return { error: "Please fill all required fields." };
@@ -263,6 +292,9 @@ export async function createProductAction(
       careMaintenance,
       colors: orderedColors,
       colorHasPriceOverride,
+      sizesEnabled: sizesFields.sizesEnabled,
+      sizeHasPriceOverride: sizesFields.sizeHasPriceOverride,
+      sizes: sizesFields.sizes,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
     });
@@ -529,6 +561,10 @@ export async function updateProductFullAction(
     const additionalInfo = JSON.parse(
       String(formData.get("additionalInfo") ?? "[]")
     ) as Array<{ key: string; value: string }>;
+    const sizesFields = parseSizesFromForm(formData);
+    if ("error" in sizesFields) {
+      return { error: sizesFields.error };
+    }
 
     if (!productId || !title || !description || !manufacturer || !categoryName) {
       return { error: "Please fill all required fields." };
@@ -594,6 +630,9 @@ export async function updateProductFullAction(
       careMaintenance,
       colors: orderedColors,
       colorHasPriceOverride,
+      sizesEnabled: sizesFields.sizesEnabled,
+      sizeHasPriceOverride: sizesFields.sizeHasPriceOverride,
+      sizes: sizesFields.sizes,
       specifications: Array.isArray(specifications) ? specifications : [],
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
     });

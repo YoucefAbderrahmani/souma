@@ -12,6 +12,13 @@ export type ProductAdditionalInfo = {
   value: string;
 };
 
+export type ProductSizeOption = {
+  label: string;
+  price?: number;
+  /** When false, selection is blocked on the product page. */
+  inStock?: boolean;
+};
+
 export type ProductStructuredContent = {
   description: string;
   careMaintenance?: string;
@@ -24,9 +31,36 @@ export type ProductStructuredContent = {
     inStock?: boolean;
   }>;
   colorHasPriceOverride?: boolean;
+  /** When true, shoppers must pick a size on the product page (and quick view). */
+  sizesEnabled?: boolean;
+  sizeHasPriceOverride?: boolean;
+  sizes?: ProductSizeOption[];
   specifications: ProductSpec[];
   additionalInfo: ProductAdditionalInfo[];
 };
+
+const EMPTY_CONTENT_DEFAULTS = {
+  colorHasPriceOverride: false as const,
+  sizesEnabled: false as const,
+  sizeHasPriceOverride: false as const,
+  sizes: [] as ProductSizeOption[],
+  specifications: [] as ProductSpec[],
+  additionalInfo: [] as ProductAdditionalInfo[],
+};
+
+export function isReservedSizeSpecName(name: string): boolean {
+  return /^(size|sizes|taille|pointure)$/i.test(name.trim());
+}
+
+export function getDisplaySpecifications(content: ProductStructuredContent): ProductSpec[] {
+  if (!content.sizesEnabled) return content.specifications;
+  return content.specifications.filter((spec) => !isReservedSizeSpecName(spec.name));
+}
+
+export function getProductSizeOptions(content: ProductStructuredContent): ProductSizeOption[] {
+  if (!content.sizesEnabled) return [];
+  return (content.sizes ?? []).filter((size) => size.label.trim());
+}
 
 const MARKER = "[[PRODUCT_CONTENT_V1]]";
 
@@ -52,9 +86,7 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
         { name: "pink" },
         { name: "purple" },
       ],
-      colorHasPriceOverride: false,
-      specifications: [],
-      additionalInfo: [],
+      ...EMPTY_CONTENT_DEFAULTS,
     };
   }
 
@@ -69,9 +101,7 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
         { name: "pink" },
         { name: "purple" },
       ],
-      colorHasPriceOverride: false,
-      specifications: [],
-      additionalInfo: [],
+      ...EMPTY_CONTENT_DEFAULTS,
     };
   }
 
@@ -117,6 +147,26 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
               { name: "purple" },
             ],
       colorHasPriceOverride: Boolean(parsed.colorHasPriceOverride),
+      sizesEnabled: Boolean(parsed.sizesEnabled),
+      sizeHasPriceOverride: Boolean(parsed.sizeHasPriceOverride),
+      sizes: Array.isArray(parsed.sizes)
+        ? parsed.sizes
+            .map((item) => {
+              const raw = item as { label?: string; price?: unknown; inStock?: unknown };
+              let inStock: boolean | undefined;
+              if (raw.inStock !== undefined) {
+                const v = raw.inStock;
+                if (v === false || v === "false" || v === 0) inStock = false;
+                else if (v === true || v === "true" || v === 1) inStock = true;
+              }
+              return {
+                label: String(raw?.label ?? "").trim(),
+                price: typeof raw.price === "number" ? Number(raw.price) : undefined,
+                ...(inStock === undefined ? {} : { inStock }),
+              };
+            })
+            .filter((item) => item.label)
+        : [],
       specifications: Array.isArray(parsed.specifications)
         ? parsed.specifications
             .map((item) => ({
@@ -160,9 +210,7 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
         { name: "pink" },
         { name: "purple" },
       ],
-      colorHasPriceOverride: false,
-      specifications: [],
-      additionalInfo: [],
+      ...EMPTY_CONTENT_DEFAULTS,
     };
   }
 }

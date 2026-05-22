@@ -17,11 +17,15 @@ import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoP
 import { productAvailableQuantity } from "@/components/Common/ProductAvailableQuantity";
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
 import { AddToWishlistButton } from "@/components/Common/AddToWishlistButton";
+import { parseProductContent, getProductSizeOptions } from "@/lib/product-content";
+import { formatCartVariantTitle, resolveProductUnitDetailPrice } from "@/lib/product-unit-price";
+import { cn } from "@/lib/utils";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
   const { openPreviewModal } = usePreviewSlider();
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState("");
 
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector(selectCartItems);
@@ -32,8 +36,16 @@ const QuickViewModal = () => {
 
   const [activePreview, setActivePreview] = useState(0);
 
-  const detailPrice = product.detailPrice ?? 0;
+  const parsedContent = parseProductContent(product.description);
+  const sizeOptions = getProductSizeOptions(parsedContent);
+  const sizesEnabled = sizeOptions.length > 0;
+  const baseDetailPrice = product.detailPrice ?? 0;
   const jomlaPrice = product.jomlaPrice;
+  const detailPrice = resolveProductUnitDetailPrice({
+    baseDetailPrice,
+    parsedContent,
+    selectedSize,
+  });
   const { instock: liveInstock } = useLiveProductInventory(
     product.id,
     product.instock ?? null,
@@ -50,10 +62,20 @@ const QuickViewModal = () => {
     openPreviewModal();
   };
 
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const preferred = sizeOptions.find((s) => s.inStock !== false) ?? sizeOptions[0];
+    setSelectedSize(preferred?.label ?? "");
+    setQuantity(1);
+  }, [isModalOpen, product.id, sizeOptions]);
+
   // add to cart
   const handleAddToCart = () => {
+    if (sizesEnabled && !selectedSize) return;
     const unitPrice = jomlaPrice ?? detailPrice;
-    const existing = cartItems.find((x) => x.id === product.id);
+    const existing = cartItems.find(
+      (x) => x.id === product.id && x.selectedSize === (selectedSize || undefined)
+    );
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItems.reduce((s, x) => s + x.quantity, 0) + quantity;
     const nextCartTotal = cartTotal + unitPrice * quantity;
@@ -71,9 +93,11 @@ const QuickViewModal = () => {
     dispatch(
       addItemToCart({
         ...product,
+        title: formatCartVariantTitle(product.title, { size: selectedSize }),
         price: detailPrice,
         discountedPrice: jomlaPrice ?? detailPrice,
         quantity,
+        selectedSize: selectedSize || undefined,
       })
     );
 
@@ -331,6 +355,39 @@ const QuickViewModal = () => {
                 industry. Lorem Ipsum has.
               </p>
 
+              {sizesEnabled ?
+                <div className="mt-6">
+                  <h4 className="font-semibold text-lg text-dark mb-3">Size</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {sizeOptions.map((size, key) => {
+                      const selected = selectedSize === size.label;
+                      return (
+                        <label
+                          key={key}
+                          htmlFor={`qv-size-${size.label}-${key}`}
+                          className={cn(
+                            "cursor-pointer rounded-md border px-3 py-1.5 text-custom-sm font-medium",
+                            selected ?
+                              "border-blue bg-blue/[0.06] text-blue"
+                            : "border-gray-3 bg-white text-dark"
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="qv-size"
+                            id={`qv-size-${size.label}-${key}`}
+                            className="sr-only"
+                            checked={selected}
+                            onChange={() => setSelectedSize(size.label)}
+                          />
+                          {size.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              : null}
+
               <div className="flex flex-wrap justify-between gap-5 mt-6 mb-7.5">
                 <div>
                   <h4 className="font-semibold text-lg text-dark mb-3.5">
@@ -444,7 +501,7 @@ const QuickViewModal = () => {
 
               <div className="flex flex-wrap items-center gap-4">
                 <button
-                  disabled={maxOrderQuantity === 0 || quantity <= 0}
+                  disabled={maxOrderQuantity === 0 || quantity <= 0 || (sizesEnabled && !selectedSize)}
                   onClick={() => handleAddToCart()}
                   className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
                 >

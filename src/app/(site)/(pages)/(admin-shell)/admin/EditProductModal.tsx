@@ -8,6 +8,8 @@ import { updateProductFullAction, type UpdateProductState } from "./actions";
 import AdminColorVariantsPanel, {
   newAdminColorFormRow,
 } from "@/components/Admin/AdminColorVariantsPanel";
+import AdminProductSizesPanel from "@/components/Admin/AdminProductSizesPanel";
+import { newAdminSizeFormRow } from "@/lib/admin-product-sizes";
 import AdminDeleteProductButton from "@/components/Admin/AdminDeleteProductButton";
 import {
   pf,
@@ -48,6 +50,9 @@ export default function EditProductModal({ product, onClose }: Props) {
   const [colorRows, setColorRows] = useState(() => [newAdminColorFormRow()]);
   const [defaultColorName, setDefaultColorName] = useState("");
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
+  const [sizesEnabled, setSizesEnabled] = useState(false);
+  const [sizeHasPriceOverride, setSizeHasPriceOverride] = useState(false);
+  const [sizeRows, setSizeRows] = useState(() => [newAdminSizeFormRow()]);
   const [editVitrinaMode, setEditVitrinaMode] = useState(false);
   const [editPriceInput, setEditPriceInput] = useState("");
 
@@ -64,6 +69,19 @@ export default function EditProductModal({ product, onClose }: Props) {
       : [newAdminColorFormRow()];
     setColorRows(colors);
     setDefaultColorName(colors[0]?.name.trim() ?? "");
+    setSizesEnabled(Boolean(parsed.sizesEnabled));
+    setSizeHasPriceOverride(Boolean(parsed.sizeHasPriceOverride));
+    if (parsed.sizes?.length) {
+      setSizeRows(
+        parsed.sizes.map((size) => ({
+          id: crypto.randomUUID(),
+          label: size.label,
+          price: size.price != null && !Number.isNaN(size.price) ? String(size.price) : "",
+        }))
+      );
+    } else {
+      setSizeRows([newAdminSizeFormRow()]);
+    }
     if (parsed.specifications?.length) {
       setSpecRows(
         parsed.specifications.map((s) => ({
@@ -330,6 +348,21 @@ export default function EditProductModal({ product, onClose }: Props) {
                   colorHasPriceOverride={colorHasPriceOverride}
                   setColorHasPriceOverride={setColorHasPriceOverride}
                   previewMainImageUrl={product.mainimage}
+                />
+              </ProductFormSection>
+
+              <ProductFormSection
+                id={productFormSectionIds.sizes}
+                title="Sizes"
+                description="Optional. Enable when shoppers must pick a size. Set different prices per size if needed."
+              >
+                <AdminProductSizesPanel
+                  sizesEnabled={sizesEnabled}
+                  setSizesEnabled={setSizesEnabled}
+                  sizeHasPriceOverride={sizeHasPriceOverride}
+                  setSizeHasPriceOverride={setSizeHasPriceOverride}
+                  sizeRows={sizeRows}
+                  setSizeRows={setSizeRows}
                 />
               </ProductFormSection>
 

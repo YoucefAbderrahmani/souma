@@ -46,6 +46,7 @@ const sectionIds = {
   basics: "admin-pf-basics",
   content: "admin-pf-content",
   colors: "admin-pf-colors",
+  sizes: "admin-pf-sizes",
   variants: "admin-pf-variants",
 } as const;
 
@@ -57,6 +58,7 @@ const JUMP_STEPS: { id: JumpKey; label: string }[] = [
   { id: "basics", label: "Basics & pricing" },
   { id: "content", label: "Description" },
   { id: "colors", label: "Colors & image" },
+  { id: "sizes", label: "Sizes" },
   { id: "variants", label: "Specs & extras" },
 ];
 

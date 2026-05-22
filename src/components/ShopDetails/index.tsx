@@ -11,7 +11,13 @@ import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/featur
 import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
 import { useRouter, useSearchParams } from "next/navigation";
-import { parseProductContent, isStructuredProductContent } from "@/lib/product-content";
+import {
+  parseProductContent,
+  isStructuredProductContent,
+  getDisplaySpecifications,
+  getProductSizeOptions,
+} from "@/lib/product-content";
+import { formatCartVariantTitle, resolveProductUnitDetailPrice } from "@/lib/product-unit-price";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
@@ -105,6 +111,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
+  const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
 
   const [activeTab, setActiveTab] = useState("tabOne");
@@ -184,6 +191,12 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       parsedContent.colors.length > 0
         ? parsedContent.colors
         : [{ name: "red" }, { name: "blue" }, { name: "orange" }, { name: "pink" }, { name: "purple" }],
+    [parsedContent]
+  );
+  const sizeOptions = useMemo(() => getProductSizeOptions(parsedContent), [parsedContent]);
+  const sizesEnabled = sizeOptions.length > 0;
+  const displaySpecifications = useMemo(
+    () => getDisplaySpecifications(parsedContent),
     [parsedContent]
   );
   const colorSignature = useMemo(
@@ -371,29 +384,36 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   }, [product.id]);
 
   useEffect(() => {
+    const preferred =
+      sizeOptions.find((size) => size.inStock !== false) ?? sizeOptions[0];
+    setSelectedSize(preferred?.label ?? "");
+  }, [product.id, sizeOptions]);
+
+  useEffect(() => {
+    const initialSpecs: Record<string, string> = {};
+    for (const spec of displaySpecifications) {
+      const first = spec.options[0]?.label;
+      if (first) initialSpecs[spec.name] = first;
+    }
+    setSelectedSpecs(initialSpecs);
+  }, [product.id, displaySpecifications]);
+
+  useEffect(() => {
     if (maxOrderQuantity == null || maxOrderQuantity <= 0) return;
     setQuantity((current) => Math.min(current, maxOrderQuantity));
   }, [maxOrderQuantity, product.id]);
 
-  const detailPrice = useMemo(() => {
-    let selectedPrice = baseDetailPrice;
-
-    const selectedColor = colorOptions.find((color) => color.name === activeColor);
-    if (parsedContent.colorHasPriceOverride && typeof selectedColor?.price === "number") {
-      selectedPrice = selectedColor.price;
-    }
-
-    parsedContent.specifications.forEach((spec) => {
-      if (!spec.hasPriceOverride) return;
-      const selectedLabel = selectedSpecs[spec.name];
-      const selectedOption = spec.options.find((option) => option.label === selectedLabel);
-      if (typeof selectedOption?.price === "number") {
-        selectedPrice = selectedOption.price;
-      }
-    });
-
-    return selectedPrice;
-  }, [activeColor, baseDetailPrice, colorOptions, parsedContent, selectedSpecs]);
+  const detailPrice = useMemo(
+    () =>
+      resolveProductUnitDetailPrice({
+        baseDetailPrice,
+        parsedContent,
+        activeColor,
+        selectedSize,
+        selectedSpecs,
+      }),
+    [activeColor, baseDetailPrice, parsedContent, selectedSize, selectedSpecs]
+  );
 
   const pa = useProductAnalyticsTracking({
     productId: trackingProductId,
@@ -403,6 +423,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     previewImg,
     activeTab,
     activeColor,
+    selectedSize,
     selectedSpecs,
     detailPrice,
     surfaceReady: canRenderProduct,
@@ -417,8 +438,16 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   };
 
   const handlePurchaseNow = () => {
+    if (sizesEnabled && !selectedSize) {
+      return;
+    }
     const cartItemsQty = cartItems.reduce((s, x) => s + x.quantity, 0);
-    const existing = cartItems.find((x) => x.id === product.id);
+    const existing = cartItems.find(
+      (x) =>
+        x.id === product.id &&
+        x.selectedSize === (selectedSize || undefined) &&
+        x.selectedColor === (activeColor || undefined)
+    );
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItemsQty + quantity;
     const nextCartTotal = totalPrice + (jomlaPrice ?? detailPrice) * quantity;
@@ -428,6 +457,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       quantity,
       detail_price: detailPrice,
       active_color: activeColor,
+      selected_size: selectedSize || undefined,
       selected_specs: selectedSpecs,
       cart_line_items: nextLineItems,
       cart_total_dzd: nextCartTotal,
@@ -438,9 +468,15 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     dispatch(
       addItemToCart({
         ...product,
+        title: formatCartVariantTitle(product.title, {
+          size: selectedSize,
+          color: activeColor,
+        }),
         price: detailPrice,
         discountedPrice: jomlaPrice ?? detailPrice,
         quantity,
+        selectedColor: activeColor,
+        selectedSize: selectedSize || undefined,
       })
     );
     router.push("/cart");
@@ -733,7 +769,67 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         </div>
                       </div>
 
-                      {parsedContent.specifications.map((spec) => (
+                      {sizesEnabled ?
+                        <div className="flex items-center gap-4">
+                          <div className="min-w-[65px]">
+                            <h4 className="font-medium text-dark">Size:</h4>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {sizeOptions.map((size, key) => {
+                              const selected = selectedSize === size.label;
+                              const outOfStock = size.inStock === false;
+                              const sizePrice =
+                                parsedContent.sizeHasPriceOverride &&
+                                typeof size.price === "number" ?
+                                  size.price
+                                : null;
+                              return (
+                                <label
+                                  key={key}
+                                  htmlFor={`size-${size.label}-${key}`}
+                                  className={cn(
+                                    "cursor-pointer select-none rounded-md border px-3 py-1.5 text-custom-sm font-medium transition",
+                                    selected ?
+                                      "border-blue bg-blue/[0.06] text-blue"
+                                    : "border-gray-3 bg-white text-dark hover:border-gray-4",
+                                    outOfStock && "cursor-not-allowed opacity-50"
+                                  )}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="size"
+                                    id={`size-${size.label}-${key}`}
+                                    className="sr-only"
+                                    checked={selected}
+                                    disabled={outOfStock}
+                                    onChange={() => {
+                                      if (outOfStock) {
+                                        trackProductAnalytics("pa_select_option", {
+                                          blocked: true,
+                                          axis: "size",
+                                          size: size.label,
+                                        });
+                                        return;
+                                      }
+                                      setSelectedSize(size.label);
+                                      trackProductAnalytics("pa_select_option", {
+                                        axis: "size",
+                                        size: size.label,
+                                      });
+                                    }}
+                                  />
+                                  {size.label}
+                                  {sizePrice != null ?
+                                    <span className="ml-1 text-dark-4">{sizePrice.toFixed(0)} DA</span>
+                                  : null}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      : null}
+
+                      {displaySpecifications.map((spec) => (
                         <div key={spec.name} className="flex items-center gap-4">
                           <div className="min-w-[90px]">
                             <h4 className="font-medium text-dark">{spec.name}:</h4>
@@ -848,7 +944,9 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                       <button
                         type="button"
                         onClick={handlePurchaseNow}
-                        disabled={maxOrderQuantity === 0}
+                        disabled={
+                          maxOrderQuantity === 0 || (sizesEnabled && !selectedSize)
+                        }
                         className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Purchase Now
@@ -920,7 +1018,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                     </p>
                     {parsedContent.specifications.length > 0 && (
                       <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        {parsedContent.specifications.map((spec) => (
+                        {displaySpecifications.map((spec) => (
                           <div key={spec.name} className="rounded-md even:bg-gray-1 flex py-3 px-4 sm:px-5">
                             <div className="max-w-[220px] min-w-[140px] w-full">
                               <p className="text-sm sm:text-base text-dark">{spec.name}</p>

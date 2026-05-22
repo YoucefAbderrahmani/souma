@@ -19,6 +19,8 @@ import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData"
 import AdminColorVariantsPanel, {
   newAdminColorFormRow,
 } from "@/components/Admin/AdminColorVariantsPanel";
+import AdminProductSizesPanel from "@/components/Admin/AdminProductSizesPanel";
+import { newAdminSizeFormRow } from "@/lib/admin-product-sizes";
 import {
   pf,
   productFormSectionIds,
@@ -79,6 +81,9 @@ export default function AdminPanels({
   const [colorRows, setColorRows] = useState(() => [newAdminColorFormRow()]);
   const [defaultColorName, setDefaultColorName] = useState("");
   const [colorHasPriceOverride, setColorHasPriceOverride] = useState(false);
+  const [sizesEnabled, setSizesEnabled] = useState(false);
+  const [sizeHasPriceOverride, setSizeHasPriceOverride] = useState(false);
+  const [sizeRows, setSizeRows] = useState(() => [newAdminSizeFormRow()]);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [productCategoryTab, setProductCategoryTab] = useState<string>("__all__");
   const [userQuery, setUserQuery] = useState("");
@@ -419,6 +424,21 @@ export default function AdminPanels({
                   setDefaultColorName={setDefaultColorName}
                   colorHasPriceOverride={colorHasPriceOverride}
                   setColorHasPriceOverride={setColorHasPriceOverride}
+                />
+              </ProductFormSection>
+
+              <ProductFormSection
+                id={productFormSectionIds.sizes}
+                title="Sizes"
+                description="Optional. Enable when this product is sold in multiple sizes. You can set a different price per size."
+              >
+                <AdminProductSizesPanel
+                  sizesEnabled={sizesEnabled}
+                  setSizesEnabled={setSizesEnabled}
+                  sizeHasPriceOverride={sizeHasPriceOverride}
+                  setSizeHasPriceOverride={setSizeHasPriceOverride}
+                  sizeRows={sizeRows}
+                  setSizeRows={setSizeRows}
                 />
               </ProductFormSection>
 
