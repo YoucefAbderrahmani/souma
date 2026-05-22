@@ -1,21 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-
-function formatRemaining(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
-}
+import { VitrinaPromoCountdown } from "@/components/Common/VitrinaPromoCountdown";
 
 export function ProductTrendingCountdown({
   endsAt,
   className = "",
+  variant = "banner",
 }: {
   endsAt: Date;
   className?: string;
+  /** `banner` on PDP; `card` on catalog thumbnails */
+  variant?: "banner" | "card";
 }) {
   const [remainingMs, setRemainingMs] = useState(() => Math.max(0, endsAt.getTime() - Date.now()));
 
@@ -26,11 +22,12 @@ export function ProductTrendingCountdown({
     return () => window.clearInterval(timer);
   }, [endsAt]);
 
-  if (remainingMs <= 0) return null;
-
   return (
-    <p className={`text-custom-sm font-medium text-red-dark ${className}`.trim()}>
-      This deal ends in <span className="font-semibold tabular-nums">{formatRemaining(remainingMs)}</span>
-    </p>
+    <VitrinaPromoCountdown
+      remainingMs={remainingMs}
+      prefix="Limited offer ends in"
+      variant={variant}
+      className={className}
+    />
   );
 }

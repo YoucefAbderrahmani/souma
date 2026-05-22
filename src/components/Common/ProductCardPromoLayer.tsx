@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
 /**
- * Sits above the slide-up hover actions (z-20) so promo pills stay visible; pointer-events pass through to buttons.
- * Base layout tokens: `PRODUCT_PROMO_CARD_LAYER_BASE_CLASS` in `@/lib/product-promo-label-tokens`.
+ * Promo pills + optional trending countdown above card hover actions.
  */
 export function ProductCardPromoLayer({
   product,
@@ -23,16 +22,17 @@ export function ProductCardPromoLayer({
 
   return (
     <div className={cn(PRODUCT_PROMO_CARD_LAYER_BASE_CLASS, className)} aria-hidden>
-      <div className="flex w-full max-w-full flex-col items-end gap-1">
+      <div className="flex w-full max-w-full flex-col items-stretch gap-1.5 sm:items-end">
         {endsValid ?
-          <div className="max-w-[min(100%,12rem)] text-right">
-            <ProductTrendingCountdown
-              endsAt={endsAt!}
-              className="text-[10px] font-medium leading-tight sm:text-[11px]"
-            />
-          </div>
+          <ProductTrendingCountdown
+            endsAt={endsAt!}
+            variant="card"
+            className="w-full max-w-full"
+          />
         : null}
-        <ProductDemoPromoLabels product={product} mode="raised" />
+        <div className="flex w-full justify-end">
+          <ProductDemoPromoLabels product={product} mode="raised" />
+        </div>
       </div>
     </div>
   );

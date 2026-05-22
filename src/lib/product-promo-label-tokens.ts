@@ -34,7 +34,7 @@ export const PRODUCT_PROMO_RAISED_STACK_CLASS = [
 
 /** Full-card overlay base (merge with optional `className` for PDP z-index, etc.) */
 export const PRODUCT_PROMO_CARD_LAYER_BASE_CLASS =
-  "pointer-events-none absolute inset-0 z-30 flex items-start justify-end px-1 pb-1 pt-1.5 sm:px-1.5 sm:pb-1.5 sm:pt-2";
+  "pointer-events-none absolute inset-0 z-30 flex flex-col items-stretch justify-start px-1.5 pb-1 pt-1.5 sm:px-2 sm:pb-1.5 sm:pt-2";
 
 /** Timers beside the orange Vitrina price (black). Non-timer `priceRow` copy uses the same token on the line below. */
 export const PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS =

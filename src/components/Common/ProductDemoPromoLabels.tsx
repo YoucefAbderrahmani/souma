@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import {
-  DEFAULT_TIMER_DURATION_MS,
   getProductPromoImageLabels,
   type ProductPromoLabel,
 } from "@/lib/product-demo-promo-labels";
@@ -10,14 +8,12 @@ import {
   PRODUCT_PROMO_COLUMN_MAX_CLASS,
   PRODUCT_PROMO_EMBEDDED_SIDE_PAD_CLASS,
   PRODUCT_PROMO_PILL_CLASS,
-  PRODUCT_PROMO_PILL_TIMER_COUNT_CLASS,
-  PRODUCT_PROMO_PILL_TIMER_PREFIX_CLASS,
-  PRODUCT_PROMO_PILL_TIMER_STACK_OUTER_CLASS,
   PRODUCT_PROMO_RAISED_STACK_CLASS,
   PRODUCT_PROMO_STACK_GAP_CLASS,
 } from "@/lib/product-promo-label-tokens";
-import { formatPromoCountdownRemaining } from "@/lib/product-promo-countdown-format";
 import { usePromoTimerEndAt } from "@/hooks/usePromoTimerEndAt";
+import { VitrinaPromoCountdownLive } from "@/components/Common/VitrinaPromoCountdown";
+import { DEFAULT_TIMER_DURATION_MS } from "@/lib/product-demo-promo-labels";
 
 function TimerPromoPill({
   prefix,
@@ -30,27 +26,8 @@ function TimerPromoPill({
 }) {
   const endAt = usePromoTimerEndAt(storageKey, defaultDurationMs);
 
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (endAt == null) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [endAt]);
-
-  const remainingLabel = useMemo(() => {
-    if (endAt == null) return "…";
-    return formatPromoCountdownRemaining(endAt - now);
-  }, [endAt, now]);
-
   return (
-    <span className={prefix.trim() ? PRODUCT_PROMO_PILL_TIMER_STACK_OUTER_CLASS : PRODUCT_PROMO_PILL_CLASS}>
-      {prefix.trim() ?
-        <span className="flex flex-col gap-0.5">
-          <span className={PRODUCT_PROMO_PILL_TIMER_PREFIX_CLASS}>{prefix.trim()}</span>
-          <span className={PRODUCT_PROMO_PILL_TIMER_COUNT_CLASS}>{remainingLabel}</span>
-        </span>
-      : remainingLabel}
-    </span>
+    <VitrinaPromoCountdownLive endAt={endAt} prefix={prefix} variant="pill" />
   );
 }
 
@@ -76,7 +53,6 @@ export function ProductDemoPromoLabels({
   mode = "embedded",
 }: {
   product: { id: number; title: string };
-  /** `raised`: flex stack for a parent that already handles position/z-index (e.g. card overlay). */
   mode?: "embedded" | "raised";
 }) {
   const labels = getProductPromoImageLabels(product);
@@ -108,7 +84,7 @@ export function ProductDemoPromoLabels({
       : null}
       {right.length > 0 ?
         <div
-          className={`absolute right-0 top-0 flex flex-col items-end ${PRODUCT_PROMO_COLUMN_MAX_CLASS} ${PRODUCT_PROMO_STACK_GAP_CLASS} ${PRODUCT_PROMO_EMBEDDED_SIDE_PAD_CLASS}`}
+          className={`absolute right-0 top-2 flex flex-col items-end ${PRODUCT_PROMO_COLUMN_MAX_CLASS} ${PRODUCT_PROMO_STACK_GAP_CLASS} ${PRODUCT_PROMO_EMBEDDED_SIDE_PAD_CLASS}`}
         >
           {right.map((entry, index) => (
             <PromoLabelEntryView key={`R-${entry.kind}-${index}`} entry={entry} />

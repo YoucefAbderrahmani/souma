@@ -1,54 +1,32 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
 import {
-  DEFAULT_TIMER_DURATION_MS,
   getProductPromoPriceRowLabels,
   type ProductPromoLabel,
 } from "@/lib/product-demo-promo-labels";
-import { formatPromoCountdownRemaining } from "@/lib/product-promo-countdown-format";
-import {
-  PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS,
-  PRODUCT_PROMO_PRICE_ROW_TIMER_COUNT_CLASS,
-  PRODUCT_PROMO_PRICE_ROW_TIMER_PREFIX_CLASS,
-} from "@/lib/product-promo-label-tokens";
+import { PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS } from "@/lib/product-promo-label-tokens";
 import { usePromoTimerEndAt } from "@/hooks/usePromoTimerEndAt";
+import { VitrinaPromoCountdownLive } from "@/components/Common/VitrinaPromoCountdown";
 import { cn } from "@/lib/utils";
 
-function PromoTimerPriceRow({
+function PriceRowTimer({
   prefix,
   storageKey,
-  defaultDurationMs = DEFAULT_TIMER_DURATION_MS,
-  className,
+  defaultDurationMs,
 }: {
   prefix: string;
   storageKey: string;
   defaultDurationMs?: number;
-  className?: string;
 }) {
   const endAt = usePromoTimerEndAt(storageKey, defaultDurationMs);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (endAt == null) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [endAt]);
-
-  const remainingLabel = useMemo(() => {
-    if (endAt == null) return "…";
-    return formatPromoCountdownRemaining(endAt - now);
-  }, [endAt, now]);
 
   return (
-    <span className={cn("inline-flex flex-col items-start gap-1", className)}>
-      {prefix.trim() ?
-        <>
-          <span className={PRODUCT_PROMO_PRICE_ROW_TIMER_PREFIX_CLASS}>{prefix.trim()}</span>
-          <span className={PRODUCT_PROMO_PRICE_ROW_TIMER_COUNT_CLASS}>{remainingLabel}</span>
-        </>
-      : <span className={PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS}>{remainingLabel}</span>}
-    </span>
+    <VitrinaPromoCountdownLive
+      endAt={endAt}
+      prefix={prefix}
+      variant="inline"
+    />
   );
 }
 
@@ -57,7 +35,7 @@ function PriceRowEntry({ entry }: { entry: ProductPromoLabel }) {
     return <span className={PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS}>{entry.text}</span>;
   }
   return (
-    <PromoTimerPriceRow
+    <PriceRowTimer
       prefix={entry.prefix}
       storageKey={entry.storageKey}
       defaultDurationMs={entry.defaultDurationMs}
@@ -65,7 +43,7 @@ function PriceRowEntry({ entry }: { entry: ProductPromoLabel }) {
   );
 }
 
-/** Promo copy for the price area (black text). Timers are shown beside the orange Vitrina price via `VitrinaPriceWithPromoTimerRow`. */
+/** Promo copy for the price area (black text). Timers sit beside the orange Vitrina price via `VitrinaPriceWithPromoTimerRow`. */
 export function ProductPromoPriceRowLabels({
   product,
   labels: labelsProp,
@@ -73,9 +51,7 @@ export function ProductPromoPriceRowLabels({
   className,
 }: {
   product: { id: number; title: string };
-  /** When set, these entries are rendered instead of resolving from `product`. */
   labels?: readonly ProductPromoLabel[];
-  /** Restrict to timer and/or text entries from the price-row set. */
   onlyKinds?: ReadonlyArray<"timer" | "text">;
   className?: string;
 }) {
@@ -95,8 +71,7 @@ export function ProductPromoPriceRowLabels({
 }
 
 /**
- * Orange Vitrina price on the left, promo timer(s) after it with margin (not flush to the card edge).
- * Pass the orange price node as `children` (typography is up to the parent).
+ * Orange Vitrina price with promo timer chip aligned center-right of the price block.
  */
 export function VitrinaPriceWithPromoTimerRow({
   product,
@@ -110,7 +85,7 @@ export function VitrinaPriceWithPromoTimerRow({
   return (
     <div
       className={cn(
-        "flex min-w-0 max-w-full flex-wrap items-center justify-start gap-x-3 gap-y-0.5 sm:gap-x-4",
+        "flex min-w-0 max-w-full flex-wrap items-center justify-start gap-x-2.5 gap-y-2 sm:gap-x-3",
         className
       )}
     >
@@ -118,7 +93,7 @@ export function VitrinaPriceWithPromoTimerRow({
       <ProductPromoPriceRowLabels
         product={product}
         onlyKinds={["timer"]}
-        className="max-w-[min(100%,11rem)] shrink-0 text-left sm:max-w-[13rem]"
+        className="shrink-0"
       />
     </div>
   );

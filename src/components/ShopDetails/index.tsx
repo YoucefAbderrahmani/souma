@@ -624,13 +624,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                     }
                   />
 
-                  {vitrinaMerchandising.trendingCountdownEndsAt ?
-                    <ProductTrendingCountdown
-                      endsAt={vitrinaMerchandising.trendingCountdownEndsAt}
-                      className="mb-4"
-                    />
-                  : null}
-
                   <div className="mb-4.5">
                     <h3
                       ref={pa.priceRef}
@@ -664,6 +657,12 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         instock: availableQuantity ?? undefined,
                       }}
                     />
+                    {vitrinaMerchandising.trendingCountdownEndsAt ?
+                      <ProductTrendingCountdown
+                        endsAt={vitrinaMerchandising.trendingCountdownEndsAt}
+                        className="mt-3 w-full"
+                      />
+                    : null}
                   </div>
 
                   <ul className="flex flex-col gap-2">
