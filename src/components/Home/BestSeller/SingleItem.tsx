@@ -16,6 +16,8 @@ import { productDetailsHref } from "@/lib/product-page-link";
 import { PRODUCT_CARD_IMAGE_SIZES } from "@/lib/product-image-sizes";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
+import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
+import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -83,16 +85,30 @@ const SingleItem = ({ item }: { item: Product }) => {
             </Link>
           </h3>
 
-          <span className="flex flex-col items-center gap-0.5 font-medium">
+          <span className="flex w-full max-w-full flex-col items-stretch gap-0.5 font-medium">
             {typeof jomlaPrice === "number" ? (
               <>
-                <span className="whitespace-nowrap text-[#FB923C] text-lg">{jomlaPrice.toFixed(2)} DA</span>
+                <ProductPriceRowWithInlineStock>
+                  <VitrinaPriceWithPromoTimerRow
+                    product={{ id: item.id, title: item.title }}
+                    trendingCountdownEndsAt={item.trendingCountdownEndsAt}
+                  >
+                    <span className="whitespace-nowrap text-[#FB923C] text-lg">{jomlaPrice.toFixed(2)} DA</span>
+                  </VitrinaPriceWithPromoTimerRow>
+                </ProductPriceRowWithInlineStock>
                 <span className="text-dark-4 line-through whitespace-nowrap text-sm">
                   {detailPrice.toFixed(2)} DA
                 </span>
               </>
             ) : (
-              <span className="whitespace-nowrap text-dark text-lg">{detailPrice.toFixed(2)} DA</span>
+              <ProductPriceRowWithInlineStock>
+                <VitrinaPriceWithPromoTimerRow
+                  product={{ id: item.id, title: item.title }}
+                  trendingCountdownEndsAt={item.trendingCountdownEndsAt}
+                >
+                  <span className="whitespace-nowrap text-dark text-lg">{detailPrice.toFixed(2)} DA</span>
+                </VitrinaPriceWithPromoTimerRow>
+              </ProductPriceRowWithInlineStock>
             )}
           </span>
         </div>

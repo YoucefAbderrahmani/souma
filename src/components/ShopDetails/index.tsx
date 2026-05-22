@@ -41,7 +41,6 @@ import {
   PRODUCT_PDP_THUMB_IMAGE_SIZES,
 } from "@/lib/product-image-sizes";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
-import { ProductTrendingCountdown } from "@/components/Common/ProductTrendingCountdown";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
 import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
@@ -632,7 +631,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                       {typeof jomlaPrice === "number" ? (
                         <>
                           <ProductPriceRowWithInlineStock>
-                            <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                            <VitrinaPriceWithPromoTimerRow
+                              product={{ id: product.id, title: product.title }}
+                              trendingCountdownEndsAt={vitrinaMerchandising.trendingCountdownEndsAt}
+                            >
                               <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-[#FB923C]">
                                 {jomlaPrice.toFixed(2)} DA
                               </span>
@@ -644,9 +646,14 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         </>
                       ) : (
                         <ProductPriceRowWithInlineStock>
-                          <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-dark">
-                            {detailPrice.toFixed(2)} DA
-                          </span>
+                          <VitrinaPriceWithPromoTimerRow
+                            product={{ id: product.id, title: product.title }}
+                            trendingCountdownEndsAt={vitrinaMerchandising.trendingCountdownEndsAt}
+                          >
+                            <span className="text-lg sm:text-2xl font-semibold whitespace-nowrap text-dark">
+                              {detailPrice.toFixed(2)} DA
+                            </span>
+                          </VitrinaPriceWithPromoTimerRow>
                         </ProductPriceRowWithInlineStock>
                       )}
                     </h3>
@@ -657,12 +664,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         instock: availableQuantity ?? undefined,
                       }}
                     />
-                    {vitrinaMerchandising.trendingCountdownEndsAt ?
-                      <ProductTrendingCountdown
-                        endsAt={vitrinaMerchandising.trendingCountdownEndsAt}
-                        className="mt-3 w-full"
-                      />
-                    : null}
                   </div>
 
                   <ul className="flex flex-col gap-2">

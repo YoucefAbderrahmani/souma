@@ -211,21 +211,23 @@ export function VitrinaPromoCountdown({
     );
   }
 
+  const label = formatPromoCountdownRemaining(remainingMs);
+
   return (
     <span
-      className={cn(
-        "inline-flex shrink-0 flex-col gap-1.5 rounded-lg border border-orange/20 bg-orange/[0.08] px-2.5 py-2 sm:px-3 sm:py-2.5",
-        className
-      )}
+      className={cn("inline-flex shrink-0 items-center gap-1.5", className)}
       role="timer"
       aria-live="polite"
+      title={prefix.trim() ? `${prefix.trim()} ${label}` : label}
     >
       {prefix.trim() ?
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-orange-dark sm:text-[11px]">
+        <span className="hidden text-[9px] font-semibold uppercase leading-none tracking-wide text-orange-dark sm:inline sm:text-[10px]">
           {prefix.trim()}
         </span>
       : null}
-      <SegmentedCountdown parts={parts} compact />
+      <span className="inline-flex items-center rounded-md border border-orange/25 bg-orange/[0.1] px-2 py-0.5 sm:px-2.5 sm:py-1">
+        <span className="text-[11px] font-bold tabular-nums text-orange sm:text-xs">{label}</span>
+      </span>
     </span>
   );
 }

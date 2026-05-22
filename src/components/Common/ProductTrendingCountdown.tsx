@@ -6,12 +6,12 @@ import { VitrinaPromoCountdown } from "@/components/Common/VitrinaPromoCountdown
 export function ProductTrendingCountdown({
   endsAt,
   className = "",
-  variant = "banner",
+  variant = "inline",
 }: {
   endsAt: Date;
   className?: string;
-  /** `banner` on PDP; `card` on catalog thumbnails */
-  variant?: "banner" | "card";
+  /** `inline` beside price; `card` on image overlay (legacy) */
+  variant?: "inline" | "banner" | "card";
 }) {
   const [remainingMs, setRemainingMs] = useState(() => Math.max(0, endsAt.getTime() - Date.now()));
 
@@ -25,7 +25,7 @@ export function ProductTrendingCountdown({
   return (
     <VitrinaPromoCountdown
       remainingMs={remainingMs}
-      prefix="Limited offer ends in"
+      prefix="Ends in"
       variant={variant}
       className={className}
     />

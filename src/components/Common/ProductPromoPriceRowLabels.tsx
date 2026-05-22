@@ -8,7 +8,17 @@ import {
 import { PRODUCT_PROMO_PRICE_ROW_TEXT_CLASS } from "@/lib/product-promo-label-tokens";
 import { usePromoTimerEndAt } from "@/hooks/usePromoTimerEndAt";
 import { VitrinaPromoCountdownLive } from "@/components/Common/VitrinaPromoCountdown";
+import { ProductTrendingCountdown } from "@/components/Common/ProductTrendingCountdown";
 import { cn } from "@/lib/utils";
+
+export function parseTrendingCountdownEndsAt(
+  raw?: string | Date | null
+): Date | null {
+  if (raw == null) return null;
+  const endsAt = raw instanceof Date ? raw : new Date(String(raw).trim());
+  if (!Number.isFinite(endsAt.getTime())) return null;
+  return endsAt;
+}
 
 function PriceRowTimer({
   prefix,
@@ -71,30 +81,39 @@ export function ProductPromoPriceRowLabels({
 }
 
 /**
- * Orange Vitrina price with promo timer chip aligned center-right of the price block.
+ * Price on the left; promo + trending countdown chips on the right (no full-width banner).
  */
 export function VitrinaPriceWithPromoTimerRow({
   product,
   children,
+  trendingCountdownEndsAt,
   className,
 }: {
   product: { id: number; title: string };
   children: ReactNode;
+  trendingCountdownEndsAt?: string | Date | null;
   className?: string;
 }) {
+  const trendingEndsAt = parseTrendingCountdownEndsAt(trendingCountdownEndsAt);
+
   return (
     <div
       className={cn(
-        "flex min-w-0 max-w-full flex-wrap items-center justify-start gap-x-2.5 gap-y-2 sm:gap-x-3",
+        "flex w-full min-w-0 max-w-full items-center justify-between gap-x-2 gap-y-1.5",
         className
       )}
     >
       <div className="min-w-0 shrink-0">{children}</div>
-      <ProductPromoPriceRowLabels
-        product={product}
-        onlyKinds={["timer"]}
-        className="shrink-0"
-      />
+      <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
+        <ProductPromoPriceRowLabels
+          product={product}
+          onlyKinds={["timer"]}
+          className="justify-end"
+        />
+        {trendingEndsAt ?
+          <ProductTrendingCountdown endsAt={trendingEndsAt} variant="inline" />
+        : null}
+      </div>
     </div>
   );
 }

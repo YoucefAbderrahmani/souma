@@ -58,7 +58,10 @@ const LatestProducts = ({ products }) => {
                   {typeof jomlaPrice === "number" ? (
                     <>
                       <ProductPriceRowWithInlineStock>
-                        <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                        <VitrinaPriceWithPromoTimerRow
+                          product={{ id: product.id, title: product.title }}
+                          trendingCountdownEndsAt={product.trendingCountdownEndsAt}
+                        >
                           <p className="text-[#FB923C] whitespace-nowrap">
                             Price: {jomlaPrice.toFixed(2)} DA
                           </p>
@@ -70,9 +73,14 @@ const LatestProducts = ({ products }) => {
                     </>
                   ) : (
                     <ProductPriceRowWithInlineStock>
-                      <p className="text-dark whitespace-nowrap">
-                        Price: {detailPrice.toFixed(2)} DA
-                      </p>
+                      <VitrinaPriceWithPromoTimerRow
+                        product={{ id: product.id, title: product.title }}
+                        trendingCountdownEndsAt={product.trendingCountdownEndsAt}
+                      >
+                        <p className="text-dark whitespace-nowrap">
+                          Price: {detailPrice.toFixed(2)} DA
+                        </p>
+                      </VitrinaPriceWithPromoTimerRow>
                     </ProductPriceRowWithInlineStock>
                   )}
                 </div>

@@ -398,7 +398,10 @@ const QuickViewModal = () => {
                     {typeof jomlaPrice === "number" ? (
                       <>
                         <ProductPriceRowWithInlineStock>
-                          <VitrinaPriceWithPromoTimerRow product={{ id: product.id, title: product.title }}>
+                          <VitrinaPriceWithPromoTimerRow
+                            product={{ id: product.id, title: product.title }}
+                            trendingCountdownEndsAt={product.trendingCountdownEndsAt}
+                          >
                             <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-[#FB923C]">
                               {jomlaPrice.toFixed(2)} DA
                             </span>
@@ -410,9 +413,14 @@ const QuickViewModal = () => {
                       </>
                     ) : (
                       <ProductPriceRowWithInlineStock>
-                        <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-dark">
-                          {detailPrice.toFixed(2)} DA
-                        </span>
+                        <VitrinaPriceWithPromoTimerRow
+                          product={{ id: product.id, title: product.title }}
+                          trendingCountdownEndsAt={product.trendingCountdownEndsAt}
+                        >
+                          <span className="font-semibold text-xl xl:text-heading-4 whitespace-nowrap text-dark">
+                            {detailPrice.toFixed(2)} DA
+                          </span>
+                        </VitrinaPriceWithPromoTimerRow>
                       </ProductPriceRowWithInlineStock>
                     )}
                     <ProductPriceAdjacentMeta
