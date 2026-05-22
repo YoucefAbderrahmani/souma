@@ -344,7 +344,11 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
       (array_agg(payload_json::jsonb->>'source' ORDER BY created_at ASC)
         FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS context_source,
       (array_agg(payload_json::jsonb->'utm'->>'source' ORDER BY created_at ASC)
-        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS utm_source
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS utm_source,
+      (array_agg(payload_json::jsonb->>'fbclid' ORDER BY created_at ASC)
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS fbclid,
+      (array_agg(payload_json::jsonb->>'igshid' ORDER BY created_at ASC)
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS igshid
     FROM sales_micro_event
     WHERE created_at >= ${since}
     GROUP BY session_key
@@ -355,6 +359,8 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
     referrer_first: unknown;
     context_source: unknown;
     utm_source: unknown;
+    fbclid: unknown;
+    igshid: unknown;
   }[];
 
   const sourceCounts = new Map<string, number>();
@@ -365,7 +371,9 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
       typeof row.context_source === "string" && row.context_source.trim() ? row.context_source : null;
     const utmSource =
       typeof row.utm_source === "string" && row.utm_source.trim() ? row.utm_source : null;
-    const label = classifyTrafficSource(referrer, contextSource, utmSource);
+    const fbclid = typeof row.fbclid === "string" && row.fbclid.trim() ? row.fbclid : null;
+    const igshid = typeof row.igshid === "string" && row.igshid.trim() ? row.igshid : null;
+    const label = classifyTrafficSource(referrer, contextSource, utmSource, { fbclid, igshid });
     sourceCounts.set(label, (sourceCounts.get(label) ?? 0) + 1);
   }
 

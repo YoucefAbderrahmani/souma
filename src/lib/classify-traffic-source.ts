@@ -204,7 +204,12 @@ function isInternalHost(host: string): boolean {
  */
 function referrerImpliesSocial(referrer: string): TrafficSourceLabel | null {
   const lower = referrer.toLowerCase();
-  if (lower.includes("facebook.com") || lower.includes("fb.com") || lower.includes("fb.me")) {
+  if (
+    lower.includes("facebook.com") ||
+    lower.includes("fb.com") ||
+    lower.includes("fb.me") ||
+    lower.includes("messenger.com")
+  ) {
     return TRAFFIC_SOURCE_LABEL.facebook;
   }
   if (lower.includes("instagram.com")) return TRAFFIC_SOURCE_LABEL.instagram;
@@ -214,8 +219,12 @@ function referrerImpliesSocial(referrer: string): TrafficSourceLabel | null {
 export function classifyTrafficSource(
   referrer: string | null | undefined,
   contextSource: string | null | undefined,
-  utmSourceFromPayload?: string | null | undefined
+  utmSourceFromPayload?: string | null | undefined,
+  socialClickIds?: { fbclid?: string | null; igshid?: string | null }
 ): TrafficSourceLabel {
+  if (socialClickIds?.fbclid?.trim()) return TRAFFIC_SOURCE_LABEL.facebook;
+  if (socialClickIds?.igshid?.trim()) return TRAFFIC_SOURCE_LABEL.instagram;
+
   if (referrer?.trim()) {
     const socialFromUrl = referrerImpliesSocial(referrer);
     if (socialFromUrl) return socialFromUrl;

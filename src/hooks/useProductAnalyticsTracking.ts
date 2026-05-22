@@ -7,32 +7,7 @@ import {
   trackProductAnalytics,
 } from "@/lib/product-analytics-client";
 import { PRODUCT_HEATMAP_SURFACE_ATTR, productHeatmapPointerPct } from "@/lib/product-heatmap-surface";
-
-function inferDevice(ua: string): "mobile" | "tablet" | "desktop" {
-  const l = ua.toLowerCase();
-  if (l.includes("ipad") || (l.includes("android") && !l.includes("mobile"))) return "tablet";
-  if (/mobi|iphone|ipod|android.*mobile|blackberry|opera mini|iemobile/i.test(ua)) return "mobile";
-  return "desktop";
-}
-
-function parseTrafficSource(): { source: string; utm: Record<string, string> } {
-  if (typeof window === "undefined") return { source: "direct", utm: {} };
-  let source = "direct";
-  try {
-    const r = document.referrer;
-    if (r) source = new URL(r).hostname.replace(/^www\./, "");
-  } catch {
-    /* ignore */
-  }
-  const utm: Record<string, string> = {};
-  const sp = new URLSearchParams(window.location.search);
-  for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const) {
-    const v = sp.get(k);
-    if (v) utm[k.replace("utm_", "")] = v.slice(0, 120);
-  }
-  if (utm.source) source = `${source}|utm:${utm.source}`;
-  return { source, utm };
-}
+import { inferDeviceFromUserAgent, parseTrafficSource } from "@/lib/parse-traffic-source";
 
 type Args = {
   productId: number;
@@ -127,12 +102,14 @@ export function useProductAnalyticsTracking({
     if (typeof window === "undefined" || globalSent.current) return;
     globalSent.current = true;
     const ua = navigator.userAgent || "";
-    const { source, utm } = parseTrafficSource();
+    const { source, utm, fbclid, igshid } = parseTrafficSource();
     trackProductAnalytics("pa_global_context", {
-      device: inferDevice(ua),
+      device: inferDeviceFromUserAgent(ua),
       user_agent: ua.slice(0, 500),
       source,
       utm,
+      fbclid,
+      igshid,
       country: (navigator.language || "").slice(0, 32),
       page: window.location.pathname,
       page_path: window.location.pathname,

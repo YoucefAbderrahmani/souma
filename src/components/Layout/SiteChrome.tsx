@@ -7,6 +7,7 @@ import CartSidebarModal from "@/components/Common/CartSidebarModal";
 import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import SmartShoppingAssistant from "@/components/Common/SmartShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
+import StorefrontAnalyticsLanding from "@/components/Common/StorefrontAnalyticsLanding";
 import ScrollToTop from "@/components/Common/ScrollToTop";
 import FloatingAdminButton from "@/components/Common/FloatingAdminButton";
 
@@ -30,6 +31,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <PreviewSliderModal />
       <SmartShoppingAssistant />
       <SequenceRouteWatcher />
+      <StorefrontAnalyticsLanding />
       <ScrollToTop />
       <FloatingAdminButton />
       {!hideFooter ? <Footer /> : null}
