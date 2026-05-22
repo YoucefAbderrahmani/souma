@@ -21,21 +21,6 @@ function removeIframeHeatmapCanvas(doc: Document) {
   doc.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`)?.remove();
 }
 
-function readSurfaceOffsetInIframe(iframe: HTMLIFrameElement) {
-  const doc = iframe.contentDocument;
-  const surface = doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
-  if (!surface) return null;
-
-  const surfaceRect = surface.getBoundingClientRect();
-  const iframeRect = iframe.getBoundingClientRect();
-  return {
-    left: surfaceRect.left - iframeRect.left,
-    top: surfaceRect.top - iframeRect.top,
-    width: Math.max(surface.offsetWidth, surfaceRect.width, 1),
-    height: Math.max(surface.offsetHeight, surfaceRect.height, 1),
-  };
-}
-
 async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatmapRenderer> {
   const layer = document.createElement("div");
   layer.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
@@ -47,7 +32,8 @@ async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatm
   layer.style.height = "100%";
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
-  layer.style.mixBlendMode = "multiply";
+  layer.style.mixBlendMode = "normal";
+  layer.style.opacity = "0.92";
   container.appendChild(layer);
   return createGaussianHeatmapRenderer(layer);
 }
@@ -115,11 +101,8 @@ export function syncStageHeatmapOverlay(
       const doc = iframe.contentDocument;
       if (doc) removeIframeHeatmapCanvas(doc);
 
-      const offset = readSurfaceOffsetInIframe(iframe);
-      const left = offset?.left ?? 0;
-      const top = offset?.top ?? 0;
-      const width = offset?.width ?? layout.surfaceWidth;
-      const height = offset?.height ?? layout.surfaceHeight;
+      const width = layout.surfaceWidth;
+      const height = layout.surfaceHeight;
 
       if (width <= 0 || height <= 0) {
         mountLayer.style.display = "none";
@@ -127,8 +110,8 @@ export function syncStageHeatmapOverlay(
       }
 
       mountLayer.style.display = "block";
-      mountLayer.style.left = `${left}px`;
-      mountLayer.style.top = `${top}px`;
+      mountLayer.style.left = "0";
+      mountLayer.style.top = "0";
       mountLayer.style.width = `${width}px`;
       mountLayer.style.height = `${height}px`;
 

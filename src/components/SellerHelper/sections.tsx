@@ -253,15 +253,27 @@ export function UserBehaviorContent({
         <div className="mt-4 flex flex-col gap-2">
           {journeys.length === 0 ?
             <div className={sellerPlaceholder}>No aggregated user journeys in the current window.</div>
-          : journeys.map((journey) => (
+          : journeys.map((journey) => {
+            const converted = journey.status === "CONVERTED";
+            return (
               <div
                 key={journey.path}
                 className="flex min-h-11 items-center gap-3 overflow-hidden rounded-lg border border-gray-3 bg-white px-3 py-2 sm:min-h-12 sm:gap-4 sm:px-4"
               >
-                <span className="shrink-0 rounded-md border border-gray-3 bg-gray-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-dark-4">
+                <span
+                  className={cn(
+                    "shrink-0 text-[10px] font-bold uppercase tracking-wide",
+                    converted ? "text-teal-dark" : "text-yellow-dark-2"
+                  )}
+                >
                   {journey.status}
                 </span>
-                <span className="shrink-0 text-sm font-bold tabular-nums text-dark sm:text-base">
+                <span
+                  className={cn(
+                    "shrink-0 text-sm font-bold tabular-nums sm:text-base",
+                    converted ? "text-teal-dark" : "text-yellow-dark-2"
+                  )}
+                >
                   {journey.ratePct.toFixed(1)}%
                 </span>
                 <span className="hidden shrink-0 text-custom-sm tabular-nums text-dark-4 sm:inline">
@@ -272,7 +284,8 @@ export function UserBehaviorContent({
                 </span>
                 <p className="min-w-0 flex-1 truncate text-custom-sm text-dark-3">{journey.path}</p>
               </div>
-            ))}
+            );
+          })}
         </div>
       </Panel>
 
@@ -288,17 +301,17 @@ export function UserBehaviorContent({
               <li key={item.label} className="py-2.5 first:pt-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-custom-sm text-dark-3">{item.label}</span>
-                  <span className="text-custom-sm font-medium tabular-nums text-dark-4">{item.sessionsLabel}</span>
+                  <span className="text-custom-sm font-medium tabular-nums text-orange">{item.sessionsLabel}</span>
                 </div>
                 {index === 0 && behavior?.scrollInsight ?
                   <div className="mt-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-dark-4">Attention point</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-dark">Attention point</p>
                     <p className="mt-1 text-custom-sm leading-relaxed text-dark-3">{behavior.scrollInsight}</p>
                   </div>
                 : null}
                 {index === scrollDepth.length - 1 && behavior?.scrollRecommendation ?
                   <div className="mt-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-dark-4">Recommendation</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-dark">Recommendation</p>
                     <p className="mt-1 text-custom-sm leading-relaxed text-dark-3">{behavior.scrollRecommendation}</p>
                   </div>
                 : null}
@@ -326,7 +339,7 @@ export function UserBehaviorContent({
                   </div>
                   <div>
                     <dt className="text-xs text-dark-4">Status</dt>
-                    <dd className="font-medium text-dark-3">{session.status}</dd>
+                    <dd className="font-medium text-red-dark">{session.status}</dd>
                   </div>
                 </dl>
                 <button

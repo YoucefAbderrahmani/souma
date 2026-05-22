@@ -90,12 +90,15 @@ export function measureProductHeatmapSurface(
   };
 }
 
-export function isProductHeatmapPreviewViewportReady(
-  doc: Document,
-  expectedWidth = HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX
-) {
+export function isProductHeatmapPreviewViewportReady(doc: Document) {
+  const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
+  if (!surface) return false;
+
   const innerWidth = doc.defaultView?.innerWidth ?? 0;
-  return innerWidth >= expectedWidth - 2;
+  if (innerWidth < 320) return false;
+
+  const rect = surface.getBoundingClientRect();
+  return rect.width >= PREVIEW_MIN_SURFACE_WIDTH_PX - 2;
 }
 
 export function measureProductHeatmapPreviewSurface(
@@ -103,14 +106,15 @@ export function measureProductHeatmapPreviewSurface(
 ): ProductHeatmapSurfaceMeasure | null {
   if (!isProductHeatmapPreviewViewportReady(doc)) return null;
 
+  const innerWidth = Math.max(doc.defaultView?.innerWidth ?? 0, HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX);
   const measured = measureProductHeatmapSurface(doc, {
-    viewportWidth: HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
+    viewportWidth: innerWidth,
   });
   if (!measured || measured.width < PREVIEW_MIN_SURFACE_WIDTH_PX) return null;
 
   return {
     ...measured,
-    documentWidth: HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
+    documentWidth: Math.max(measured.documentWidth, innerWidth, HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX),
   };
 }
 

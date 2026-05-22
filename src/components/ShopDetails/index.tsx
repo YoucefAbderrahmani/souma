@@ -303,7 +303,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   }, [dispatch, requestedProductId]);
 
   useLayoutEffect(() => {
-    if (embed || typeof document === "undefined") return;
+    if (!isHeatmapPreview || typeof document === "undefined") return;
 
     const root = document.documentElement;
     const body = document.body;
@@ -317,7 +317,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       root.style.minWidth = previousRootMinWidth;
       body.style.minWidth = previousBodyMinWidth;
     };
-  }, [embed]);
+  }, [isHeatmapPreview]);
 
   useEffect(() => {
     if (embed || isHeatmapPreview) return;
@@ -325,7 +325,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   }, [embed, isHeatmapPreview]);
 
   useEffect(() => {
-    if (!embed) return;
+    if (!embed && !isHeatmapPreview) return;
     const root = document.documentElement;
     const body = document.body;
     const previousRootOverflow = root.style.overflow;
@@ -336,7 +336,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       root.style.overflow = previousRootOverflow;
       body.style.overflow = previousBodyOverflow;
     };
-  }, [embed]);
+  }, [embed, isHeatmapPreview]);
 
   useEffect(() => {
     const preferredColor = colorOptions.find((color) => color.inStock !== false) ?? colorOptions[0];

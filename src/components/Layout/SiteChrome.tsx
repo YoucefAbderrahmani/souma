@@ -13,7 +13,8 @@ import FloatingAdminButton from "@/components/Common/FloatingAdminButton";
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const isEmbed = searchParams.get("embed") === "1";
+  const isEmbed =
+    searchParams.get("embed") === "1" || searchParams.get("heatmapPreview") === "1";
   const hideFooter =
     pathname.startsWith("/admin") || pathname.startsWith("/sequence") || pathname.startsWith("/seller-helper");
 

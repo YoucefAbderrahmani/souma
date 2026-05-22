@@ -5,6 +5,7 @@ export function productDetailsHref(productId: string | number) {
 export function productHeatmapPreviewHref(productId: string | number) {
   const params = new URLSearchParams({
     productId: String(productId),
+    embed: "1",
     heatmapPreview: "1",
   });
   return `/shop-details?${params.toString()}`;
