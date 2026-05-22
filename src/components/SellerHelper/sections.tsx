@@ -25,6 +25,7 @@ import type {
 } from "@/types/conception-admin";
 import { sortByImportance } from "@/lib/importance-ranking";
 import { cn } from "@/lib/utils";
+import { ProgressBar } from "./charts";
 import { ProductPageHeatmap } from "./ProductPageHeatmap";
 import AlertRuleSettingsModal from "./AlertRuleSettingsModal";
 import { AiRecommendationCard } from "./AiRecommendationCard";
@@ -235,7 +236,7 @@ export function UserBehaviorContent({
     onNavigateSection?.("Conversion Funnel");
   };
 
-  const journeys = behavior?.journeys ?? [];
+  const trafficSources = behavior?.trafficSources ?? [];
   const scrollDepth = behavior?.scrollDepth ?? [];
   const sessionReplays = behavior?.sessionReplays ?? [];
 
@@ -249,43 +250,22 @@ export function UserBehaviorContent({
       </Panel>
 
       <Panel>
-        <h4 className="text-base font-semibold text-dark">Primary User Journeys</h4>
-        <div className="mt-4 flex flex-col gap-2">
-          {journeys.length === 0 ?
-            <div className={sellerPlaceholder}>No aggregated user journeys in the current window.</div>
-          : journeys.map((journey) => {
-            const converted = journey.status === "CONVERTED";
-            return (
-              <div
-                key={journey.path}
-                className="flex min-h-11 items-center gap-3 overflow-hidden rounded-lg border border-gray-3 bg-white px-3 py-2 sm:min-h-12 sm:gap-4 sm:px-4"
-              >
-                <span
-                  className={cn(
-                    "shrink-0 text-[10px] font-bold uppercase tracking-wide",
-                    converted ? "text-teal-dark" : "text-yellow-dark-2"
-                  )}
-                >
-                  {journey.status}
+        <h4 className="text-base font-semibold text-dark">Sources de trafic</h4>
+        <div className="mt-4 space-y-4">
+          {trafficSources.length === 0 ?
+            <div className={sellerPlaceholder}>Aucune source de trafic enregistrée sur la période.</div>
+          : trafficSources.map((source) => (
+            <div key={source.label}>
+              <div className="mb-1.5 flex items-center justify-between gap-2 text-custom-sm">
+                <span className="font-medium text-dark">{source.label}</span>
+                <span className="shrink-0 tabular-nums text-dark-4">
+                  {source.ratePct.toFixed(1)}% · {new Intl.NumberFormat("fr-FR").format(source.sessions)} session
+                  {source.sessions === 1 ? "" : "s"}
                 </span>
-                <span
-                  className={cn(
-                    "shrink-0 text-sm font-bold tabular-nums sm:text-base",
-                    converted ? "text-teal-dark" : "text-yellow-dark-2"
-                  )}
-                >
-                  {journey.ratePct.toFixed(1)}%
-                </span>
-                <span className="hidden shrink-0 text-custom-sm tabular-nums text-dark-4 sm:inline">
-                  {new Intl.NumberFormat("en-US").format(journey.sessions)} session(s)
-                </span>
-                <span className="hidden shrink-0 text-custom-sm tabular-nums text-dark-4 md:inline">
-                  {journey.durationLabel}
-                </span>
-                <p className="min-w-0 flex-1 truncate text-custom-sm text-dark-3">{journey.path}</p>
               </div>
-            );
-          })}
+              <ProgressBar value={Math.round(source.ratePct)} />
+            </div>
+          ))}
         </div>
       </Panel>
 

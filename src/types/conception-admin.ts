@@ -108,12 +108,10 @@ export type ConceptionSecurityBrief = {
   computedAt: string;
 };
 
-export type ConceptionUserJourney = {
-  path: string;
-  status: "CONVERTED" | "ABANDONED";
-  ratePct: number;
+export type ConceptionTrafficSourceSlice = {
+  label: string;
   sessions: number;
-  durationLabel: string;
+  ratePct: number;
 };
 
 export type ConceptionScrollDepthRow = {
@@ -136,7 +134,7 @@ export type ConceptionSessionReplay = {
 };
 
 export type ConceptionUserBehaviorBrief = {
-  journeys: ConceptionUserJourney[];
+  trafficSources: ConceptionTrafficSourceSlice[];
   heatmapBands: ConceptionHeatmapBand[];
   scrollDepth: ConceptionScrollDepthRow[];
   scrollInsight: string | null;

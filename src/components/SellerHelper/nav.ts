@@ -25,7 +25,7 @@ export const SELLER_HELPER_NAV_META: Record<
   },
   "User Behavior": {
     label: "Behavior",
-    description: "Heatmaps, journeys, scroll depth, and session replays.",
+    description: "Heatmaps, sources de trafic, profondeur de scroll et enregistrements de session.",
   },
   "Vitrina Recommendation": {
     label: "Vitrina",

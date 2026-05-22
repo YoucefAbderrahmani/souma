@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import { getConceptionAlertRuleSettings, settingsToAlertRules } from "@/server/conception/alert-rule-settings";
 import { buildConceptionSecurityBrief } from "@/server/conception/security-intel";
+import { classifyTrafficSource } from "@/lib/classify-traffic-source";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
   ConceptionDeviceSlice,
@@ -322,20 +323,9 @@ function fmtDuration(seconds: number): string {
   return `${minutes}m ${remainder}s`;
 }
 
-function collapsePath(pages: string[]): string {
-  const deduped: string[] = [];
-  for (const page of pages) {
-    const normalized = page.trim();
-    if (!normalized) continue;
-    if (deduped[deduped.length - 1] === normalized) continue;
-    deduped.push(normalized);
-  }
-  return deduped.join(" → ");
-}
-
 function emptyUserBehavior(): ConceptionUserBehaviorBrief {
   return {
-    journeys: [],
+    trafficSources: [],
     heatmapBands: [],
     scrollDepth: [],
     scrollInsight: null,
@@ -346,72 +336,41 @@ function emptyUserBehavior(): ConceptionUserBehaviorBrief {
 }
 
 async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehaviorBrief> {
-  const journeyRes = await db.execute(sql`
-    WITH ordered AS (
-      SELECT
-        session_key,
-        page_path,
-        event_name,
-        created_at,
-        ROW_NUMBER() OVER (
-          PARTITION BY session_key
-          ORDER BY sequence_index, created_at
-        ) AS ord
-      FROM sales_micro_event
-      WHERE created_at >= ${since}
-        AND page_path IS NOT NULL
-        AND page_path <> ''
-    ),
-  session_paths AS (
-      SELECT
-        session_key,
-        string_agg(page_path, ' → ' ORDER BY ord) AS path_raw,
-        bool_or(event_name = ${STORE_EVENT.purchase}) AS converted,
-        EXTRACT(EPOCH FROM (MAX(created_at) - MIN(created_at)))::double precision AS duration_s
-      FROM ordered
-      GROUP BY session_key
-      HAVING COUNT(*) >= 2
-    )
-    SELECT path_raw, converted, duration_s
-    FROM session_paths
-    ORDER BY duration_s DESC NULLS LAST
-    LIMIT 200
+  const sourceRes = await db.execute(sql`
+    SELECT
+      session_key,
+      (array_agg(referrer ORDER BY created_at ASC)
+        FILTER (WHERE referrer IS NOT NULL))[1] AS referrer_first,
+      (array_agg(payload_json::jsonb->>'source' ORDER BY created_at ASC)
+        FILTER (WHERE event_name = ${STORE_EVENT.globalContext}))[1] AS context_source
+    FROM sales_micro_event
+    WHERE created_at >= ${since}
+    GROUP BY session_key
   `);
 
-  const journeyRows = journeyRes.rows as {
-    path_raw: unknown;
-    converted: unknown;
-    duration_s: unknown;
+  const sourceRows = sourceRes.rows as {
+    session_key: unknown;
+    referrer_first: unknown;
+    context_source: unknown;
   }[];
 
-  const journeyCounts = new Map<
-    string,
-    { sessions: number; converted: number; durationTotal: number }
-  >();
-
-  for (const row of journeyRows) {
-    const raw = typeof row.path_raw === "string" ? row.path_raw : "";
-    const path = collapsePath(raw.split(" → "));
-    if (!path) continue;
-    const converted = Boolean(row.converted);
-    const duration = Number(row.duration_s ?? 0);
-    const current = journeyCounts.get(path) ?? { sessions: 0, converted: 0, durationTotal: 0 };
-    current.sessions += 1;
-    if (converted) current.converted += 1;
-    if (Number.isFinite(duration)) current.durationTotal += duration;
-    journeyCounts.set(path, current);
+  const sourceCounts = new Map<string, number>();
+  for (const row of sourceRows) {
+    const referrer =
+      typeof row.referrer_first === "string" && row.referrer_first.trim() ? row.referrer_first : null;
+    const contextSource =
+      typeof row.context_source === "string" && row.context_source.trim() ? row.context_source : null;
+    const label = classifyTrafficSource(referrer, contextSource);
+    sourceCounts.set(label, (sourceCounts.get(label) ?? 0) + 1);
   }
 
-  const totalJourneySessions = Array.from(journeyCounts.values()).reduce((sum, item) => sum + item.sessions, 0);
-  const journeys = Array.from(journeyCounts.entries())
-    .sort((a, b) => b[1].sessions - a[1].sessions)
-    .slice(0, 4)
-    .map(([path, stats]) => ({
-      path,
-      status: stats.converted > stats.sessions / 2 ? ("CONVERTED" as const) : ("ABANDONED" as const),
-      ratePct: totalJourneySessions > 0 ? (100 * stats.sessions) / totalJourneySessions : 0,
-      sessions: stats.sessions,
-      durationLabel: fmtDuration(stats.sessions > 0 ? stats.durationTotal / stats.sessions : 0),
+  const totalSourceSessions = sourceRows.length;
+  const trafficSources = Array.from(sourceCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, sessions]) => ({
+      label,
+      sessions,
+      ratePct: totalSourceSessions > 0 ? (100 * sessions) / totalSourceSessions : 0,
     }));
 
   const scrollRes = await db.execute(sql`
@@ -537,7 +496,7 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
   );
 
   if (
-    journeys.length === 0 &&
+    trafficSources.length === 0 &&
     scrollDepth.every((row) => row.sessions === 0) &&
     sessionReplays.length === 0
   ) {
@@ -545,7 +504,7 @@ async function buildUserBehaviorBrief(since: Date): Promise<ConceptionUserBehavi
   }
 
   return {
-    journeys,
+    trafficSources,
     heatmapBands,
     scrollDepth,
     scrollInsight,
