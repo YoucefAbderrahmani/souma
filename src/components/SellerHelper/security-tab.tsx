@@ -6,8 +6,12 @@ import type { ConceptionOverviewDto } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
 import { ProgressBar, ThreatActivityChart } from "./charts";
 import SecurityQuickFixConfirmModal from "./SecurityQuickFixConfirmModal";
-import { SellerHelperInsightCard } from "./SellerHelperInsightCard";
-import { securityToneToPriority } from "./ai-recommendation-card-utils";
+import {
+  SellerHelperSecurityCard,
+  securityActionPrimaryClass,
+  securityResolutionFromStatus,
+} from "./SellerHelperSecurityCard";
+import { securityBlockedRowClass } from "./seller-helper-security-card-utils";
 import {
   sellerAccentStrip,
   sellerGhostButton,
@@ -176,41 +180,26 @@ export function SecurityTabContent({
           {incidents.length === 0 ?
             <div className={cn(sellerPlaceholder, "mt-4")}>Aucune activité suspecte détectée.</div>
           : <div className="mt-4 flex flex-col gap-3">
-              {incidents.map((incident, index) => (
-                <SellerHelperInsightCard
-                  key={incident.id}
-                  tier={securityToneToPriority(incident.statusTone)}
-                  priorityLabel={incident.statusLabel}
-                  title={incident.title}
-                  body={incident.detail}
-                  extraBadges={
-                    <span className="rounded-full border border-gray-3 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark-4">
-                      {incident.category} · {incident.riskScore}/100
-                    </span>
-                  }
-                  meta={[
-                    { text: incident.displayIdentity },
-                    { text: incident.location },
-                    { text: incident.timeAgoLabel },
-                  ]}
-                  actions={
-                    (incident.quickFixes?.length ?? 0) > 0 ?
-                      <button
-                        type="button"
-                        className={cn(
-                          "inline-flex w-full items-center justify-center rounded-lg px-3 py-2",
-                          "bg-orange text-xs font-bold uppercase tracking-wide text-white",
-                          "transition-colors hover:bg-orange-dark"
-                        )}
-                        onClick={() => setQuickFixTarget({ kind: "incident", item: incident })}
-                      >
-                        Action rapide
-                      </button>
-                    : undefined
-                  }
-                  animationIndex={index}
-                />
-              ))}
+              {incidents.map((incident) => {
+                const resolution = securityResolutionFromStatus(incident.status);
+                return (
+                  <SellerHelperSecurityCard
+                    key={incident.id}
+                    incident={incident}
+                    actions={
+                      (incident.quickFixes?.length ?? 0) > 0 ?
+                        <button
+                          type="button"
+                          className={securityActionPrimaryClass(resolution)}
+                          onClick={() => setQuickFixTarget({ kind: "incident", item: incident })}
+                        >
+                          Action rapide
+                        </button>
+                      : undefined
+                    }
+                  />
+                );
+              })}
             </div>
           }
         </Panel>
@@ -232,7 +221,7 @@ export function SecurityTabContent({
                 </thead>
                 <tbody>
                   {blockedIdentities.map((row) => (
-                    <tr key={row.id} className={sellerTableRow}>
+                    <tr key={row.id} className={cn(sellerTableRow, securityBlockedRowClass())}>
                       <td className="px-3 py-3 font-medium text-dark">{row.displayIdentity}</td>
                       <td className="px-3 py-3">{row.reason}</td>
                       <td className="px-3 py-3 tabular-nums">{formatCount(row.blockedRequests)}</td>

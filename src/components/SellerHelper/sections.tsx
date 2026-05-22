@@ -29,7 +29,11 @@ import { ProductPageHeatmap } from "./ProductPageHeatmap";
 import AlertRuleSettingsModal from "./AlertRuleSettingsModal";
 import { AiRecommendationCard } from "./AiRecommendationCard";
 import { mapConceptionRecommendationToCard } from "./ai-recommendation-card-utils";
-import { SellerHelperInsightCard, insightActionBtnSecondary } from "./SellerHelperInsightCard";
+import {
+  SellerHelperAlertCard,
+  alertActionPrimaryClass,
+  alertActionSecondaryClass,
+} from "./SellerHelperAlertCard";
 import type { SellerHelperNavItem } from "./nav";
 import {
   sellerGhostButton,
@@ -918,44 +922,27 @@ export function AlertsContent({
             <div className="rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-6 text-center text-custom-sm text-dark-4">
               No active alerts right now.
             </div>
-          : incidents.map((incident, index) => {
+          : incidents.map((incident) => {
             const activeStatus = incident.statusKind === "active";
             return (
-              <SellerHelperInsightCard
+              <SellerHelperAlertCard
                 key={incident.key}
                 tier={incident.tier}
-                priorityLabel={incident.severity}
+                severityLabel={incident.severity}
                 title={incident.title}
-                body={incident.description}
-                recommendation={incident.detail || undefined}
-                recommendationLabel="Detail"
-                extraBadges={
-                  <span
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                      activeStatus ?
-                        "border-red bg-white text-red-dark"
-                      : "border-gray-4 bg-white text-dark-4"
-                    )}
-                  >
-                    {incident.status}
-                  </span>
-                }
-                meta={[
-                  { icon: <Clock className="h-3.5 w-3.5" aria-hidden />, text: incident.timeAgo },
-                  { icon: <Users className="h-3.5 w-3.5" aria-hidden />, text: incident.affected },
-                ]}
+                description={incident.description}
+                detail={incident.detail}
+                statusLabel={incident.status}
+                statusActive={activeStatus}
+                timeAgo={incident.timeAgo}
+                affected={incident.affected}
                 actions={
                   <>
                     <button
                       type="button"
                       disabled={detailLoading && detailAlert?.id === incident.key}
                       onClick={() => void analyzeIncident(incident.key)}
-                      className={cn(
-                        "inline-flex w-full items-center justify-center rounded-lg px-3 py-2",
-                        "bg-orange text-xs font-bold uppercase tracking-wide text-white",
-                        "transition-colors hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60"
-                      )}
+                      className={alertActionPrimaryClass}
                     >
                       {detailLoading && detailAlert?.id === incident.key ? "Analyzing…" : "Analyze in detail"}
                     </button>
@@ -963,7 +950,7 @@ export function AlertsContent({
                       type="button"
                       disabled={busyKey === incident.key}
                       onClick={() => void dismissIncident(incident.key, "resolved")}
-                      className={insightActionBtnSecondary}
+                      className={alertActionSecondaryClass}
                     >
                       Mark as resolved
                     </button>
@@ -971,13 +958,12 @@ export function AlertsContent({
                       type="button"
                       disabled={busyKey === incident.key}
                       onClick={() => void dismissIncident(incident.key, "ignored")}
-                      className={insightActionBtnSecondary}
+                      className={alertActionSecondaryClass}
                     >
                       Dismiss temporarily
                     </button>
                   </>
                 }
-                animationIndex={index}
               />
             );
           })}
