@@ -21,7 +21,7 @@ import {
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
-import { getBestProductReviewForMerch } from "@/server/reviews/reviews-db";
+import { getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { clampVitrinaFixesPerItem, DEFAULT_VITRINA_FIXES_PER_ITEM } from "@/lib/vitrina-fixes-per-item";
 import type { VitrinaQuickFixId, VitrinaQuickFixOption } from "@/types/vitrina-product-recommendations";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
@@ -81,15 +81,16 @@ async function heroSnippetFromBestVerifiedReview(
   catalogRating: number
 ): Promise<string | null> {
   const aliasIds = getStorefrontInventoryAliasIds(productTitle, productDbId);
-  for (const localId of aliasIds) {
-    try {
-      const best = await getBestProductReviewForMerch(localId);
+  try {
+    const bestById = await getBestProductReviewsForMerchByLocalIds(aliasIds);
+    for (const localId of aliasIds) {
+      const best = bestById.get(localId);
       if (best?.comment?.trim()) {
         return buildHeroReviewSnippetFromVerifiedReview(best);
       }
-    } catch {
-      /* try next alias */
     }
+  } catch {
+    /* fall through to rating line */
   }
 
   if (catalogRating > 0) {
@@ -386,7 +387,6 @@ export async function applyVitrinaQuickFixes(
         VITRINA_QUICK_FIX_INFO_KEYS.quality,
         ratingLabel
       );
-      contentChanged = true;
 
       const heroSnippet = await heroSnippetFromBestVerifiedReview(
         product.id,
@@ -399,7 +399,13 @@ export async function applyVitrinaQuickFixes(
           VITRINA_MERCH_KEYS.heroReview,
           heroSnippet
         );
+      } else {
+        nextAdditionalInfo = nextAdditionalInfo.filter(
+          (entry) => entry.key !== VITRINA_MERCH_KEYS.heroReview
+        );
       }
+
+      contentChanged = true;
 
       applied.push(
         heroSnippet ?

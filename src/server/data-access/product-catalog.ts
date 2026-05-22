@@ -16,6 +16,7 @@ import {
   getVitrinaMerchandisingFromAdditionalInfo,
   isVitrinaStorefrontMerchExcluded,
   readCatalogBoostAt,
+  resolveStorefrontHeroReviewSnippet,
 } from "@/lib/vitrina-merchandising";
 import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
@@ -168,9 +169,10 @@ async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Prom
   const idsWithReviews = products
     .filter((p) => {
       if (isVitrinaStorefrontMerchExcluded(p)) return false;
-      if ((p.reviews ?? 0) <= 0) return false;
       const parsed = parseProductContent(p.description);
-      return !parsed.suppressLiveHeroReviewOverlay;
+      if (parsed.suppressLiveHeroReviewOverlay) return false;
+      if (p.heroReviewSnippet?.trim()) return false;
+      return (p.reviews ?? 0) > 0;
     })
     .map((p) => Math.trunc(Number(p.id)))
     .filter((id) => Number.isFinite(id) && id > 0);
@@ -372,9 +374,7 @@ export async function getHeroReviewSnippetsByStorefrontIds(
   for (const product of products) {
     if (!uniqueIds.has(product.id)) continue;
     if (isVitrinaStorefrontMerchExcluded(product)) continue;
-    const snippet =
-      product.heroReviewSnippet?.trim() ||
-      getStorefrontMerchHeroStripFromAdditionalInfo(parseProductContent(product.description).additionalInfo);
+    const snippet = resolveStorefrontHeroReviewSnippet(product);
     if (snippet) {
       snippets[product.id] = snippet;
     }

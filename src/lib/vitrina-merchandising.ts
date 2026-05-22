@@ -1,5 +1,5 @@
 import type { ProductAdditionalInfo } from "@/lib/product-content";
-import { isStructuredProductContent, parseProductContent, serializeProductContent } from "@/lib/product-content";
+import { parseProductContent } from "@/lib/product-content";
 
 /** Catalogue titles with no Vitrina/demo promo overlays or live review hero strip on images. */
 export const VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES = [
@@ -132,22 +132,30 @@ export function readHeroReviewSnippetFromDescription(description?: string | null
 }
 
 /**
- * Single strip for catalog / PDP hero overlay: verified-review line first, then Quality / Availability
- * lines from quick fixes (so cards show rating copy even when there is no written review yet).
+ * Hero image banner copy: persisted `Merch: Hero review` only (verified quote or ⭐ rating line).
+ * Quality / Availability quick-fix lines stay in the Additional Information tab, not on the photo.
  */
 export function getStorefrontMerchHeroStripFromAdditionalInfo(
   additionalInfo: ProductAdditionalInfo[]
 ): string | null {
   const merch = getVitrinaMerchandisingFromAdditionalInfo(additionalInfo);
   if (merch.heroReviewSnippet?.trim()) return truncateStorefrontStrip(merch.heroReviewSnippet.trim());
-
-  const quality = additionalInfo.find((row) => row.key === VITRINA_QUICK_FIX_INFO_KEYS.quality)?.value?.trim();
-  if (quality) return truncateStorefrontStrip(quality);
-
-  const availability = additionalInfo
-    .find((row) => row.key === VITRINA_QUICK_FIX_INFO_KEYS.availability)
-    ?.value?.trim();
-  if (availability) return truncateStorefrontStrip(availability);
-
   return null;
+}
+
+/** Hero review strip for catalog cards and PDP (server field, description, live catalog). */
+export function resolveStorefrontHeroReviewSnippet(product: {
+  title: string;
+  description?: string | null;
+  heroReviewSnippet?: string | null;
+}): string | null {
+  if (isVitrinaStorefrontMerchExcluded(product)) return null;
+
+  const parsed = parseProductContent(product.description ?? "");
+  if (parsed.suppressLiveHeroReviewOverlay) return null;
+
+  const fromCatalog = product.heroReviewSnippet?.trim();
+  if (fromCatalog) return fromCatalog;
+
+  return getStorefrontMerchHeroStripFromAdditionalInfo(parsed.additionalInfo);
 }
