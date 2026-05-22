@@ -30,7 +30,7 @@ const Category = ({ slug, products }: { slug: string; products: Product[] }) => 
       <section className="overflow-hidden pb-20 pt-5 lg:pt-20 xl:pt-28">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-7.5 gap-y-9">
+            <div className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-x-7.5 gap-y-9">
               {filteredProducts.map((item) => (
                 <ProductItem item={item} key={item.id} />
               ))}

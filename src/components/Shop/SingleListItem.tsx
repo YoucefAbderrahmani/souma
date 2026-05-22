@@ -18,6 +18,7 @@ import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjace
 import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
 import { VitrinaPriceWithPromoTimerRow } from "@/components/Common/ProductPromoPriceRowLabels";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
+import { PRODUCT_LIST_IMAGE_FRAME_CLASS } from "@/lib/product-image-sizes";
 import { ProductCardPromoLayer } from "@/components/Common/ProductCardPromoLayer";
 import { ProductRatingStars } from "@/components/Common/ProductRatingStars";
 
@@ -92,25 +93,24 @@ const SingleListItem = ({ item }: { item: Product }) => {
   return (
     <div className="group rounded-lg bg-white shadow-1">
       <div className="flex">
-        <div className="shadow-list relative overflow-hidden flex items-center justify-center max-w-[270px] w-full sm:min-h-[270px] p-4">
+        <div className={PRODUCT_LIST_IMAGE_FRAME_CLASS}>
           <button
             type="button"
             onClick={handleOpenQuickView}
             aria-label={`Quick view ${item.title}`}
-            className="flex items-center justify-center w-full h-full"
+            className="absolute inset-0 z-10 flex items-center justify-center"
           >
-            <span className="relative inline-block max-w-full">
-              <ProductCatalogImageWithMerch
-                product={item}
-                src={item.imgs.previews[0]}
-                alt=""
-                width={250}
-                height={250}
-                heroReviewSnippet={item.heroReviewSnippet ?? null}
-                showHeroReviewOverlay
-                showPromoLabels={false}
-              />
-            </span>
+            <ProductCatalogImageWithMerch
+              product={item}
+              src={item.imgs.previews[0]}
+              alt=""
+              width={250}
+              height={250}
+              fillFrame
+              heroReviewSnippet={item.heroReviewSnippet ?? null}
+              showHeroReviewOverlay
+              showPromoLabels={false}
+            />
           </button>
 
           <div className="absolute left-0 bottom-0 z-20 w-full translate-y-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0">

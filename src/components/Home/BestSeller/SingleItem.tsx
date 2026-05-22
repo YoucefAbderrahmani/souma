@@ -87,7 +87,7 @@ const SingleItem = ({ item }: { item: Product }) => {
 
   return (
     <div className="group">
-      <div className="relative overflow-hidden rounded-lg bg-[#F6F7FB] min-h-[403px]">
+      <div className="relative flex flex-col overflow-hidden rounded-lg bg-[#F6F7FB]">
         <div className="text-center px-4 py-7.5">
           <div className="flex items-center justify-center gap-2.5 mb-2">
             <ProductRatingStars rating={item.averageRating} size={14} />
@@ -115,18 +115,18 @@ const SingleItem = ({ item }: { item: Product }) => {
           </span>
         </div>
 
-        <div className="relative w-full">
+        <div className="relative w-full aspect-square overflow-hidden">
           <button
             type="button"
             onClick={handleOpenQuickView}
             aria-label={`Quick view ${item.title}`}
-            className="flex w-full justify-center"
+            className="absolute inset-0 z-10 flex items-center justify-center"
           >
-            <span className="relative inline-block max-w-full overflow-hidden rounded-b-lg">
               <ProductCatalogImageWithMerch
                 product={item}
                 src={item.imgs.previews[0]}
                 alt=""
+                fillFrame
                 width={280}
                 height={280}
                 className="rounded-b-lg"
@@ -136,7 +136,6 @@ const SingleItem = ({ item }: { item: Product }) => {
                 showPromoLabels={false}
                 sizes={PRODUCT_CARD_IMAGE_SIZES}
               />
-            </span>
           </button>
 
           <div className="absolute right-0 bottom-0 z-20 flex translate-x-full flex-col gap-2 p-5.5 transition-transform duration-300 ease-linear delay-0 group-hover:translate-x-0 group-hover:delay-150">

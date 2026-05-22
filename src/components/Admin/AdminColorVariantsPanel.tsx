@@ -158,7 +158,6 @@ export default function AdminColorVariantsPanel({
                   <input
                     type="text"
                     required={colorRows.length <= 1}
-                    placeholder="e.g. Midnight blue"
                     value={row.name}
                     onChange={(event) => {
                       const nextName = event.target.value;
@@ -179,7 +178,6 @@ export default function AdminColorVariantsPanel({
                     min="0"
                     step="0.01"
                     disabled={!colorHasPriceOverride}
-                    placeholder={colorHasPriceOverride ? "Price" : "—"}
                     value={row.price}
                     onChange={(event) =>
                       setColorRows((prev) =>
@@ -198,7 +196,6 @@ export default function AdminColorVariantsPanel({
                     type="text"
                     inputMode="url"
                     autoComplete="off"
-                    placeholder="https://… or /api/media/…"
                     value={row.imageUrl}
                     onChange={(event) =>
                       setColorRows((prev) =>

@@ -33,6 +33,8 @@ type Props = {
    * so grids do not fire dozens of API calls on first paint.
    */
   deferHeroReviewFetch?: boolean;
+  /** Fill a square/rect parent (`absolute inset-0`); image is cropped with `object-cover`. */
+  fillFrame?: boolean;
 };
 
 /**
@@ -53,27 +55,34 @@ export function ProductCatalogImageWithMerch({
   priority,
   sizes = PRODUCT_CARD_IMAGE_SIZES,
   deferHeroReviewFetch = true,
+  fillFrame = false,
 }: Props) {
   const snippet = heroReviewSnippet?.trim() ?? "";
 
-  return (
-    <span
-      className={cn(
+  const frameClass = fillFrame
+    ? cn("relative isolate block h-full w-full overflow-hidden rounded-lg", className)
+    : cn(
         "group relative isolate inline-block max-h-full max-w-full overflow-hidden rounded-lg",
         className
-      )}
-    >
+      );
+
+  return (
+    <span className={frameClass}>
       <Image
         src={src}
         alt={alt}
-        width={width}
-        height={height}
+        {...(fillFrame ? { fill: true } : { width, height })}
         sizes={sizes}
         priority={priority}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         fetchPriority={priority ? "high" : "low"}
-        className={cn("block h-auto w-full rounded-lg object-cover align-middle", imageClassName)}
+        className={cn(
+          fillFrame ?
+            "object-cover object-center"
+          : "block h-auto w-full rounded-lg object-cover align-middle",
+          imageClassName
+        )}
       />
 
       {snippet ?

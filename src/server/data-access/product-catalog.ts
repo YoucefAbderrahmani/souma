@@ -1,5 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 import { catalogAddedAtFromSlug } from "@/lib/catalog-sort";
+import {
+  filterStorefrontHiddenProducts,
+  getHiddenStorefrontTitleKeys,
+  normalizeStorefrontProductTitle,
+} from "@/lib/storefront-hidden-products";
 import { db } from "@/server/db";
 import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
@@ -9,7 +14,7 @@ import { getVitrinaMerchandisingFromAdditionalInfo, getStorefrontMerchHeroStripF
 import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
-const normalize = (value: string) => value.toLowerCase().trim().replace(/\s+/g, " ");
+const normalize = normalizeStorefrontProductTitle;
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -196,12 +201,20 @@ export async function getCatalogProducts(): Promise<Product[]> {
       };
     });
 
-    const merged = mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withVitrinaStorefrontFieldsFromDescription);
+    const hiddenTitles = await getHiddenStorefrontTitleKeys();
+    const merged = filterStorefrontHiddenProducts(
+      mergeCatalogWithoutDuplicateTitles(shopData, mappedDbProducts).map(withVitrinaStorefrontFieldsFromDescription),
+      hiddenTitles
+    );
     const withAgg = await withReviewAggregatesFromDatabase(merged);
     return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
   } catch {
+    const hiddenTitles = await getHiddenStorefrontTitleKeys().catch(() => new Set<string>());
     const deduped = dedupeProductsByTitle(shopData);
-    const merged = deduped.map(withVitrinaStorefrontFieldsFromDescription);
+    const merged = filterStorefrontHiddenProducts(
+      deduped.map(withVitrinaStorefrontFieldsFromDescription),
+      hiddenTitles
+    );
     const withAgg = await withReviewAggregatesFromDatabase(merged);
     return await withLiveHeroReviewSnippetsFromDatabase(withAgg);
   }

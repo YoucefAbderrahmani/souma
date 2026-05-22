@@ -13,6 +13,10 @@ import {
 } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import { mainImageFromColors, reorderColorsWithDefault } from "@/lib/admin-product-colors";
+import {
+  hideStorefrontProductByTitle,
+  unhideStorefrontProductByTitle,
+} from "@/lib/storefront-hidden-products";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
@@ -296,6 +300,8 @@ export async function createProductAction(
         image: imageUrl,
       });
     }
+
+    await unhideStorefrontProductByTitle(title);
 
     revalidatePath("/admin");
     revalidateStorefrontCatalogPaths();
@@ -648,6 +654,8 @@ export async function deleteProductAction(productId: string): Promise<DeleteProd
     if (!existing[0]) {
       return { error: "Product not found." };
     }
+
+    await hideStorefrontProductByTitle(existing[0].title);
 
     await db.delete(imageTable).where(eq(imageTable.productId, id));
     await db.delete(wishlist_to_productTable).where(eq(wishlist_to_productTable.productId, id));

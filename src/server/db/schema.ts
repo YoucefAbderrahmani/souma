@@ -83,6 +83,13 @@ export const wishlistTable = pgTable("wishlist", {
     .unique(),
 });
 
+/** Titles removed by admin — hides matching rows from DB and bundled shopData on the storefront. */
+export const storefrontHiddenProductTable = pgTable("storefront_hidden_product", {
+  normalizedTitle: varchar("normalized_title", { length: 512 }).primaryKey(),
+  title: varchar({ length: 255 }).notNull(),
+  hiddenAt: timestamp("hidden_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 export const productsTable = pgTable("products", {
   id: uuid().primaryKey().defaultRandom(),
   slug: varchar({ length: 255 }).notNull().unique(),

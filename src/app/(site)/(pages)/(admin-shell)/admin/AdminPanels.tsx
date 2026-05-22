@@ -284,14 +284,14 @@ export default function AdminPanels({
               >
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <ProductFormField label="Product title" hint="Clear, specific name (e.g. model or size if relevant).">
-                    <input name="title" required className={pf.input} placeholder="e.g. Wireless noise-cancelling headphones" />
+                    <input name="title" required className={pf.input} />
                   </ProductFormField>
                   <ProductFormField label="Manufacturer / brand">
-                    <input name="manufacturer" required className={pf.input} placeholder="e.g. Vitrina Audio" />
+                    <input name="manufacturer" required className={pf.input} />
                   </ProductFormField>
                   <ProductFormField label="Category">
                     <select name="categoryName" required className={pf.select}>
-                      <option value="">Choose a category…</option>
+                      <option value=""></option>
                       {websiteCategories.map((category) => (
                         <option key={category.id} value={category.title}>
                           {category.title}
@@ -361,7 +361,6 @@ export default function AdminPanels({
                           value={addPriceInput}
                           onChange={(e) => setAddPriceInput(e.target.value)}
                           className={pf.input}
-                          placeholder={addVitrinaMode ? "e.g. 1000" : "0"}
                         />
                       </ProductFormField>
                       {addVitrinaMode && addVitrinaStandardPreview != null ? (
@@ -373,7 +372,7 @@ export default function AdminPanels({
                       ) : null}
                     </div>
                     <ProductFormField label="Stock quantity" hint="Units available to sell.">
-                      <input name="instock" type="number" min="0" required className={pf.input} placeholder="0" />
+                      <input name="instock" type="number" min="0" required className={pf.input} />
                     </ProductFormField>
                   </div>
                 </div>
@@ -392,7 +391,6 @@ export default function AdminPanels({
                       required
                       rows={5}
                       className={pf.textarea}
-                      placeholder="Describe the product in a few short paragraphs…"
                     />
                   </ProductFormField>
                   <ProductFormField
@@ -403,7 +401,6 @@ export default function AdminPanels({
                       name="careMaintenance"
                       rows={3}
                       className={pf.textarea}
-                      placeholder="How to care for this product"
                     />
                   </ProductFormField>
                 </div>
@@ -456,7 +453,6 @@ export default function AdminPanels({
                           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                             <input
                               type="text"
-                              placeholder="Spec name (e.g. Storage)"
                               value={row.name}
                               onChange={(event) =>
                                 setSpecRows((prev) =>
@@ -498,7 +494,6 @@ export default function AdminPanels({
                               >
                                 <input
                                   type="text"
-                                  placeholder="Option (e.g. 128 GB)"
                                   value={option.label}
                                   onChange={(event) =>
                                     setSpecRows((prev) =>
@@ -521,7 +516,6 @@ export default function AdminPanels({
                                   min="0"
                                   step="0.01"
                                   disabled={!row.hasPriceOverride}
-                                  placeholder="Price"
                                   value={option.price}
                                   onChange={(event) =>
                                     setSpecRows((prev) =>
@@ -626,7 +620,6 @@ export default function AdminPanels({
                         >
                           <input
                             type="text"
-                            placeholder="Label (e.g. Warranty)"
                             value={row.key}
                             onChange={(event) =>
                               setAdditionalRows((prev) =>
@@ -637,7 +630,6 @@ export default function AdminPanels({
                           />
                           <input
                             type="text"
-                            placeholder="Value"
                             value={row.value}
                             onChange={(event) =>
                               setAdditionalRows((prev) =>
