@@ -119,9 +119,6 @@ export function TimelineLogsSection({
             <ClipboardList className="h-4 w-4 text-orange" aria-hidden />
             Activity log
           </h4>
-          <p className="mt-0.5 text-xs text-dark-4">
-            Vitrina fixes, security blocks, alerts, and recommendations — with conversion since each change.
-          </p>
         </div>
         <span className="text-xs font-medium text-dark-4 tabular-nums">
           {sorted.length} {sorted.length === 1 ? "entry" : "entries"}

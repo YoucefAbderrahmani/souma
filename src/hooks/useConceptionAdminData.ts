@@ -521,6 +521,70 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
+  const clearAllVitrinaRecommendations = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/vitrina-recommendations/clear", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await readJsonResponse<{
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        recommendations?: VitrinaProductMarketingRecommendation[];
+      }>(res, "Clear Vitrina recommendations API");
+      if (!res.ok || body.ok === false) {
+        throw new Error(body.message || body.error || "Clear failed");
+      }
+      clearVitrinaQuickFixAppliedProductIds();
+      writeCachedVitrinaRecommendations([]);
+      setState((s) => ({
+        ...s,
+        vitrinaRecommendations: [],
+        actionMessage: body.message ?? "Vitrina recommendations cleared.",
+      }));
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, []);
+
+  const resetAllVitrinaCatalogToDefault = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/vitrina-recommendations/reset-catalog-default", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await readJsonResponse<{
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        updatedCount?: number;
+      }>(res, "Reset Vitrina catalog API");
+      if (!res.ok || body.ok === false) {
+        throw new Error(body.message || body.error || "Reset failed");
+      }
+      setState((s) => ({
+        ...s,
+        actionMessage: body.message ?? "Catalog reset to default Vitrina merchandising.",
+      }));
+      await load({ background: true });
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, [load]);
+
   const dismissVitrinaAfterQuickFix = useCallback(async (productId: string) => {
     removeVitrinaQuickFixAppliedProductId(productId);
     try {
@@ -555,5 +619,7 @@ export function useConceptionAdminData(
     clearAllAlerts,
     clearAllSecurity,
     dismissVitrinaAfterQuickFix,
+    clearAllVitrinaRecommendations,
+    resetAllVitrinaCatalogToDefault,
   };
 }

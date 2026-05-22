@@ -346,6 +346,8 @@ function SellerHelperDashboardInner({
     clearAllAlerts,
     clearAllSecurity,
     dismissVitrinaAfterQuickFix,
+    clearAllVitrinaRecommendations,
+    resetAllVitrinaCatalogToDefault,
   } = useConceptionAdminData(initialData, initialError, {
     liveRefreshIntervalMs: isAdminEmbed ? 60_000 : 5_000,
   });
@@ -497,6 +499,8 @@ function SellerHelperDashboardInner({
           <VitrinaRecommendationsContent
             recommendations={vitrinaRecommendations}
             onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
+            onClearAllRecommendations={clearAllVitrinaRecommendations}
+            onResetAllCatalogToDefault={resetAllVitrinaCatalogToDefault}
           />
         )}
         {showPanel(

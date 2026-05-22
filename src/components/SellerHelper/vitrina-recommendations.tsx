@@ -3,7 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, Megaphone, Search, SlidersHorizontal, Tag, Zap } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Megaphone,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  Tag,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import "swiper/css";
@@ -28,6 +39,7 @@ import {
   vitrinaSectionShell,
   vitrinaSectionEmpty,
   sellerIconButton,
+  sellerGhostButton,
   sellerPrimaryButton,
   sellerSecondaryButton,
 } from "./layout";
@@ -273,10 +285,16 @@ function VitrinaProductCard({
 export function VitrinaRecommendationsContent({
   recommendations,
   onVitrinaQuickFixApplied,
+  onClearAllRecommendations,
+  onResetAllCatalogToDefault,
 }: {
   recommendations: VitrinaProductMarketingRecommendation[];
   onVitrinaQuickFixApplied?: (productId: string) => void | Promise<void>;
+  onClearAllRecommendations?: () => Promise<boolean>;
+  onResetAllCatalogToDefault?: () => Promise<boolean>;
 }) {
+  const [clearBusy, setClearBusy] = useState(false);
+  const [resetCatalogBusy, setResetCatalogBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [quickFixProduct, setQuickFixProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -350,13 +368,64 @@ export function VitrinaRecommendationsContent({
     setSortMode("opportunity-high");
   }, []);
 
+  const handleClearAll = () => {
+    if (
+      !window.confirm(
+        "Clear all generated Vitrina recommendations from the cache? You can run Analyze again to regenerate them."
+      )
+    ) {
+      return;
+    }
+    setClearBusy(true);
+    void onClearAllRecommendations?.().finally(() => setClearBusy(false));
+  };
+
+  const handleResetCatalog = () => {
+    if (
+      !window.confirm(
+        "Reset every catalogue product to default Vitrina merchandising (remove promo prices and quick-fix fields)? This does not add a timeline log entry."
+      )
+    ) {
+      return;
+    }
+    setResetCatalogBusy(true);
+    void onResetAllCatalogToDefault?.().finally(() => setResetCatalogBusy(false));
+  };
+
   return (
     <div className={sellerHelperStack}>
-      <div className="space-y-1">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
           <Megaphone className="h-5 w-5 text-orange" aria-hidden />
           Vitrina Recommendation
         </h3>
+        <div className="flex flex-wrap gap-2">
+          {onClearAllRecommendations ?
+            <button
+              type="button"
+              disabled={clearBusy || recommendations.length === 0}
+              onClick={handleClearAll}
+              className={cn(
+                sellerGhostButton,
+                "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+              )}
+            >
+              <Trash2 className={cn("h-4 w-4", clearBusy && "animate-pulse")} aria-hidden />
+              {clearBusy ? "Clearing…" : "Clear recommendations"}
+            </button>
+          : null}
+          {onResetAllCatalogToDefault ?
+            <button
+              type="button"
+              disabled={resetCatalogBusy}
+              onClick={handleResetCatalog}
+              className={sellerSecondaryButton}
+            >
+              <RotateCcw className={cn("h-4 w-4", resetCatalogBusy && "animate-spin")} aria-hidden />
+              {resetCatalogBusy ? "Resetting…" : "Reset all Vitrina changes"}
+            </button>
+          : null}
+        </div>
       </div>
 
       {preparedRecommendations.length === 0 ?

@@ -44,6 +44,11 @@ export async function readVitrinaRecommendationsCache(): Promise<VitrinaProductM
   }
 }
 
+/** Clears generated Vitrina recommendation cards (memory + on-disk cache). */
+export async function clearVitrinaRecommendationsCache(): Promise<void> {
+  await writeVitrinaRecommendationsCache([]);
+}
+
 export async function writeVitrinaRecommendationsCache(
   recommendations: VitrinaProductMarketingRecommendation[]
 ): Promise<void> {

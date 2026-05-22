@@ -1,10 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { parseProductContent, serializeProductContent } from "@/lib/product-content";
-import {
-  VITRINA_MERCH_KEYS,
-  VITRINA_QUICK_FIX_INFO_KEYS,
-  isVitrinaMerchandisingKey,
-} from "@/lib/vitrina-merchandising";
+import { computeVitrinaDefaultReset } from "@/server/seller-helper/vitrina-product-reset";
 import { db } from "@/server/db";
 import { conceptionSecurityBlockTable, productsTable, sellerHelperAppliedActionTable } from "@/server/db/schema";
 import {
@@ -228,28 +223,16 @@ export async function resetVitrinaProductToDefault(options: {
 
   if (!product) return { ok: false, message: "Product not found." };
 
-  const content = parseProductContent(product.description);
-  const stripKeys = new Set<string>([
-    VITRINA_MERCH_KEYS.trendingCountdown,
-    VITRINA_MERCH_KEYS.heroReview,
-    VITRINA_QUICK_FIX_INFO_KEYS.availability,
-    VITRINA_QUICK_FIX_INFO_KEYS.quality,
-  ]);
-
-  const nextAdditionalInfo = content.additionalInfo.filter(
-    (entry) => !stripKeys.has(entry.key) && !isVitrinaMerchandisingKey(entry.key)
-  );
-
-  const nextDescription = serializeProductContent({
-    ...content,
-    additionalInfo: nextAdditionalInfo,
-  });
+  const reset = computeVitrinaDefaultReset(product);
+  if (!reset.changed) {
+    return { ok: true, message: "Product already matches default Vitrina merchandising." };
+  }
 
   await db
     .update(productsTable)
     .set({
-      jomlaPrice: null,
-      description: nextDescription,
+      jomlaPrice: reset.nextJomlaPrice,
+      description: reset.nextDescription,
     })
     .where(eq(productsTable.id, dbProductId));
 
