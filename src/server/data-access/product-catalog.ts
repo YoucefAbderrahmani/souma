@@ -127,13 +127,17 @@ function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProduct
 function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
   const parsed = parseProductContent(product.description);
   const additional = parsed.additionalInfo;
-  const strip = getStorefrontMerchHeroStripFromAdditionalInfo(additional);
+  const strip =
+    parsed.suppressLiveHeroReviewOverlay ? null : getStorefrontMerchHeroStripFromAdditionalInfo(additional);
   const trending = getVitrinaMerchandisingFromAdditionalInfo(additional).trendingCountdownEndsAt;
-  return {
+  const base = {
     ...product,
     ...(strip ? { heroReviewSnippet: strip } : {}),
     ...(trending ? { trendingCountdownEndsAt: trending.toISOString() } : {}),
   };
+  if (!parsed.suppressLiveHeroReviewOverlay) return base;
+  const { heroReviewSnippet: _h, trendingCountdownEndsAt: _t, ...withoutMerch } = base;
+  return withoutMerch;
 }
 
 async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Product[]> {
@@ -151,7 +155,11 @@ async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Pr
 
 async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Promise<Product[]> {
   const idsWithReviews = products
-    .filter((p) => (p.reviews ?? 0) > 0)
+    .filter((p) => {
+      if ((p.reviews ?? 0) <= 0) return false;
+      const parsed = parseProductContent(p.description);
+      return !parsed.suppressLiveHeroReviewOverlay;
+    })
     .map((p) => Math.trunc(Number(p.id)))
     .filter((id) => Number.isFinite(id) && id > 0);
   if (idsWithReviews.length === 0) return products;
@@ -159,6 +167,10 @@ async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Prom
   const bestById = await getBestProductReviewsForMerchByLocalIds(idsWithReviews);
   return products.map((p) => {
     const id = Math.trunc(Number(p.id));
+    if (parseProductContent(p.description).suppressLiveHeroReviewOverlay) {
+      const { heroReviewSnippet: _omit, trendingCountdownEndsAt: _t, ...rest } = p;
+      return rest;
+    }
     const best = bestById.get(id);
     if (!best) return p;
     return { ...p, heroReviewSnippet: buildHeroReviewSnippetFromVerifiedReview(best) };

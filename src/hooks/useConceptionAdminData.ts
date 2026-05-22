@@ -17,6 +17,7 @@ import {
   removeVitrinaQuickFixAppliedProductId,
 } from "@/lib/vitrina-recommendations-cache";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
+import { clearAllPromoTimerSessionStorage } from "@/lib/product-demo-promo-labels";
 
 export type ConceptionAdminInitialData = {
   overview: ConceptionOverviewDto;
@@ -570,6 +571,7 @@ export function useConceptionAdminData(
       if (!res.ok || body.ok === false) {
         throw new Error(body.message || body.error || "Reset failed");
       }
+      clearAllPromoTimerSessionStorage();
       setState((s) => ({
         ...s,
         actionMessage: body.message ?? "Catalog reset to default Vitrina merchandising.",

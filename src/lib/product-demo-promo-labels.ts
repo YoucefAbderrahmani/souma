@@ -108,3 +108,24 @@ export function getProductPromoPriceRowNonTimerLabels(
 ): readonly ProductPromoLabel[] {
   return getProductPromoPriceRowLabels(product).filter((e) => e.kind !== "timer");
 }
+
+/** Clears sessionStorage countdowns for hardcoded demo promo timers (not logged to Timeline). */
+export function clearAllPromoTimerSessionStorage(): void {
+  if (typeof window === "undefined") return;
+  const keys = new Set<string>();
+  for (const labels of Object.values(PRODUCT_PROMO_LABELS_BY_ID)) {
+    for (const entry of labels) {
+      if (entry.kind === "timer") keys.add(entry.storageKey);
+    }
+  }
+  for (const entry of MX_MASTER_PROMO_LABELS) {
+    if (entry.kind === "timer") keys.add(entry.storageKey);
+  }
+  for (const key of Array.from(keys)) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+  }
+}

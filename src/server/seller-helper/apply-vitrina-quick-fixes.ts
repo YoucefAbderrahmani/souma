@@ -333,11 +333,13 @@ export async function applyVitrinaQuickFixes(
   const priceChanged = nextJomlaPrice !== product.jomlaPrice;
 
   if (contentChanged) {
-    nextDescription = serializeProductContent({
+    const nextContent = {
       ...content,
       colors: nextColors,
       additionalInfo: nextAdditionalInfo,
-    });
+    };
+    delete nextContent.suppressLiveHeroReviewOverlay;
+    nextDescription = serializeProductContent(nextContent);
   }
 
   const storefrontDataChanged = contentChanged || priceChanged;

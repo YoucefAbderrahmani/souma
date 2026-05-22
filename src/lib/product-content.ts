@@ -37,6 +37,8 @@ export type ProductStructuredContent = {
   sizes?: ProductSizeOption[];
   specifications: ProductSpec[];
   additionalInfo: ProductAdditionalInfo[];
+  /** When true, catalog skips auto-injecting live review hero overlays after a Vitrina reset. */
+  suppressLiveHeroReviewOverlay?: boolean;
 };
 
 const EMPTY_CONTENT_DEFAULTS = {
@@ -198,6 +200,7 @@ export function parseProductContent(raw?: string | null): ProductStructuredConte
             }))
             .filter((item) => item.key && item.value)
         : [],
+      suppressLiveHeroReviewOverlay: Boolean(parsed.suppressLiveHeroReviewOverlay),
     };
   } catch {
     return {

@@ -1,21 +1,55 @@
 import { eq } from "drizzle-orm";
-import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import {
-  VITRINA_MERCH_KEYS,
-  VITRINA_QUICK_FIX_INFO_KEYS,
-  isVitrinaMerchandisingKey,
+  additionalInfoHasVitrinaHeroOrStripContent,
+  isVitrinaQuickFixAdditionalInfoEntry,
 } from "@/lib/vitrina-merchandising";
+import {
+  isStructuredProductContent,
+  parseProductContent,
+  serializeProductContent,
+  type ProductStructuredContent,
+} from "@/lib/product-content";
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { clearVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 
-const STRIP_KEYS = new Set<string>([
-  VITRINA_MERCH_KEYS.trendingCountdown,
-  VITRINA_MERCH_KEYS.heroReview,
-  VITRINA_QUICK_FIX_INFO_KEYS.availability,
-  VITRINA_QUICK_FIX_INFO_KEYS.quality,
-]);
+export function stripVitrinaQuickFixFromStructuredContent(
+  content: ProductStructuredContent,
+  options?: { suppressLiveHeroAfterStrip?: boolean }
+): { content: ProductStructuredContent; contentChanged: boolean } {
+  const nextAdditionalInfo = content.additionalInfo.filter(
+    (entry) => !isVitrinaQuickFixAdditionalInfoEntry(entry)
+  );
+
+  const hadVitrinaEntries = nextAdditionalInfo.length !== content.additionalInfo.length;
+  const hadHeroStrip = additionalInfoHasVitrinaHeroOrStripContent(content.additionalInfo);
+  const suppressLiveHero =
+    options?.suppressLiveHeroAfterStrip !== false &&
+    (hadHeroStrip || Boolean(content.suppressLiveHeroReviewOverlay));
+
+  const contentChanged =
+    hadVitrinaEntries ||
+    (suppressLiveHero && !content.suppressLiveHeroReviewOverlay) ||
+    (content.suppressLiveHeroReviewOverlay && !suppressLiveHero);
+
+  if (!contentChanged) {
+    return { content, contentChanged: false };
+  }
+
+  const next: ProductStructuredContent = {
+    ...content,
+    additionalInfo: nextAdditionalInfo,
+  };
+
+  if (suppressLiveHero) {
+    next.suppressLiveHeroReviewOverlay = true;
+  } else {
+    delete next.suppressLiveHeroReviewOverlay;
+  }
+
+  return { content: next, contentChanged: true };
+}
 
 export function computeVitrinaDefaultReset(product: {
   description: string | null;
@@ -25,18 +59,24 @@ export function computeVitrinaDefaultReset(product: {
   nextJomlaPrice: null;
   changed: boolean;
 } {
-  const content = parseProductContent(product.description);
-  const nextAdditionalInfo = content.additionalInfo.filter(
-    (entry) => !STRIP_KEYS.has(entry.key) && !isVitrinaMerchandisingKey(entry.key)
-  );
+  const raw = product.description ?? "";
+  const jomlaChanged = product.jomlaPrice != null;
 
-  const nextDescription = serializeProductContent({
-    ...content,
-    additionalInfo: nextAdditionalInfo,
+  if (!isStructuredProductContent(raw)) {
+    return {
+      nextDescription: raw,
+      nextJomlaPrice: null,
+      changed: jomlaChanged,
+    };
+  }
+
+  const parsed = parseProductContent(raw);
+  const { content, contentChanged } = stripVitrinaQuickFixFromStructuredContent(parsed, {
+    suppressLiveHeroAfterStrip: true,
   });
 
-  const changed =
-    product.jomlaPrice != null || nextDescription !== (product.description ?? "");
+  const nextDescription = serializeProductContent(content);
+  const changed = jomlaChanged || contentChanged || nextDescription !== raw;
 
   return {
     nextDescription,
@@ -84,6 +124,6 @@ export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
     message:
       updatedCount === 0 ?
         "No Vitrina quick-fix fields were found on catalogue products."
-      : `Reset ${updatedCount} product${updatedCount === 1 ? "" : "s"} to default Vitrina merchandising.`,
+      : `Reset ${updatedCount} product${updatedCount === 1 ? "" : "s"}: removed promo prices, countdowns, review/quality strips, and related overlays.`,
   };
 }

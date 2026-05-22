@@ -21,7 +21,44 @@ function truncateStorefrontStrip(text: string): string {
 }
 
 export function isVitrinaMerchandisingKey(key: string): boolean {
-  return key === VITRINA_MERCH_KEYS.trendingCountdown || key === VITRINA_MERCH_KEYS.heroReview;
+  const normalized = key.trim().toLowerCase();
+  return (
+    normalized === VITRINA_MERCH_KEYS.trendingCountdown.toLowerCase() ||
+    normalized === VITRINA_MERCH_KEYS.heroReview.toLowerCase() ||
+    normalized.startsWith("merch:")
+  );
+}
+
+/** True when this additionalInfo row was written by Vitrina quick fixes (or equivalent merch copy). */
+export function isVitrinaQuickFixAdditionalInfoEntry(entry: ProductAdditionalInfo): boolean {
+  const key = entry.key.trim();
+  const keyLower = key.toLowerCase();
+  const value = entry.value.trim();
+
+  if (isVitrinaMerchandisingKey(key)) return true;
+  if (keyLower === VITRINA_QUICK_FIX_INFO_KEYS.quality.toLowerCase()) return true;
+  if (keyLower === VITRINA_QUICK_FIX_INFO_KEYS.availability.toLowerCase()) return true;
+
+  if (readTrendingCountdownEnd(value)) return true;
+  if (/^⭐\s*\d\s*\/\s*5/i.test(value)) return true;
+  if (/^in stock\s*—/i.test(value)) return true;
+  if (/customer rating\s+\d/i.test(value) || /check customer reviews/i.test(value)) return true;
+
+  return false;
+}
+
+export function additionalInfoHasVitrinaHeroOrStripContent(
+  additionalInfo: ProductAdditionalInfo[]
+): boolean {
+  return additionalInfo.some((entry) => {
+    if (!isVitrinaQuickFixAdditionalInfoEntry(entry)) return false;
+    const keyLower = entry.key.trim().toLowerCase();
+    if (keyLower === VITRINA_MERCH_KEYS.heroReview.toLowerCase()) return true;
+    if (keyLower === VITRINA_QUICK_FIX_INFO_KEYS.quality.toLowerCase()) return true;
+    if (keyLower === VITRINA_QUICK_FIX_INFO_KEYS.availability.toLowerCase()) return true;
+    if (/^⭐\s*\d\s*\/\s*5/i.test(entry.value.trim())) return true;
+    return false;
+  });
 }
 
 /** One-line hero strip from a real verified storefront review (no scripted marketing copy). */
