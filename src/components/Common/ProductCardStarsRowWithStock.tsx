@@ -12,14 +12,20 @@ export function ProductCardStarsRowWithStock({
   stars,
   trailing,
   className,
+  /** When the parent already polls inventory, pass the resolved count to avoid a duplicate request. */
+  resolvedInstock,
 }: {
   product: Pick<Product, "id" | "instock">;
   stars: ReactNode;
   trailing: ReactNode;
   className?: string;
+  resolvedInstock?: number | null;
 }) {
-  const { instock: liveInstock } = useLiveProductInventory(product.id, product.instock ?? null);
-  const instock = liveInstock ?? product.instock;
+  const useParentStock = resolvedInstock !== undefined;
+  const { instock: liveInstock } = useLiveProductInventory(product.id, product.instock ?? null, {
+    enabled: !useParentStock,
+  });
+  const instock = useParentStock ? resolvedInstock : (liveInstock ?? product.instock);
   const hasStock = productAvailableQuantity({ instock }) !== null;
 
   return (

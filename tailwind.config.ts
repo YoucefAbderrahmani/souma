@@ -310,6 +310,12 @@ const config: Config = {
 				from: { opacity: '0', transform: 'translateY(20px)' },
 				to: { opacity: '1', transform: 'translateY(0)' },
 			},
+			'wishlist-pop': {
+				'0%': { transform: 'scale(1)' },
+				'35%': { transform: 'scale(1.18)' },
+				'65%': { transform: 'scale(0.94)' },
+				'100%': { transform: 'scale(1)' },
+			},
 		},
 		animation: {
   			'conception-aurora': 'conception-aurora 16s ease-in-out infinite',
@@ -319,6 +325,7 @@ const config: Config = {
   			'conception-grid': 'conception-grid 10s ease-in-out infinite',
 			'conception-chart-line': 'conception-chart-line 2.8s ease-in-out infinite',
 			'ai-rec-slide-in': 'ai-rec-slide-in 0.5s ease forwards',
+			'wishlist-pop': 'wishlist-pop 0.52s ease-out',
 		},
   		boxShadow: {
   			'1': '0px 1px 2px 0px rgba(166, 175, 195, 0.25)',

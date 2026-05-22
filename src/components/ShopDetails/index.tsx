@@ -23,6 +23,7 @@ import { resolveTrackingProductId } from "@/lib/product-page-link";
 import { cn } from "@/lib/utils";
 import { HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX } from "@/lib/product-heatmap-surface";
 import {
+  formatProductAvailableQuantity,
   productAvailableQuantity,
 } from "@/components/Common/ProductAvailableQuantity";
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
@@ -239,6 +240,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   const availableQuantity = liveInstock ?? productAvailableQuantity(product);
   const maxOrderQuantity =
     availableQuantity != null ? Math.max(availableQuantity, 0) : null;
+  const availabilityLabel =
+    availableQuantity != null ?
+      formatProductAvailableQuantity(Math.max(0, Math.trunc(availableQuantity)))
+    : "Stock status unavailable";
 
   useEffect(() => {
     if (!hasDisplayableProduct(product)) return;
@@ -569,6 +574,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
 
                   <ProductCardStarsRowWithStock
                     product={{ id: product.id, instock: product.instock }}
+                    resolvedInstock={availableQuantity}
                     className="mb-4.5"
                     stars={<ProductRatingStars rating={product.averageRating} size={18} />}
                     trailing={
@@ -998,7 +1004,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
             </>
           : null}
           {!embed ?
-            <ProductPageAssistant product={product} availabilityLabel="In Stock" />
+            <ProductPageAssistant product={product} availabilityLabel={availabilityLabel} />
           : null}
         </>
       )}
