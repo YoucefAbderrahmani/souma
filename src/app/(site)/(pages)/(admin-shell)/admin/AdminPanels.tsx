@@ -10,6 +10,7 @@ import {
 import { InstantPanel } from "@/components/ui/InstantPanel";
 import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
+import AdminDeleteProductButton from "@/components/Admin/AdminDeleteProductButton";
 import EditProductModal from "./EditProductModal";
 import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
@@ -783,13 +784,22 @@ export default function AdminPanels({
                         <td className="py-3 pr-4">{p.instock}</td>
                         <td className="py-3 pr-4">{p.rating}</td>
                         <td className="py-3">
-                          <button
-                            type="button"
-                            onClick={() => setEditingProduct(p)}
-                            className="rounded-md border border-gray-3 px-3 py-1 text-xs font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex flex-wrap items-start gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingProduct(p)}
+                              className="rounded-md border border-gray-3 px-3 py-1 text-xs font-medium text-dark hover:border-orange hover:text-orange-dark"
+                            >
+                              Edit
+                            </button>
+                            <AdminDeleteProductButton
+                              productId={p.id}
+                              productTitle={p.title}
+                              onDeleted={() => {
+                                if (editingProduct?.id === p.id) setEditingProduct(null);
+                              }}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))

@@ -11,6 +11,8 @@ export type Product = {
   jomlaPrice?: number;
   category: string;
   id: number;
+  /** Ms since epoch from admin slug suffix; used to sort New Arrivals newest-first. */
+  catalogAddedAt?: number;
   /** Units available to sell (from catalog `instock`). */
   instock?: number;
   imgs?: {

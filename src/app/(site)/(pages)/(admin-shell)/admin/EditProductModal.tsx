@@ -8,6 +8,7 @@ import { updateProductFullAction, type UpdateProductState } from "./actions";
 import AdminColorVariantsPanel, {
   newAdminColorFormRow,
 } from "@/components/Admin/AdminColorVariantsPanel";
+import AdminDeleteProductButton from "@/components/Admin/AdminDeleteProductButton";
 import {
   pf,
   productFormSectionIds,
@@ -586,13 +587,20 @@ export default function EditProductModal({ product, onClose }: Props) {
             ) : null}
           </div>
 
-          <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-gray-3 bg-white px-4 py-4 sm:px-6">
-            <button type="button" onClick={onClose} className={pf.btnSecondary}>
-              Cancel
-            </button>
-            <button type="submit" disabled={isUpdating} className={pf.btnPrimary}>
-              {isUpdating ? "Saving…" : "Save changes"}
-            </button>
+          <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-3 bg-white px-4 py-4 sm:px-6">
+            <AdminDeleteProductButton
+              productId={product.id}
+              productTitle={product.title}
+              onDeleted={onClose}
+            />
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button type="button" onClick={onClose} className={pf.btnSecondary}>
+                Cancel
+              </button>
+              <button type="submit" disabled={isUpdating} className={pf.btnPrimary}>
+                {isUpdating ? "Saving…" : "Save changes"}
+              </button>
+            </div>
           </footer>
         </form>
       </div>

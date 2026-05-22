@@ -6,10 +6,11 @@ import ProductItem from "@/components/Common/ProductItem";
 import type { Product } from "@/types/product";
 import { usePriceMode } from "@/app/context/PriceModeContext";
 import { getVisibleProductsForMode } from "@/lib/price-mode";
+import { sortProductsNewestFirst } from "@/lib/catalog-sort";
 
 const NewArrival = ({ products }: { products: Product[] }) => {
   const { mode } = usePriceMode();
-  const visibleProducts = getVisibleProductsForMode(products, mode);
+  const visibleProducts = sortProductsNewestFirst(getVisibleProductsForMode(products, mode));
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">

@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { catalogAddedAtFromSlug } from "@/lib/catalog-sort";
 import { db } from "@/server/db";
 import { categoryTable, productsTable } from "@/server/db/schema";
 import categoryData from "@/components/Home/Categories/categoryData";
@@ -110,10 +111,12 @@ function dedupeProductsByTitle(products: Product[]): Product[] {
 
 /** Static seed + DB products: same title only once; database version replaces the static card. */
 function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProducts: Product[]): Product[] {
-  const dbDeduped = dedupeProductsByTitle(dbProducts);
+  const dbDeduped = dedupeProductsByTitle(dbProducts).sort(
+    (a, b) => (b.catalogAddedAt ?? 0) - (a.catalogAddedAt ?? 0)
+  );
   const dbTitles = new Set(dbDeduped.map((p) => normalize(p.title)));
   const staticOnly = staticProducts.filter((p) => !dbTitles.has(normalize(p.title)));
-  return [...staticOnly, ...dbDeduped];
+  return [...dbDeduped, ...staticOnly];
 }
 
 function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
@@ -162,6 +165,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
     const dbProducts = await db
       .select({
         id: productsTable.id,
+        slug: productsTable.slug,
         title: productsTable.title,
         description: productsTable.description,
         price: productsTable.price,
@@ -178,6 +182,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       const imgs = buildCatalogProductImages(item.mainimage, item.description);
       return {
         id: resolveStorefrontProductId(item.title, item.id),
+        catalogAddedAt: catalogAddedAtFromSlug(item.slug),
         title: item.title,
         description: item.description,
         reviews: 0,
