@@ -20,6 +20,7 @@ import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
 import type { Product } from "@/types/product";
 import { resolveTrackingProductId } from "@/lib/product-page-link";
+import { cn } from "@/lib/utils";
 import { HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX } from "@/lib/product-heatmap-surface";
 import {
   productAvailableQuantity,
@@ -665,18 +666,31 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                         <div className="min-w-[65px]">
                           <h4 className="font-medium text-dark">Color:</h4>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2.5">
-                          {colorOptions.map((color, key) => (
-                            <label key={key} htmlFor={`color-${color.name}-${key}`} className="cursor-pointer select-none flex items-center">
-                              <div className="relative">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {colorOptions.map((color, key) => {
+                            const selected = activeColor === color.name;
+                            const outOfStock = color.inStock === false;
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={`color-${color.name}-${key}`}
+                                className={cn(
+                                  "cursor-pointer select-none rounded-md border px-3 py-1.5 text-custom-sm font-medium transition",
+                                  selected ?
+                                    "border-blue bg-blue/[0.06] text-blue"
+                                  : "border-gray-3 bg-white text-dark hover:border-gray-4",
+                                  outOfStock && "cursor-not-allowed opacity-50"
+                                )}
+                              >
                                 <input
                                   type="radio"
                                   name="color"
                                   id={`color-${color.name}-${key}`}
                                   className="sr-only"
-                                  checked={activeColor === color.name}
+                                  checked={selected}
+                                  disabled={outOfStock}
                                   onChange={() => {
-                                    if (color.inStock === false) {
+                                    if (outOfStock) {
                                       trackProductAnalytics("pa_select_option", {
                                         blocked: true,
                                         axis: "color",
@@ -691,17 +705,10 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                                     }
                                   }}
                                 />
-                                <div
-                                  className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${
-                                    activeColor === color.name ? "border" : ""
-                                  }`}
-                                  style={{ borderColor: color.name }}
-                                >
-                                  <span className="block w-3 h-3 rounded-full" style={{ backgroundColor: color.name }} />
-                                </div>
-                              </div>
-                            </label>
-                          ))}
+                                {color.name}
+                              </label>
+                            );
+                          })}
                         </div>
                       </div>
 
