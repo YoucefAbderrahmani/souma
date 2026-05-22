@@ -225,9 +225,7 @@ export function VitrinaPromoCountdown({
           {prefix.trim()}
         </span>
       : null}
-      <span className="inline-flex items-center rounded-md border border-orange/25 bg-orange/[0.1] px-2 py-0.5 sm:px-2.5 sm:py-1">
-        <span className="text-[11px] font-bold tabular-nums text-orange sm:text-xs">{label}</span>
-      </span>
+      <span className="text-[11px] font-bold tabular-nums text-orange sm:text-xs">{label}</span>
     </span>
   );
 }
