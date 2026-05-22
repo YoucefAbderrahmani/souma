@@ -29,6 +29,7 @@ import { ProductPageHeatmap } from "./ProductPageHeatmap";
 import AlertRuleSettingsModal from "./AlertRuleSettingsModal";
 import { AiRecommendationCard } from "./AiRecommendationCard";
 import { mapConceptionRecommendationToCard } from "./ai-recommendation-card-utils";
+import { SellerHelperInsightCard, insightActionBtnSecondary } from "./SellerHelperInsightCard";
 import type { SellerHelperNavItem } from "./nav";
 import {
   sellerGhostButton,
@@ -542,20 +543,6 @@ function AlertSummaryIconBadge({ kind }: { kind: "alert" | "clock" | "check" | "
   );
 }
 
-function alertSeverityPill(tier: ConceptionAlertDto["severity"]) {
-  if (tier === "critical") return "bg-red text-white";
-  if (tier === "high") return "bg-orange text-white";
-  if (tier === "medium") return "bg-orange/15 text-dark";
-  return "bg-gray-5 text-white";
-}
-
-function alertIncidentCardSurface(tier: ConceptionAlertDto["severity"]) {
-  if (tier === "critical") return "border-l-4 border-l-red bg-red-light-6";
-  if (tier === "high") return "border-l-4 border-l-orange bg-orange/10";
-  if (tier === "medium") return "border-l-4 border-l-orange/50 bg-orange/10";
-  return "border-l-4 border-l-gray-4 bg-gray-1";
-}
-
 function alertDtoToIncident(alert: ConceptionAlertDto) {
   const severity =
     alert.severity === "critical" ? "CRITICAL"
@@ -926,78 +913,72 @@ export function AlertsContent({
           </div>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 flex flex-col gap-3">
           {incidents.length === 0 ?
             <div className="rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-6 text-center text-custom-sm text-dark-4">
               No active alerts right now.
             </div>
-          : incidents.map((incident) => {
+          : incidents.map((incident, index) => {
             const activeStatus = incident.statusKind === "active";
             return (
-              <article
+              <SellerHelperInsightCard
                 key={incident.key}
-                className={cn("overflow-hidden rounded-lg border border-gray-3 p-4", alertIncidentCardSurface(incident.tier))}
-              >
-                <div className="flex flex-wrap items-center gap-2">
+                tier={incident.tier}
+                priorityLabel={incident.severity}
+                title={incident.title}
+                body={incident.description}
+                recommendation={incident.detail || undefined}
+                recommendationLabel="Detail"
+                extraBadges={
                   <span
                     className={cn(
-                      "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]",
-                      alertSeverityPill(incident.tier)
-                    )}
-                  >
-                    {incident.severity}
-                  </span>
-                  <span
-                    className={cn(
-                      "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]",
+                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                       activeStatus ?
-                        "border border-red bg-white text-red-dark"
-                      : "border border-gray-4 bg-white text-dark-4"
+                        "border-red bg-white text-red-dark"
+                      : "border-gray-4 bg-white text-dark-4"
                     )}
                   >
                     {incident.status}
                   </span>
-                </div>
-                <h5 className="mt-2 text-base font-semibold text-dark">{incident.title}</h5>
-                <p className="mt-1 text-custom-sm text-dark-3">{incident.description}</p>
-                <p className="mt-1 text-custom-sm text-dark-4">{incident.detail}</p>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dark-4">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" aria-hidden />
-                    {incident.timeAgo}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" aria-hidden />
-                    {incident.affected}
-                  </span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={detailLoading && detailAlert?.id === incident.key}
-                    onClick={() => void analyzeIncident(incident.key)}
-                    className={sellerPrimaryButton}
-                  >
-                    {detailLoading && detailAlert?.id === incident.key ? "Analyzing…" : "Analyze in detail"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyKey === incident.key}
-                    onClick={() => void dismissIncident(incident.key, "resolved")}
-                    className={sellerSecondaryButton}
-                  >
-                    Mark as resolved
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyKey === incident.key}
-                    onClick={() => void dismissIncident(incident.key, "ignored")}
-                    className={sellerGhostButton}
-                  >
-                    Dismiss temporarily
-                  </button>
-                </div>
-              </article>
+                }
+                meta={[
+                  { icon: <Clock className="h-3.5 w-3.5" aria-hidden />, text: incident.timeAgo },
+                  { icon: <Users className="h-3.5 w-3.5" aria-hidden />, text: incident.affected },
+                ]}
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      disabled={detailLoading && detailAlert?.id === incident.key}
+                      onClick={() => void analyzeIncident(incident.key)}
+                      className={cn(
+                        "inline-flex w-full items-center justify-center rounded-lg px-3 py-2",
+                        "bg-orange text-xs font-bold uppercase tracking-wide text-white",
+                        "transition-colors hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60"
+                      )}
+                    >
+                      {detailLoading && detailAlert?.id === incident.key ? "Analyzing…" : "Analyze in detail"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyKey === incident.key}
+                      onClick={() => void dismissIncident(incident.key, "resolved")}
+                      className={insightActionBtnSecondary}
+                    >
+                      Mark as resolved
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyKey === incident.key}
+                      onClick={() => void dismissIncident(incident.key, "ignored")}
+                      className={insightActionBtnSecondary}
+                    >
+                      Dismiss temporarily
+                    </button>
+                  </>
+                }
+                animationIndex={index}
+              />
             );
           })}
         </div>

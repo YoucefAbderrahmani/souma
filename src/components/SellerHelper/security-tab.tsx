@@ -6,18 +6,16 @@ import type { ConceptionOverviewDto } from "@/types/conception-admin";
 import { cn } from "@/lib/utils";
 import { ProgressBar, ThreatActivityChart } from "./charts";
 import SecurityQuickFixConfirmModal from "./SecurityQuickFixConfirmModal";
+import { SellerHelperInsightCard } from "./SellerHelperInsightCard";
+import { securityToneToPriority } from "./ai-recommendation-card-utils";
 import {
   sellerAccentStrip,
   sellerGhostButton,
   sellerHelperGrid,
   sellerHelperStack,
-  sellerInsightBadge,
-  sellerInsightRow,
-  sellerInsightTone,
   sellerPanel,
   sellerPanelPadding,
   sellerPlaceholder,
-  sellerPrimaryButton,
   sellerTable,
   sellerTableHead,
   sellerTableRow,
@@ -53,18 +51,6 @@ function Panel({
 
 function formatCount(value: number) {
   return new Intl.NumberFormat("fr-FR").format(value);
-}
-
-function incidentBadgeClass(tone: "risk" | "attention" | "guidance") {
-  if (tone === "risk") return sellerInsightBadge.risk;
-  if (tone === "attention") return sellerInsightBadge.attention;
-  return sellerInsightBadge.guidance;
-}
-
-function incidentRowClass(tone: "risk" | "attention" | "guidance") {
-  if (tone === "risk") return sellerInsightTone.risk;
-  if (tone === "attention") return sellerInsightTone.attention;
-  return sellerInsightTone.guidance;
 }
 
 type QuickFixTarget =
@@ -189,38 +175,41 @@ export function SecurityTabContent({
           <SectionHeading title="Activités suspectes détectées" icon={AlertTriangle} />
           {incidents.length === 0 ?
             <div className={cn(sellerPlaceholder, "mt-4")}>Aucune activité suspecte détectée.</div>
-          : <div className="mt-4 space-y-3">
-              {incidents.map((incident) => (
-                <div
+          : <div className="mt-4 flex flex-col gap-3">
+              {incidents.map((incident, index) => (
+                <SellerHelperInsightCard
                   key={incident.id}
-                  className={cn(sellerInsightRow, incidentRowClass(incident.statusTone))}
-                >
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={incidentBadgeClass(incident.statusTone)}>{incident.statusLabel}</span>
-                      <span className="text-xs font-semibold uppercase tracking-wide text-dark-4">
-                        {incident.category}
-                      </span>
-                      <span className="text-xs font-medium text-dark-4">
-                        Score de risque {incident.riskScore}/100
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-dark">{incident.title}</p>
-                    <p className="text-custom-sm text-dark-3">{incident.detail}</p>
-                    <p className="text-xs text-dark-4">
-                      {incident.displayIdentity} • {incident.location} • {incident.timeAgoLabel}
-                    </p>
-                  </div>
-                  {(incident.quickFixes?.length ?? 0) > 0 ?
-                    <button
-                      type="button"
-                      className={sellerPrimaryButton}
-                      onClick={() => setQuickFixTarget({ kind: "incident", item: incident })}
-                    >
-                      Action rapide
-                    </button>
-                  : null}
-                </div>
+                  tier={securityToneToPriority(incident.statusTone)}
+                  priorityLabel={incident.statusLabel}
+                  title={incident.title}
+                  body={incident.detail}
+                  extraBadges={
+                    <span className="rounded-full border border-gray-3 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark-4">
+                      {incident.category} · {incident.riskScore}/100
+                    </span>
+                  }
+                  meta={[
+                    { text: incident.displayIdentity },
+                    { text: incident.location },
+                    { text: incident.timeAgoLabel },
+                  ]}
+                  actions={
+                    (incident.quickFixes?.length ?? 0) > 0 ?
+                      <button
+                        type="button"
+                        className={cn(
+                          "inline-flex w-full items-center justify-center rounded-lg px-3 py-2",
+                          "bg-orange text-xs font-bold uppercase tracking-wide text-white",
+                          "transition-colors hover:bg-orange-dark"
+                        )}
+                        onClick={() => setQuickFixTarget({ kind: "incident", item: incident })}
+                      >
+                        Action rapide
+                      </button>
+                    : undefined
+                  }
+                  animationIndex={index}
+                />
               ))}
             </div>
           }

@@ -17,6 +17,8 @@ import { UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
 import { SecurityTabContent } from "./security-tab";
 import { SellerHelperNav } from "./SellerHelperNav";
+import { SellerHelperInsightCard } from "./SellerHelperInsightCard";
+import { priorityFromLabel } from "./ai-recommendation-card-utils";
 import type { SellerHelperNavItem } from "./nav";
 import { useInstantTab } from "@/hooks/useInstantTab";
 import { InstantPanel } from "@/components/ui/InstantPanel";
@@ -32,10 +34,6 @@ import {
   sellerPrimaryButton,
   sellerSecondaryButton,
   sellerHelperStack,
-  sellerInsightBadge,
-  sellerInsightRow,
-  sellerInsightShell,
-  sellerInsightTone,
   sellerTable,
   sellerTableHead,
   sellerTableRow,
@@ -278,17 +276,17 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
             title="Detected Friction Points"
             icon={AlertTriangle}
           />
-          <div className="mt-4 space-y-3">
-            {friction.map((item) => (
-              <div key={item.title} className={cn(sellerInsightShell, sellerInsightTone.risk)}>
-                <p className={cn(sellerInsightBadge.risk, "w-fit")}>{item.priority}</p>
-                <p className="mt-2 text-base font-semibold text-dark">{item.title}</p>
-                <p className="mt-2 text-custom-sm text-dark-4">{item.body}</p>
-                <div className={cn(sellerInsightRow, sellerInsightTone.info, "mt-3")}>
-                  <span className={sellerInsightBadge.info}>Recommendation</span>
-                  <p className="min-w-0 flex-1 text-custom-sm text-dark-3">{item.reco}</p>
-                </div>
-              </div>
+          <div className="flex flex-col gap-3">
+            {friction.map((item, index) => (
+              <SellerHelperInsightCard
+                key={item.title}
+                tier={priorityFromLabel(item.priority)}
+                priorityLabel={item.priority}
+                title={item.title}
+                body={item.body}
+                recommendation={item.reco}
+                animationIndex={index}
+              />
             ))}
           </div>
         </Panel>

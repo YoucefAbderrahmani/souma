@@ -98,12 +98,38 @@ export function implementationTimeClass(tier: ConceptionRecommendationDto["prior
   return "border-l-gray-4 bg-gray-1";
 }
 
+export const recommendationPanelClass =
+  "rounded-lg border border-gray-2 bg-gray-1/60 p-3 sm:p-3.5";
+
+export const sellerHelperActionBtnSecondary = cn(
+  "inline-flex min-h-[34px] w-full items-center justify-center rounded-lg border border-gray-3 bg-white px-2.5 py-1.5",
+  "text-xs font-semibold transition-colors duration-150",
+  "hover:border-orange hover:bg-orange/5 hover:text-orange",
+  "disabled:cursor-not-allowed disabled:opacity-60"
+);
+
 export function aiRecommendationCardRootClass(_tier: ConceptionRecommendationDto["priority"]) {
   return cn(
     "group relative flex w-full flex-col overflow-hidden rounded-xl border border-gray-3 bg-white shadow-1",
     "transition-all duration-250 ease-out hover:border-gray-4 hover:shadow-md",
     "motion-safe:animate-ai-rec-slide-in motion-safe:opacity-0"
   );
+}
+
+export function priorityFromLabel(label: string): ConceptionRecommendationDto["priority"] {
+  const upper = label.toUpperCase();
+  if (upper.includes("CRITICAL")) return "critical";
+  if (upper.includes("HIGH")) return "high";
+  if (upper.includes("MEDIUM")) return "medium";
+  return "low";
+}
+
+export function securityToneToPriority(
+  tone: "risk" | "attention" | "guidance"
+): ConceptionRecommendationDto["priority"] {
+  if (tone === "risk") return "critical";
+  if (tone === "attention") return "high";
+  return "medium";
 }
 
 export function aiRecAnimationStyle(animationIndex: number): { animationDelay: string } {
