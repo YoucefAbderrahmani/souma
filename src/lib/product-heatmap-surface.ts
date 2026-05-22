@@ -6,18 +6,41 @@ function clampPct(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+/** Paint box shared by pointer tracking and heatmap overlay (border-box of the surface). */
+export function getProductHeatmapSurfacePaintSize(surface: HTMLElement) {
+  const rect = surface.getBoundingClientRect();
+  return {
+    width: Math.max(1, Math.round(rect.width)),
+    height: Math.max(1, Math.round(rect.height)),
+  };
+}
+
 export function productHeatmapPointerPct(surface: HTMLElement, event: MouseEvent) {
   const rect = surface.getBoundingClientRect();
-  const width = Math.max(rect.width, surface.offsetWidth, 1);
-  const height = Math.max(rect.height, surface.offsetHeight, 1);
+  const { width, height } = getProductHeatmapSurfacePaintSize(surface);
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
 
   return {
     x_pct: Number(clampPct((100 * x) / width).toFixed(3)),
     y_pct: Number(clampPct((100 * y) / height).toFixed(3)),
-    surface_width: Math.round(width),
-    surface_height: Math.round(height),
+    surface_width: width,
+    surface_height: height,
+  };
+}
+
+/** Map stored surface percentages to overlay pixel coordinates. */
+export function heatmapPctToPixel(
+  xPct: number,
+  yPct: number,
+  paintWidth: number,
+  paintHeight: number
+) {
+  const width = Math.max(1, Math.round(paintWidth));
+  const height = Math.max(1, Math.round(paintHeight));
+  return {
+    x: Math.min(width - 1, Math.max(0, Math.round((xPct / 100) * width))),
+    y: Math.min(height - 1, Math.max(0, Math.round((yPct / 100) * height))),
   };
 }
 
@@ -73,8 +96,7 @@ export function measureProductHeatmapSurface(
   const scrollX = view?.scrollX ?? docEl.scrollLeft ?? body?.scrollLeft ?? 0;
   const scrollY = view?.scrollY ?? docEl.scrollTop ?? body?.scrollTop ?? 0;
   const rect = surface.getBoundingClientRect();
-  const width = Math.max(rect.width, 1);
-  const height = Math.max(rect.height, 1);
+  const { width, height } = getProductHeatmapSurfacePaintSize(surface);
   const viewportWidth =
     options?.viewportWidth ??
     Math.max(view?.innerWidth ?? 0, HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX, width, 1);
@@ -110,6 +132,7 @@ export function isProductHeatmapPreviewViewportReady(doc: Document) {
 export function measureProductHeatmapPreviewSurface(
   doc: Document
 ): ProductHeatmapSurfaceMeasure | null {
+  resetProductHeatmapPreviewWindow(doc);
   if (!isProductHeatmapPreviewViewportReady(doc)) return null;
 
   const innerWidth = Math.max(doc.defaultView?.innerWidth ?? 0, HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX);
@@ -152,7 +175,7 @@ export function mergeProductHeatmapPreviewLayout(
       height: Math.max(current.height, measured.height),
       offsetLeft,
       offsetTop,
-      documentWidth: HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
+      documentWidth: Math.max(current.documentWidth, measured.documentWidth),
       documentHeight: Math.max(current.documentHeight, measured.documentHeight),
     },
     locked: true,

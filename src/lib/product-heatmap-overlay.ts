@@ -1,5 +1,8 @@
 import type { ConceptionHeatmapDetailDto } from "@/types/conception-heatmap";
-import { PRODUCT_HEATMAP_SURFACE_ATTR } from "@/lib/product-heatmap-surface";
+import {
+  getProductHeatmapSurfacePaintSize,
+  PRODUCT_HEATMAP_SURFACE_ATTR,
+} from "@/lib/product-heatmap-surface";
 import {
   createGaussianHeatmapRenderer,
   type GaussianHeatmapRenderer,
@@ -202,8 +205,11 @@ export function syncProductHeatmapOverlay(
   };
 
   const draw = () => {
-    const width = Math.max(surface.offsetWidth, surface.getBoundingClientRect().width, 1);
-    const height = Math.max(surface.offsetHeight, surface.getBoundingClientRect().height, 1);
+    const { width, height } = getProductHeatmapSurfacePaintSize(surface);
+    if (mountHost) {
+      mountHost.style.width = `${width}px`;
+      mountHost.style.height = `${height}px`;
+    }
     void ensureRenderer().then((instance) => {
       if (!instance) return;
       instance.repaint(heatmap, width, height);

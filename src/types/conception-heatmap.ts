@@ -13,6 +13,10 @@ export type ConceptionHeatmapPageOption = {
 export type ConceptionHeatmapCell = {
   x: number;
   y: number;
+  /** Average pointer X on the product surface (0–100%), matches tracking `x_pct`. */
+  xPct?: number;
+  /** Average pointer Y on the product surface (0–100%), matches tracking `y_pct`. */
+  yPct?: number;
   count: number;
   intensity: number;
 };

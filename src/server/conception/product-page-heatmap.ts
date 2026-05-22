@@ -15,7 +15,13 @@ export const HEATMAP_GRID_WIDTH = 48;
 export const HEATMAP_GRID_HEIGHT = 72;
 const DEFAULT_WINDOW_DAYS = 7;
 
-type BucketCounts = Map<string, number>;
+type BucketStat = {
+  count: number;
+  sumXpct: number;
+  sumYpct: number;
+};
+
+type BucketCounts = Map<string, BucketStat>;
 
 function bucketKey(x: number, y: number) {
   return `${x}:${y}`;
@@ -33,8 +39,22 @@ function pctToBucket(xPct: number, yPct: number) {
 }
 
 function addBucket(buckets: BucketCounts, x: number, y: number, weight = 1) {
+  const cellW = 100 / HEATMAP_GRID_WIDTH;
+  const cellH = 100 / HEATMAP_GRID_HEIGHT;
+  const xPct = (x + 0.5) * cellW;
+  const yPct = (y + 0.5) * cellH;
+  addPointerBucket(buckets, xPct, yPct, weight);
+}
+
+function addPointerBucket(buckets: BucketCounts, xPct: number, yPct: number, weight = 1) {
+  const { x, y } = pctToBucket(xPct, yPct);
   const key = bucketKey(x, y);
-  buckets.set(key, (buckets.get(key) ?? 0) + weight);
+  const prev = buckets.get(key) ?? { count: 0, sumXpct: 0, sumYpct: 0 };
+  buckets.set(key, {
+    count: prev.count + weight,
+    sumXpct: prev.sumXpct + xPct * weight,
+    sumYpct: prev.sumYpct + yPct * weight,
+  });
 }
 
 function addZone(buckets: BucketCounts, xStart: number, xEnd: number, yStart: number, yEnd: number, weight: number) {
@@ -76,16 +96,20 @@ function isHeatmapPreviewPointerEvent(payload: Record<string, unknown> | null) {
 }
 
 function bucketsToCells(buckets: BucketCounts): ConceptionHeatmapCell[] {
-  const max = Math.max(1, ...Array.from(buckets.values()));
-  return Array.from(buckets.entries()).map(([key, count]) => {
+  const max = Math.max(1, ...Array.from(buckets.values()).map((stat) => stat.count));
+  return Array.from(buckets.entries()).map(([key, stat]) => {
     const [xRaw, yRaw] = key.split(":");
     const x = Number(xRaw);
     const y = Number(yRaw);
+    const xPct = stat.sumXpct / stat.count;
+    const yPct = stat.sumYpct / stat.count;
     return {
       x,
       y,
-      count,
-      intensity: Math.round((100 * count) / max),
+      xPct: Number(xPct.toFixed(3)),
+      yPct: Number(yPct.toFixed(3)),
+      count: stat.count,
+      intensity: Math.round((100 * stat.count) / max),
     };
   });
 }
@@ -148,8 +172,7 @@ async function aggregateProductSignals(productId: number, since: Date) {
       const xPct = readPct(payload, "x_pct");
       const yPct = readPct(payload, "y_pct");
       if (xPct != null && yPct != null) {
-        const { x, y } = pctToBucket(xPct, yPct);
-        addBucket(hoverBuckets, x, y);
+        addPointerBucket(hoverBuckets, xPct, yPct);
       }
       continue;
     }
@@ -160,8 +183,7 @@ async function aggregateProductSignals(productId: number, since: Date) {
       const xPct = readPct(payload, "x_pct");
       const yPct = readPct(payload, "y_pct");
       if (xPct != null && yPct != null) {
-        const { x, y } = pctToBucket(xPct, yPct);
-        addBucket(clickBuckets, x, y);
+        addPointerBucket(clickBuckets, xPct, yPct);
       }
       continue;
     }

@@ -1,4 +1,17 @@
-import type { ConceptionHeatmapDetailDto, ConceptionHeatmapMetric } from "@/types/conception-heatmap";
+import { heatmapPctToPixel } from "@/lib/product-heatmap-surface";
+import type { ConceptionHeatmapCell, ConceptionHeatmapDetailDto, ConceptionHeatmapMetric } from "@/types/conception-heatmap";
+
+function cellPointerPct(cell: ConceptionHeatmapCell, heatmap: ConceptionHeatmapDetailDto) {
+  if (Number.isFinite(cell.xPct) && Number.isFinite(cell.yPct)) {
+    return { xPct: cell.xPct, yPct: cell.yPct };
+  }
+  const cellW = 100 / heatmap.gridWidth;
+  const cellH = 100 / heatmap.gridHeight;
+  return {
+    xPct: (cell.x + 0.5) * cellW,
+    yPct: (cell.y + 0.5) * cellH,
+  };
+}
 
 /** Color stops for heatmap.js (0 = cold/transparent → 1 = hot). */
 const METRIC_GRADIENTS: Record<ConceptionHeatmapMetric, Record<string, string>> = {
@@ -38,8 +51,6 @@ export function cellsToHeatmapPoints(
   width: number,
   height: number
 ): { points: Array<{ x: number; y: number; value: number }>; max: number } {
-  const cellW = width / heatmap.gridWidth;
-  const cellH = height / heatmap.gridHeight;
   const points: Array<{ x: number; y: number; value: number }> = [];
   let max = 1;
 
@@ -47,27 +58,22 @@ export function cellsToHeatmapPoints(
     const value = Math.max(1, cell.count);
     max = Math.max(max, value);
 
-    const cx = (cell.x + 0.5) * cellW;
-    const cy = (cell.y + 0.5) * cellH;
-    const xi = Math.round(cx);
-    const yi = Math.round(cy);
-
+    const { xPct, yPct } = cellPointerPct(cell, heatmap);
+    const { x: xi, y: yi } = heatmapPctToPixel(xPct, yPct, width, height);
     points.push({ x: xi, y: yi, value });
 
     if (cell.intensity >= 25) {
       const w = value * 0.45;
+      const spreadPct = Math.min(2.5, (45 / Math.max(width, height)) * 100);
       const offsets = [
-        [0.32, 0.32],
-        [0.68, 0.32],
-        [0.32, 0.68],
-        [0.68, 0.68],
+        [-spreadPct, -spreadPct],
+        [spreadPct, -spreadPct],
+        [-spreadPct, spreadPct],
+        [spreadPct, spreadPct],
       ] as const;
-      for (const [fx, fy] of offsets) {
-        points.push({
-          x: Math.min(width - 1, Math.max(0, Math.round(cell.x * cellW + cellW * fx))),
-          y: Math.min(height - 1, Math.max(0, Math.round(cell.y * cellH + cellH * fy))),
-          value: w,
-        });
+      for (const [dx, dy] of offsets) {
+        const neighbor = heatmapPctToPixel(xPct + dx, yPct + dy, width, height);
+        points.push({ x: neighbor.x, y: neighbor.y, value: w });
       }
     }
   }
