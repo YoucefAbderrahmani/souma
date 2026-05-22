@@ -801,15 +801,29 @@ export default function AdminPanels({
               <ProductFormSection
                 id={productFormSectionIds.media}
                 title="Main image"
-                description="This photo is used in listings and as the default gallery image."
-                badge="Required"
+                description="Upload a file or paste a public image URL (URL works on Vercel when file upload is not configured)."
+                badge="File or URL"
               >
-                <ProductImageDropZone
-                  inputId="admin-product-image"
-                  fileName={selectedFileName}
-                  onFileChange={(file) => setSelectedFileName(file?.name ?? "No file selected")}
-                  required
-                />
+                <div className="space-y-4">
+                  <ProductImageDropZone
+                    inputId="admin-product-image"
+                    fileName={selectedFileName}
+                    onFileChange={(file) => setSelectedFileName(file?.name ?? "No file selected")}
+                    helper="Optional if you use an image URL below. On hosted Vercel, enable Blob storage or use a URL."
+                  />
+                  <ProductFormField
+                    label="Image URL (optional)"
+                    hint="Full https:// link or /uploads/… path. Use this instead of upload on production if needed."
+                  >
+                    <input
+                      name="mainImageUrl"
+                      type="url"
+                      className={pf.input}
+                      placeholder="https://…"
+                      autoComplete="off"
+                    />
+                  </ProductFormField>
+                </div>
               </ProductFormSection>
             </ProductFormShell>
 

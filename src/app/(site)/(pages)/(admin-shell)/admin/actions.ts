@@ -1,13 +1,12 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { db } from "@/server/db";
 import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
+import { normalizeProductImageUrl, saveProductImageFile } from "@/lib/product-image-storage";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
@@ -139,6 +138,23 @@ async function resolveColorVariantsFromForm(params: {
   return { colors: out };
 }
 
+function parseJsonField<T>(raw: string, label: string): T | { error: string } {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return { error: `Invalid ${label} data.` };
+  }
+}
+
+function formatActionError(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    const msg = error.message.trim();
+    if (msg.length <= 220) return msg;
+    return `${msg.slice(0, 217)}…`;
+  }
+  return "Failed to create product. Try again.";
+}
+
 export async function createProductAction(
   _prevState: CreateProductState,
   formData: FormData
@@ -156,18 +172,28 @@ export async function createProductAction(
     const { price, jomlaPrice } = parsedPrice;
     const instock = Number(formData.get("instock") ?? 0);
     const image = formData.get("image");
+    const mainImageUrlRaw = String(formData.get("mainImageUrl") ?? "").trim();
     const colorsJson = String(formData.get("colors") ?? "[]");
     const colorHasPriceOverride = String(formData.get("colorHasPriceOverride") ?? "false") === "true";
-    const specifications = JSON.parse(
-      String(formData.get("specifications") ?? "[]")
-    ) as Array<{
-      name: string;
-      hasPriceOverride?: boolean;
-      options: Array<{ label: string; price?: number }>;
-    }>;
-    const additionalInfo = JSON.parse(
-      String(formData.get("additionalInfo") ?? "[]")
-    ) as Array<{ key: string; value: string }>;
+    const specificationsParsed = parseJsonField<
+      Array<{
+        name: string;
+        hasPriceOverride?: boolean;
+        options: Array<{ label: string; price?: number }>;
+      }>
+    >(String(formData.get("specifications") ?? "[]"), "specifications");
+    if ("error" in specificationsParsed) {
+      return { error: specificationsParsed.error };
+    }
+    const additionalInfoParsed = parseJsonField<Array<{ key: string; value: string }>>(
+      String(formData.get("additionalInfo") ?? "[]"),
+      "additional info"
+    );
+    if ("error" in additionalInfoParsed) {
+      return { error: additionalInfoParsed.error };
+    }
+    const specifications = specificationsParsed;
+    const additionalInfo = additionalInfoParsed;
 
     if (!title || !description || !manufacturer || !categoryName) {
       return { error: "Please fill all required fields." };
@@ -177,20 +203,9 @@ export async function createProductAction(
       return { error: "Stock must be a valid positive number." };
     }
 
-    if (!(image instanceof File) || image.size === 0) {
-      return { error: "Please upload a product image." };
-    }
-
-    const mimeToExt: Record<string, string> = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "image/gif": "gif",
-    };
-
-    const ext = mimeToExt[image.type];
-    if (!ext) {
-      return { error: "Unsupported image type. Use jpg, png, webp, or gif." };
+    const hasUpload = image instanceof File && image.size > 0;
+    if (!hasUpload && !mainImageUrlRaw) {
+      return { error: "Please upload a product image or paste an image URL." };
     }
 
     const existingCategory = await db
@@ -232,15 +247,16 @@ export async function createProductAction(
       additionalInfo: Array.isArray(additionalInfo) ? additionalInfo : [],
     });
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
-    await mkdir(uploadDir, { recursive: true });
-
-    const fileName = `${slug}.${ext}`;
-    const filePath = path.join(uploadDir, fileName);
-    const fileBuffer = Buffer.from(await image.arrayBuffer());
-    await writeFile(filePath, fileBuffer);
-
-    const imageUrl = `/uploads/products/${fileName}`;
+    let imageUrl: string;
+    if (hasUpload && image instanceof File) {
+      const saved = await saveProductImageFile({ slug, file: image });
+      if ("error" in saved) return { error: saved.error };
+      imageUrl = saved.url;
+    } else {
+      const normalized = normalizeProductImageUrl(mainImageUrlRaw);
+      if ("error" in normalized) return { error: normalized.error };
+      imageUrl = normalized.url;
+    }
 
     const inserted = await db
       .insert(productsTable)
@@ -273,8 +289,9 @@ export async function createProductAction(
       success: true,
       message: "Product created successfully.",
     };
-  } catch {
-    return { error: "Failed to create product. Try again." };
+  } catch (error) {
+    console.error("[createProductAction]", error);
+    return { error: formatActionError(error) };
   }
 }
 
@@ -529,25 +546,12 @@ export async function updateProductFullAction(
     let mainimage = existingRow[0].mainimage;
 
     if (image instanceof File && image.size > 0) {
-      const mimeToExt: Record<string, string> = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/webp": "webp",
-        "image/gif": "gif",
-      };
-      const ext = mimeToExt[image.type];
-      if (!ext) {
-        return { error: "Unsupported image type. Use jpg, png, webp, or gif." };
-      }
-
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
-      await mkdir(uploadDir, { recursive: true });
-
-      const fileName = `${existingRow[0].slug}.${ext}`;
-      const filePath = path.join(uploadDir, fileName);
-      const fileBuffer = Buffer.from(await image.arrayBuffer());
-      await writeFile(filePath, fileBuffer);
-      mainimage = `/uploads/products/${fileName}`;
+      const saved = await saveProductImageFile({
+        slug: existingRow[0].slug,
+        file: image,
+      });
+      if ("error" in saved) return { error: saved.error };
+      mainimage = saved.url;
     }
 
     const existingCategory = await db
