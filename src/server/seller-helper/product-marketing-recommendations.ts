@@ -329,7 +329,7 @@ function buildTips(
         : highDemand ?
           "Demand is building on this item. State that it is available now so shoppers move from the catalog to the product page with confidence."
         : "Tell shoppers the item is available now on the thumbnail and near the price block.",
-      priority: highDemand ? "high" : "medium",
+      priority: "medium",
       quickFixId: "availability_note",
     });
   }
