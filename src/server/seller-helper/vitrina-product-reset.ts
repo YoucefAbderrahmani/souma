@@ -52,6 +52,19 @@ export function stripVitrinaQuickFixFromStructuredContent(
   return { content: next, contentChanged: true };
 }
 
+/**
+ * After a catalog revert, strip any remaining Vitrina rows and block live DB review
+ * hero injection (otherwise products with storefront reviews keep showing the banner).
+ */
+export function finalizeDescriptionAfterVitrinaCatalogReset(raw: string): string {
+  const parsed = parseProductContent(raw ?? "");
+  const { content } = stripVitrinaQuickFixFromStructuredContent(parsed, {
+    suppressLiveHeroAfterStrip: true,
+  });
+  content.suppressLiveHeroReviewOverlay = true;
+  return serializeProductContent(content);
+}
+
 export function computeVitrinaDefaultReset(product: {
   description: string | null;
   jomlaPrice: number | null;
@@ -171,11 +184,12 @@ export async function resetVitrinaForProductTitlesSilent(titles: string[]): Prom
 
     const chokepoint = earliestChokepoints.get(product.id);
     if (chokepoint && catalogRowDiffersFromChokepoint(product, chokepoint)) {
+      const finalizedDescription = finalizeDescriptionAfterVitrinaCatalogReset(chokepoint.description);
       await db
         .update(productsTable)
         .set({
           jomlaPrice: chokepoint.jomlaPrice,
-          description: chokepoint.description,
+          description: finalizedDescription,
         })
         .where(eq(productsTable.id, product.id));
       updatedCount += 1;
@@ -183,14 +197,7 @@ export async function resetVitrinaForProductTitlesSilent(titles: string[]): Prom
     }
 
     const reset = computeVitrinaDefaultReset(product);
-    let nextDescription = reset.nextDescription;
-    if (isStructuredProductContent(product.description ?? "")) {
-      const parsed = parseProductContent(product.description);
-      const stripped = stripVitrinaQuickFixFromStructuredContent(parsed, {
-        suppressLiveHeroAfterStrip: true,
-      });
-      nextDescription = serializeProductContent(stripped.content);
-    }
+    let nextDescription = finalizeDescriptionAfterVitrinaCatalogReset(reset.nextDescription);
 
     const shouldWrite =
       reset.changed ||
@@ -257,32 +264,41 @@ export async function resetAllVitrinaCatalogToDefaultSilent(): Promise<{
 
   for (const product of products) {
     const chokepoint = earliestChokepoints.get(product.id);
+    let nextDescription = product.description ?? "";
+    let nextJomla = product.jomlaPrice;
+    let revertKind: "chokepoint" | "strip" | null = null;
 
     if (chokepoint) {
       if (!catalogRowDiffersFromChokepoint(product, chokepoint)) continue;
-
-      await db
-        .update(productsTable)
-        .set({
-          jomlaPrice: chokepoint.jomlaPrice,
-          description: chokepoint.description,
-        })
-        .where(eq(productsTable.id, product.id));
-      chokepointRestoredCount += 1;
-      continue;
+      nextDescription = chokepoint.description;
+      nextJomla = chokepoint.jomlaPrice;
+      revertKind = "chokepoint";
+    } else {
+      const reset = computeVitrinaDefaultReset(product);
+      if (!reset.changed) continue;
+      nextDescription = reset.nextDescription;
+      nextJomla = reset.nextJomlaPrice;
+      revertKind = "strip";
     }
 
-    const reset = computeVitrinaDefaultReset(product);
-    if (!reset.changed) continue;
+    const finalizedDescription = finalizeDescriptionAfterVitrinaCatalogReset(nextDescription);
+    if (
+      (product.description ?? "") === finalizedDescription &&
+      product.jomlaPrice === nextJomla
+    ) {
+      continue;
+    }
 
     await db
       .update(productsTable)
       .set({
-        jomlaPrice: reset.nextJomlaPrice,
-        description: reset.nextDescription,
+        jomlaPrice: nextJomla,
+        description: finalizedDescription,
       })
       .where(eq(productsTable.id, product.id));
-    strippedCount += 1;
+
+    if (revertKind === "chokepoint") chokepointRestoredCount += 1;
+    else strippedCount += 1;
   }
 
   const updatedCount = chokepointRestoredCount + strippedCount;
