@@ -287,6 +287,7 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
             {friction.map((item, index) => (
               <SellerHelperInsightCard
                 key={item.title}
+                layout="unified"
                 tier={priorityFromLabel(item.priority)}
                 priorityLabel={item.priority}
                 title={item.title}
