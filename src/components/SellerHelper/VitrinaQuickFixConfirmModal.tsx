@@ -13,11 +13,17 @@ const initialState: ApplyVitrinaQuickFixesState = {};
 
 type Props = {
   product: VitrinaProductMarketingRecommendation;
+  fixesPerItem: number;
   onClose: () => void;
   onApplied?: (productId: string) => void | Promise<void>;
 };
 
-export default function VitrinaQuickFixConfirmModal({ product, onClose, onApplied }: Props) {
+export default function VitrinaQuickFixConfirmModal({
+  product,
+  fixesPerItem,
+  onClose,
+  onApplied,
+}: Props) {
   const router = useRouter();
   const [state, action, isPending] = useActionState(applyVitrinaQuickFixesAction, initialState);
   const fixes = product.quickFixes ?? [];
@@ -89,6 +95,7 @@ export default function VitrinaQuickFixConfirmModal({ product, onClose, onApplie
           </button>
           <form action={action}>
             <input type="hidden" name="productId" value={product.productId} />
+            <input type="hidden" name="fixesPerItem" value={String(fixesPerItem)} />
             <input type="hidden" name="fixes" value={JSON.stringify(fixes)} />
             <input
               type="hidden"

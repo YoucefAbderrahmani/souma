@@ -14,6 +14,7 @@ import {
   type VitrinaRecommendationPromptProduct,
 } from "@/server/seller-helper/vitrina-recommendation-prompt";
 import type { Product } from "@/types/product";
+import { clampVitrinaFixesPerItem } from "@/lib/vitrina-fixes-per-item";
 import type {
   VitrinaProductMarketingRecommendation,
   VitrinaProductMarketingTip,
@@ -56,7 +57,6 @@ const COLOR_WORDS = [
 const PRICE_IN_TITLE = /(\d[\d\s.,]*\s*(da|dzd|dinar|€|\$))|(\b(prix|promo|solde)\b)/i;
 const DEFAULT_VITRINA_CATALOG_LIMIT = 500;
 const PROMPT_TOP_RECOMMENDATIONS = 3;
-const MAX_QUICK_FIXES = 4;
 const SIGNAL_WINDOW_DAYS = 7;
 const MS_DAY = 86_400_000;
 
@@ -444,13 +444,15 @@ function buildQuickFixes(
   product: ProductRow,
   interaction: VitrinaInteractionSnapshot,
   aggregate: SignalAggregate,
-  tips: VitrinaProductMarketingTip[]
+  tips: VitrinaProductMarketingTip[],
+  fixesPerItem: number
 ): VitrinaQuickFixOption[] {
   const fixes: VitrinaQuickFixOption[] = [];
   const seen = new Set<VitrinaQuickFixId>();
+  const maxFixes = clampVitrinaFixesPerItem(fixesPerItem);
 
   const pushFix = (fix: VitrinaQuickFixOption) => {
-    if (seen.has(fix.id) || fixes.length >= MAX_QUICK_FIXES) return;
+    if (seen.has(fix.id) || fixes.length >= maxFixes) return;
     seen.add(fix.id);
     fixes.push(fix);
   };
@@ -744,11 +746,15 @@ function toRecommendation(
   display: VitrinaDisplaySnapshot,
   interaction: VitrinaInteractionSnapshot,
   aggregate: SignalAggregate,
-  tips: VitrinaProductMarketingTip[]
+  tips: VitrinaProductMarketingTip[],
+  fixesPerItem?: number
 ): VitrinaProductMarketingRecommendation {
-  const quickFixes = buildQuickFixes(product, interaction, aggregate, tips);
+  const maxFixes =
+    fixesPerItem != null ? clampVitrinaFixesPerItem(fixesPerItem) : tips.length;
+  const cappedTips = tips.slice(0, maxFixes);
+  const quickFixes = buildQuickFixes(product, interaction, aggregate, cappedTips, maxFixes);
   const primaryRecommendation =
-    tips[0]?.action ??
+    cappedTips[0]?.action ??
     "Refine the title, image, and price to clarify the offer from the catalog thumbnail.";
 
   return {
@@ -764,9 +770,9 @@ function toRecommendation(
     rating: product.rating,
     description: product.description,
     primaryRecommendation,
-    tips,
+    tips: cappedTips,
     quickFixes,
-    opportunityScore: opportunityScore(tips, interaction),
+    opportunityScore: opportunityScore(cappedTips, interaction),
     signals: {
       views: interaction.views,
       hovers: interaction.hovers,
@@ -803,7 +809,8 @@ export function buildVitrinaRecommendationPromptContext(
 }
 
 export async function getVitrinaProductMarketingRecommendationByProductId(
-  productId: string
+  productId: string,
+  options?: { fixesPerItem?: number }
 ): Promise<VitrinaProductMarketingRecommendation | null> {
   const id = productId.trim();
   if (!id) {
@@ -858,12 +865,13 @@ export async function getVitrinaProductMarketingRecommendationByProductId(
   const interaction = buildInteractionSnapshot(aggregate);
   const tips = buildTips(product, display, interaction, aggregate);
 
-  return toRecommendation(product, display, interaction, aggregate, tips);
+  return toRecommendation(product, display, interaction, aggregate, tips, options?.fixesPerItem);
 }
 
 export async function listVitrinaProductMarketingRecommendations(options?: {
   actionableOnly?: boolean;
   limit?: number;
+  fixesPerItem?: number;
 }): Promise<VitrinaProductMarketingRecommendation[]> {
   const limit = Math.max(1, options?.limit ?? DEFAULT_VITRINA_CATALOG_LIMIT);
   const since = new Date(Date.now() - SIGNAL_WINDOW_DAYS * MS_DAY);
@@ -902,6 +910,13 @@ export async function listVitrinaProductMarketingRecommendations(options?: {
     });
 
   return ranked.map((item) =>
-    toRecommendation(item.product, item.display, item.interaction, item.aggregate, item.tips)
+    toRecommendation(
+      item.product,
+      item.display,
+      item.interaction,
+      item.aggregate,
+      item.tips,
+      options?.fixesPerItem
+    )
   );
 }

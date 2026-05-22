@@ -19,6 +19,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import "swiper/css";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
+import { VitrinaFixesPerItemSetting } from "@/components/SellerHelper/VitrinaFixesPerItemSetting";
 import { productDetailsHref } from "@/lib/product-page-link";
 import { compareImportanceTiers, IMPORTANCE_RANKS } from "@/lib/importance-ranking";
 import { cn } from "@/lib/utils";
@@ -149,8 +150,6 @@ function interleaveFeaturedHighlights(
   return ordered;
 }
 
-const MAX_VISIBLE_TIPS = 3;
-
 function VitrinaPriorityIcon({ priority }: { priority: VitrinaProductMarketingRecommendation["tips"][number]["priority"] }) {
   const className = "h-3 w-3 shrink-0";
   if (priority === "high") return <Zap className={className} aria-hidden />;
@@ -167,7 +166,7 @@ function VitrinaProductCard({
   onEdit: (item: VitrinaProductMarketingRecommendation) => void;
   onApplyQuickFixes: (item: VitrinaProductMarketingRecommendation) => void;
 }) {
-  const visibleTips = item.tips.slice(0, MAX_VISIBLE_TIPS);
+  const visibleTips = item.tips;
   const hasQuickFixes = (item.quickFixes?.length ?? 0) > 0;
   const topPriority = vitrinaTopPriority(item);
   const opportunity = Math.min(100, Math.max(0, Math.round(item.opportunityScore ?? 0)));
@@ -284,11 +283,17 @@ function VitrinaProductCard({
 
 export function VitrinaRecommendationsContent({
   recommendations,
+  fixesPerItem,
+  onFixesPerItemChange,
+  fixesPerItemBusy,
   onVitrinaQuickFixApplied,
   onClearAllRecommendations,
   onResetAllCatalogToDefault,
 }: {
   recommendations: VitrinaProductMarketingRecommendation[];
+  fixesPerItem: number;
+  onFixesPerItemChange: (value: number) => void;
+  fixesPerItemBusy?: boolean;
   onVitrinaQuickFixApplied?: (productId: string) => void | Promise<void>;
   onClearAllRecommendations?: () => Promise<boolean>;
   onResetAllCatalogToDefault?: () => Promise<boolean>;
@@ -427,6 +432,12 @@ export function VitrinaRecommendationsContent({
           : null}
         </div>
       </div>
+
+      <VitrinaFixesPerItemSetting
+        value={fixesPerItem}
+        onChange={onFixesPerItemChange}
+        disabled={fixesPerItemBusy}
+      />
 
       {preparedRecommendations.length === 0 ?
         <div className={sellerPlaceholder}>
@@ -606,6 +617,7 @@ export function VitrinaRecommendationsContent({
         <VitrinaQuickFixConfirmModal
           key={quickFixProduct.productId}
           product={quickFixProduct}
+          fixesPerItem={fixesPerItem}
           onClose={() => setQuickFixProduct(null)}
           onApplied={onVitrinaQuickFixApplied}
         />

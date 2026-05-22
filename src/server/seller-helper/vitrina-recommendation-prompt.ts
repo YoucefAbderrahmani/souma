@@ -59,7 +59,7 @@ recommendations must be an array with at most the maxRecommendations value from 
 Each recommendation must include:
 - productId (string, must match an input productId)
 - primaryRecommendation (one concise merchandising action in French)
-- tips (array of 1 to 3 objects with label, action, priority)
+- tips (array of 1 to 6 objects with label, action, priority)
 - isTopRecommendation (boolean; exactly one item in the array must be true)
 priority must be exactly one of: high, medium, low.
 Ground every recommendation in the supplied display and interaction fields.

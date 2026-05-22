@@ -4,8 +4,13 @@ import { buildConceptionAnalyzeSignals, buildConceptionOverview } from "@/server
 import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
 import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
 import { attachAssignedRoleToRecommendationRow } from "@/server/conception/recommendation-role-enrich";
+import {
+  clampVitrinaFixesPerItem,
+  DEFAULT_VITRINA_FIXES_PER_ITEM,
+} from "@/lib/vitrina-fixes-per-item";
 import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
 import { writeVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
+import { capVitrinaRecommendationsList } from "@/types/vitrina-product-recommendations";
 import { db } from "@/server/db";
 import { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
@@ -131,7 +136,12 @@ async function insertBaselineRecommendationsIfEmpty(
  * Rule engine aligned with the academic spec: conversion drop, traffic spike,
  * cart abandon, JS error density, performance — plus funnel-based recommendations.
  */
-export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResult> {
+export async function runConceptionAnalysisJob(options?: {
+  fixesPerItem?: number;
+}): Promise<ConceptionAnalyzeResult> {
+  const fixesPerItem = clampVitrinaFixesPerItem(
+    options?.fixesPerItem ?? DEFAULT_VITRINA_FIXES_PER_ITEM
+  );
   const s = await buildConceptionAnalyzeSignals();
   const ruleSettings = await getConceptionAlertRuleSettings();
 
@@ -373,8 +383,9 @@ export async function runConceptionAnalysisJob(): Promise<ConceptionAnalyzeResul
 
   let vitrinaRecommendations: VitrinaProductMarketingRecommendation[] = [];
   try {
-    vitrinaRecommendations = await listVitrinaProductMarketingRecommendations({ limit: 200 });
-    await writeVitrinaRecommendationsCache(vitrinaRecommendations);
+    const generated = await listVitrinaProductMarketingRecommendations({ limit: 200 });
+    await writeVitrinaRecommendationsCache(generated);
+    vitrinaRecommendations = capVitrinaRecommendationsList(generated, fixesPerItem);
   } catch (error) {
     console.error("[conception/analyze][vitrina]", error);
   }

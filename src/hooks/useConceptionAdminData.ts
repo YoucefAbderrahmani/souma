@@ -18,6 +18,13 @@ import {
 } from "@/lib/vitrina-recommendations-cache";
 import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
 import { clearAllPromoTimerSessionStorage } from "@/lib/product-demo-promo-labels";
+import {
+  clampVitrinaFixesPerItem,
+  DEFAULT_VITRINA_FIXES_PER_ITEM,
+  readVitrinaFixesPerItemFromStorage,
+  vitrinaRecommendationsApiUrl,
+  writeVitrinaFixesPerItemToStorage,
+} from "@/lib/vitrina-fixes-per-item";
 
 export type ConceptionAdminInitialData = {
   overview: ConceptionOverviewDto;
@@ -40,6 +47,8 @@ type State = {
   analyzeBusy: boolean;
   analyzeMessage: string | null;
   actionMessage: string | null;
+  vitrinaFixesPerItem: number;
+  vitrinaReloadBusy: boolean;
 };
 
 const fetchOptions: RequestInit = {
@@ -47,9 +56,14 @@ const fetchOptions: RequestInit = {
   cache: "no-store",
 };
 
-function getInitialVitrinaRecommendations() {
+function getInitialVitrinaFixesPerItem() {
+  if (typeof window === "undefined") return DEFAULT_VITRINA_FIXES_PER_ITEM;
+  return readVitrinaFixesPerItemFromStorage();
+}
+
+function getInitialVitrinaRecommendations(fixesPerItem: number) {
   if (typeof window === "undefined") return [];
-  return filterOutQuickFixAppliedRecommendations(readCachedVitrinaRecommendations());
+  return filterOutQuickFixAppliedRecommendations(readCachedVitrinaRecommendations(fixesPerItem));
 }
 
 export type UseConceptionAdminDataOptions = {
@@ -66,19 +80,72 @@ export function useConceptionAdminData(
   const liveRefreshIntervalMs = options?.liveRefreshIntervalMs ?? 5_000;
   const liveRefreshEnabled = options?.liveRefreshEnabled ?? true;
   const loadGenerationRef = useRef(0);
+  const initialFixesPerItem = getInitialVitrinaFixesPerItem();
   const [state, setState] = useState<State>({
     overview: initialData?.overview ?? null,
     alerts: initialData?.alerts ?? [],
     resolvedAlerts: initialData?.resolvedAlerts ?? [],
     recommendations: initialData?.recommendations ?? [],
     inbox: initialData?.inbox ?? [],
-    vitrinaRecommendations: getInitialVitrinaRecommendations(),
+    vitrinaRecommendations: getInitialVitrinaRecommendations(initialFixesPerItem),
     loading: !initialData,
     error: initialError,
     analyzeBusy: false,
     analyzeMessage: null,
     actionMessage: null,
+    vitrinaFixesPerItem: initialFixesPerItem,
+    vitrinaReloadBusy: false,
   });
+
+  const fetchVitrinaRecommendations = useCallback(
+    async (fixesPerItem: number, options?: { regenerate?: boolean; silent?: boolean }) => {
+      const clamped = clampVitrinaFixesPerItem(fixesPerItem);
+      if (!options?.silent) {
+        setState((s) => ({ ...s, vitrinaReloadBusy: true }));
+      }
+      try {
+        const res = await fetch(
+          vitrinaRecommendationsApiUrl(clamped, { regenerate: options?.regenerate }),
+          fetchOptions
+        );
+        const body = await readJsonResponse<{
+          error?: string;
+          message?: string;
+          recommendations?: VitrinaProductMarketingRecommendation[];
+        }>(res, "Vitrina recommendations API");
+        if (!res.ok) throw new Error(body.message || body.error || "Vitrina cache unavailable");
+        const recommendations = Array.isArray(body.recommendations) ? body.recommendations : [];
+        setState((current) => ({
+          ...current,
+          vitrinaRecommendations: filterOutQuickFixAppliedRecommendations(recommendations),
+          vitrinaFixesPerItem: clamped,
+        }));
+        writeCachedVitrinaRecommendations(recommendations);
+        return recommendations;
+      } catch {
+        return null;
+      } finally {
+        if (!options?.silent) {
+          setState((s) => ({ ...s, vitrinaReloadBusy: false }));
+        }
+      }
+    },
+    []
+  );
+
+  const setVitrinaFixesPerItem = useCallback(
+    (next: number) => {
+      const clamped = clampVitrinaFixesPerItem(next);
+      writeVitrinaFixesPerItemToStorage(clamped);
+      let regenerate = false;
+      setState((s) => {
+        regenerate = clamped > s.vitrinaFixesPerItem;
+        return { ...s, vitrinaFixesPerItem: clamped };
+      });
+      void fetchVitrinaRecommendations(clamped, { regenerate });
+    },
+    [fetchVitrinaRecommendations]
+  );
 
   const load = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
     const generation = ++loadGenerationRef.current;
@@ -151,36 +218,14 @@ export function useConceptionAdminData(
     let cancelled = false;
 
     void (async () => {
-      try {
-        const res = await fetch("/api/admin/conception/vitrina-recommendations", fetchOptions);
-        const body = await readJsonResponse<{
-          error?: string;
-          message?: string;
-          recommendations?: VitrinaProductMarketingRecommendation[];
-        }>(res, "Vitrina recommendations API");
-        if (!res.ok) throw new Error(body.message || body.error || "Vitrina cache unavailable");
-        const recommendations = body.recommendations;
-        if (cancelled || !Array.isArray(recommendations)) return;
-
-        setState((current) => {
-          if (recommendations.length === 0 && current.vitrinaRecommendations.length > 0) {
-            return current;
-          }
-          return {
-            ...current,
-            vitrinaRecommendations: filterOutQuickFixAppliedRecommendations(recommendations),
-          };
-        });
-        writeCachedVitrinaRecommendations(recommendations);
-      } catch {
-        // Keep the last cached snapshot when the cache endpoint is unavailable.
-      }
+      if (cancelled) return;
+      await fetchVitrinaRecommendations(initialFixesPerItem, { silent: true });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchVitrinaRecommendations, initialFixesPerItem]);
 
   const refreshLive = useCallback(() => load({ background: true }), [load]);
   useLiveDataRefresh(
@@ -454,9 +499,12 @@ export function useConceptionAdminData(
     loadGenerationRef.current += 1;
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));
     try {
+      const fixesPerItem = readVitrinaFixesPerItemFromStorage();
       const res = await fetch("/api/admin/conception/analyze", {
         method: "POST",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fixesPerItem }),
       });
       const body = await readJsonResponse<{
         error?: string;
@@ -587,26 +635,13 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
-  const dismissVitrinaAfterQuickFix = useCallback(async (productId: string) => {
-    removeVitrinaQuickFixAppliedProductId(productId);
-    try {
-      const res = await fetch("/api/admin/conception/vitrina-recommendations", fetchOptions);
-      const body = await readJsonResponse<{
-        error?: string;
-        message?: string;
-        recommendations?: VitrinaProductMarketingRecommendation[];
-      }>(res, "Vitrina recommendations API");
-      if (!res.ok) return;
-      const recommendations = Array.isArray(body.recommendations) ? body.recommendations : [];
-      setState((s) => ({
-        ...s,
-        vitrinaRecommendations: filterOutQuickFixAppliedRecommendations(recommendations),
-      }));
-      writeCachedVitrinaRecommendations(recommendations);
-    } catch {
-      /* keep current list if refetch fails */
-    }
-  }, []);
+  const dismissVitrinaAfterQuickFix = useCallback(
+    async (productId: string) => {
+      removeVitrinaQuickFixAppliedProductId(productId);
+      await fetchVitrinaRecommendations(readVitrinaFixesPerItemFromStorage(), { silent: true });
+    },
+    [fetchVitrinaRecommendations]
+  );
 
   return {
     ...state,
@@ -623,5 +658,8 @@ export function useConceptionAdminData(
     dismissVitrinaAfterQuickFix,
     clearAllVitrinaRecommendations,
     resetAllVitrinaCatalogToDefault,
+    vitrinaFixesPerItem: state.vitrinaFixesPerItem,
+    vitrinaReloadBusy: state.vitrinaReloadBusy,
+    setVitrinaFixesPerItem,
   };
 }

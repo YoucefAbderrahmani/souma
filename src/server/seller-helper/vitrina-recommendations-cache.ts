@@ -1,7 +1,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
-import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
+import {
+  clampVitrinaFixesPerItem,
+  DEFAULT_VITRINA_FIXES_PER_ITEM,
+} from "@/lib/vitrina-fixes-per-item";
+import {
+  capVitrinaRecommendationsList,
+  type VitrinaProductMarketingRecommendation,
+} from "@/types/vitrina-product-recommendations";
 
 type VitrinaRecommendationsCachePayload = {
   generatedAt: string;
@@ -20,9 +27,12 @@ function isRecommendationArray(value: unknown): value is VitrinaProductMarketing
   return Array.isArray(value);
 }
 
-export async function readVitrinaRecommendationsCache(): Promise<VitrinaProductMarketingRecommendation[]> {
+export async function readVitrinaRecommendationsCache(
+  fixesPerItem: number = DEFAULT_VITRINA_FIXES_PER_ITEM
+): Promise<VitrinaProductMarketingRecommendation[]> {
+  const max = clampVitrinaFixesPerItem(fixesPerItem);
   if (memoryCache && memoryCache.recommendations.length > 0) {
-    return memoryCache.recommendations;
+    return capVitrinaRecommendationsList(memoryCache.recommendations, max);
   }
 
   try {
@@ -38,7 +48,19 @@ export async function readVitrinaRecommendationsCache(): Promise<VitrinaProductM
         recommendations: parsed.recommendations,
       };
     }
-    return parsed.recommendations;
+    return capVitrinaRecommendationsList(parsed.recommendations, max);
+  } catch {
+    return [];
+  }
+}
+
+/** Uncapped recommendations as stored on disk (for merging after quick-fix refresh). */
+export async function readVitrinaRecommendationsCacheRaw(): Promise<VitrinaProductMarketingRecommendation[]> {
+  if (memoryCache) return memoryCache.recommendations;
+  try {
+    const raw = await readFile(cacheFilePath(), "utf8");
+    const parsed = JSON.parse(raw) as Partial<VitrinaRecommendationsCachePayload>;
+    return isRecommendationArray(parsed.recommendations) ? parsed.recommendations : [];
   } catch {
     return [];
   }
@@ -76,7 +98,7 @@ export async function refreshVitrinaRecommendationInCache(
   const updated = await getVitrinaProductMarketingRecommendationByProductId(productId);
   if (!updated) return;
 
-  const current = await readVitrinaRecommendationsCache();
+  const current = await readVitrinaRecommendationsCacheRaw();
   const primary = String(productId);
   const alternates = (mergeWithAlternateIds ?? []).map(String);
   const idx = current.findIndex(
@@ -97,7 +119,7 @@ export async function removeVitrinaRecommendationsFromCache(
   }
   if (keys.size === 0) return;
 
-  const current = await readVitrinaRecommendationsCache();
+  const current = await readVitrinaRecommendationsCacheRaw();
   const next = current.filter((row) => !keys.has(String(row.productId)));
   if (next.length === current.length) return;
   await writeVitrinaRecommendationsCache(next);

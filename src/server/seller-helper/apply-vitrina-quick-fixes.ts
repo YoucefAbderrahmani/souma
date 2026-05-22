@@ -16,6 +16,7 @@ import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { refreshVitrinaRecommendationInCache } from "@/server/seller-helper/vitrina-recommendations-cache";
 import { getBestProductReviewForMerch } from "@/server/reviews/reviews-db";
+import { clampVitrinaFixesPerItem, DEFAULT_VITRINA_FIXES_PER_ITEM } from "@/lib/vitrina-fixes-per-item";
 import type { VitrinaQuickFixId, VitrinaQuickFixOption } from "@/types/vitrina-product-recommendations";
 import { getVitrinaProductMarketingRecommendationByProductId } from "@/server/seller-helper/product-marketing-recommendations";
 
@@ -100,8 +101,10 @@ function normalizeSubmittedQuickFix(value: unknown): VitrinaQuickFixOption | nul
 
 export function parseSubmittedVitrinaQuickFixes(
   rawFixes: string,
-  rawFixIds: string
+  rawFixIds: string,
+  fixesPerItem: number = DEFAULT_VITRINA_FIXES_PER_ITEM
 ): VitrinaQuickFixOption[] {
+  const maxFixes = clampVitrinaFixesPerItem(fixesPerItem);
   const submitted: VitrinaQuickFixOption[] = [];
 
   if (rawFixes.trim()) {
@@ -115,7 +118,7 @@ export function parseSubmittedVitrinaQuickFixes(
   }
 
   if (submitted.length > 0) {
-    return submitted.slice(0, 4);
+    return submitted.slice(0, maxFixes);
   }
 
   const requestedFixIds = JSON.parse(rawFixIds) as unknown;
@@ -130,18 +133,22 @@ export function parseSubmittedVitrinaQuickFixes(
       label: id,
       summary: id,
     }))
-    .slice(0, 4);
+    .slice(0, maxFixes);
 }
 
 export async function resolveVitrinaQuickFixes(
   productId: string,
-  requestedFixes: VitrinaQuickFixOption[]
+  requestedFixes: VitrinaQuickFixOption[],
+  fixesPerItem: number = DEFAULT_VITRINA_FIXES_PER_ITEM
 ): Promise<{ fixes: VitrinaQuickFixOption[]; error?: string }> {
+  const maxFixes = clampVitrinaFixesPerItem(fixesPerItem);
   if (requestedFixes.length === 0) {
     return { fixes: [], error: "No quick fixes selected." };
   }
 
-  const recommendation = await getVitrinaProductMarketingRecommendationByProductId(productId);
+  const recommendation = await getVitrinaProductMarketingRecommendationByProductId(productId, {
+    fixesPerItem: maxFixes,
+  });
   if (!recommendation) {
     return { fixes: [], error: "Product recommendation not found." };
   }
@@ -164,7 +171,7 @@ export async function resolveVitrinaQuickFixes(
       return allowedFix;
     })
     .filter((fix): fix is VitrinaQuickFixOption => Boolean(fix))
-    .slice(0, 4);
+    .slice(0, maxFixes);
 
   if (fixes.length === 0) {
     return { fixes: [], error: "No quick fixes are available for this product." };
@@ -358,7 +365,7 @@ export async function applyVitrinaQuickFixes(
   const appliedFixIds = fixes
     .map((fix) => fix.id)
     .filter((id, index, all) => all.indexOf(id) === index);
-  const summaryLines = applied.slice(0, 4).join(" • ");
+  const summaryLines = applied.join(" • ");
   await logAppliedAction({
     kind: "vitrina_quick_fix",
     title: `Vitrina quick fix · ${product.title}`,

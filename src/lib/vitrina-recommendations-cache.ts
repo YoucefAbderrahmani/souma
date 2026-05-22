@@ -1,4 +1,11 @@
-import type { VitrinaProductMarketingRecommendation } from "@/types/vitrina-product-recommendations";
+import {
+  clampVitrinaFixesPerItem,
+  DEFAULT_VITRINA_FIXES_PER_ITEM,
+} from "@/lib/vitrina-fixes-per-item";
+import {
+  capVitrinaRecommendationsList,
+  type VitrinaProductMarketingRecommendation,
+} from "@/types/vitrina-product-recommendations";
 
 const STORAGE_KEY = "seller_helper_vitrina_recommendations";
 
@@ -11,14 +18,21 @@ function isRecommendationArray(value: unknown): value is VitrinaProductMarketing
   return Array.isArray(value);
 }
 
-export function readCachedVitrinaRecommendations(): VitrinaProductMarketingRecommendation[] {
+export function readCachedVitrinaRecommendations(
+  fixesPerItem: number = DEFAULT_VITRINA_FIXES_PER_ITEM
+): VitrinaProductMarketingRecommendation[] {
   if (typeof window === "undefined") return [];
 
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Partial<VitrinaRecommendationsCachePayload>;
-    return isRecommendationArray(parsed.recommendations) ? parsed.recommendations : [];
+    return isRecommendationArray(parsed.recommendations) ?
+      capVitrinaRecommendationsList(
+        parsed.recommendations,
+        clampVitrinaFixesPerItem(fixesPerItem)
+      )
+    : [];
   } catch {
     return [];
   }

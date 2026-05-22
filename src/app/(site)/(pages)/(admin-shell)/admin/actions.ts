@@ -13,6 +13,7 @@ import {
 } from "@/lib/product-content";
 import { mainImageFromColors, reorderColorsWithDefault } from "@/lib/admin-product-colors";
 import { unhideStorefrontProductByTitle } from "@/lib/storefront-hidden-products";
+import { parseVitrinaFixesPerItemParam } from "@/lib/vitrina-fixes-per-item";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
@@ -499,14 +500,16 @@ export async function applyVitrinaQuickFixesAction(
       return { error: "Missing product id." };
     }
 
+    const fixesPerItem = parseVitrinaFixesPerItemParam(formData.get("fixesPerItem"));
+
     let requestedFixes;
     try {
-      requestedFixes = parseSubmittedVitrinaQuickFixes(rawFixes, rawFixIds);
+      requestedFixes = parseSubmittedVitrinaQuickFixes(rawFixes, rawFixIds, fixesPerItem);
     } catch {
       return { error: "Invalid quick fix selection." };
     }
 
-    const resolved = await resolveVitrinaQuickFixes(productId, requestedFixes);
+    const resolved = await resolveVitrinaQuickFixes(productId, requestedFixes, fixesPerItem);
     if (resolved.error) {
       return { error: resolved.error };
     }
