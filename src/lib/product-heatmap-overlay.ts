@@ -15,11 +15,7 @@ export type HeatmapStageLayout = {
 };
 
 const STAGE_OVERLAY_LAYER_ATTR = "data-product-heatmap-overlay-layer";
-
-function removeIframeHeatmapCanvas(doc: Document) {
-  doc.querySelector(`canvas[${PRODUCT_HEATMAP_OVERLAY_ATTR}]`)?.remove();
-  doc.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`)?.remove();
-}
+const IFRAME_OVERLAY_LAYER_ATTR = "data-product-heatmap-iframe-overlay";
 
 async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatmapRenderer> {
   const layer = document.createElement("div");
@@ -32,8 +28,8 @@ async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatm
   layer.style.height = "100%";
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
-  layer.style.mixBlendMode = "normal";
-  layer.style.opacity = "0.92";
+  layer.style.mixBlendMode = "multiply";
+  layer.style.opacity = "1";
   container.appendChild(layer);
   return createGaussianHeatmapRenderer(layer);
 }
@@ -61,8 +57,6 @@ export function syncStageHeatmapOverlay(
     renderer = null;
     mountLayer?.remove();
     mountLayer = null;
-    const doc = iframe.contentDocument;
-    if (doc) removeIframeHeatmapCanvas(doc);
   };
 
   if (!heatmap) {
@@ -97,9 +91,6 @@ export function syncStageHeatmapOverlay(
   const sync = () => {
     void ensureRenderer().then((instance) => {
       if (!instance || !mountLayer) return;
-
-      const doc = iframe.contentDocument;
-      if (doc) removeIframeHeatmapCanvas(doc);
 
       const width = layout.surfaceWidth;
       const height = layout.surfaceHeight;
@@ -151,7 +142,7 @@ export function syncStageHeatmapOverlay(
   };
 }
 
-/** In-iframe overlay (preview uses syncStageHeatmapOverlay). */
+/** In-iframe overlay — drawn on the product surface inside the preview iframe. */
 export function syncProductHeatmapOverlay(
   doc: Document,
   heatmap: ConceptionHeatmapDetailDto | null
@@ -159,7 +150,7 @@ export function syncProductHeatmapOverlay(
   const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
   if (!surface) return () => {};
 
-  let mountHost = surface.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`) as HTMLDivElement | null;
+  let mountHost = surface.querySelector(`[${IFRAME_OVERLAY_LAYER_ATTR}]`) as HTMLDivElement | null;
   let renderer: GaussianHeatmapRenderer | null = null;
   let rendererReady: Promise<GaussianHeatmapRenderer | null> | null = null;
   let cancelled = false;
@@ -188,12 +179,14 @@ export function syncProductHeatmapOverlay(
     if (!rendererReady) {
       if (!mountHost) {
         mountHost = document.createElement("div");
-        mountHost.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
+        mountHost.setAttribute(IFRAME_OVERLAY_LAYER_ATTR, "");
         mountHost.style.position = "absolute";
         mountHost.style.inset = "0";
+        mountHost.style.width = "100%";
+        mountHost.style.height = "100%";
         mountHost.style.pointerEvents = "none";
         mountHost.style.zIndex = "2147483646";
-        mountHost.style.mixBlendMode = "multiply";
+        mountHost.style.overflow = "hidden";
         surface.appendChild(mountHost);
       }
       rendererReady = mountGaussianLayer(mountHost).then((instance) => {

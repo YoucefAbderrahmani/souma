@@ -1,6 +1,6 @@
 export const PRODUCT_HEATMAP_SURFACE_ATTR = "data-product-heatmap-surface";
 export const HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX = 1280;
-const PREVIEW_MIN_SURFACE_WIDTH_PX = 700;
+const PREVIEW_MIN_SURFACE_WIDTH_PX = 480;
 
 function clampPct(value: number) {
   return Math.min(100, Math.max(0, value));
@@ -42,6 +42,7 @@ export function resetProductHeatmapPreviewWindow(doc: Document) {
   }
 }
 
+/** Align iframe viewport to the product surface (scroll) — legacy. */
 export function applyProductHeatmapPreviewFrame(
   doc: Document,
   measure: ProductHeatmapSurfaceMeasure
@@ -52,6 +53,11 @@ export function applyProductHeatmapPreviewFrame(
     top: measure.offsetTop,
     behavior: "auto",
   });
+}
+
+/** Reset scroll only; parent iframe uses negative offset to crop the surface. */
+export function resetProductHeatmapPreviewViewport(doc: Document) {
+  resetProductHeatmapPreviewWindow(doc);
 }
 
 export function measureProductHeatmapSurface(
@@ -97,8 +103,8 @@ export function isProductHeatmapPreviewViewportReady(doc: Document) {
   const innerWidth = doc.defaultView?.innerWidth ?? 0;
   if (innerWidth < 320) return false;
 
-  const rect = surface.getBoundingClientRect();
-  return rect.width >= PREVIEW_MIN_SURFACE_WIDTH_PX - 2;
+  const width = Math.max(surface.offsetWidth, surface.getBoundingClientRect().width, 0);
+  return width >= PREVIEW_MIN_SURFACE_WIDTH_PX - 2;
 }
 
 export function measureProductHeatmapPreviewSurface(

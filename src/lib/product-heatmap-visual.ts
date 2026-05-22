@@ -98,6 +98,9 @@ export async function createGaussianHeatmapRenderer(
     repaint(heatmap, width, height) {
       if (width <= 0 || height <= 0) return;
 
+      container.style.width = `${Math.round(width)}px`;
+      container.style.height = `${Math.round(height)}px`;
+
       const radius = heatmapRadiusForSize(width, height);
       instance.configure({
         radius,

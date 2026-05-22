@@ -9,14 +9,14 @@ import type {
 } from "@/types/conception-heatmap";
 import { productDetailsHref, productHeatmapPreviewHref } from "@/lib/product-page-link";
 import {
-  applyProductHeatmapPreviewFrame,
   HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
   mergeProductHeatmapPreviewLayout,
   measureProductHeatmapPreviewSurface,
   PRODUCT_HEATMAP_SURFACE_ATTR,
+  resetProductHeatmapPreviewViewport,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncStageHeatmapOverlay } from "@/lib/product-heatmap-overlay";
+import { syncProductHeatmapOverlay } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -133,17 +133,7 @@ function HeatmapPagePreview({
     const iframe = iframeRef.current;
     const doc = iframe?.contentDocument;
     if (!doc) return;
-
-    const measure: ProductHeatmapSurfaceMeasure = {
-      width: layout.surfaceWidth,
-      height: layout.surfaceHeight,
-      offsetLeft: layout.surfaceOffsetLeft,
-      offsetTop: layout.surfaceOffsetTop,
-      documentWidth: layout.documentWidth,
-      documentHeight: layout.documentHeight,
-    };
-
-    applyProductHeatmapPreviewFrame(doc, measure);
+    resetProductHeatmapPreviewViewport(doc);
   }, [
     layout.documentHeight,
     layout.documentWidth,
@@ -155,22 +145,38 @@ function HeatmapPagePreview({
   ]);
 
   useLayoutEffect(() => {
-    const stage = stageRef.current;
     const iframe = iframeRef.current;
-    if (!stage || !iframe) return () => {};
+    if (!iframe || !heatmap) return () => {};
 
-    return syncStageHeatmapOverlay(
-      stage,
-      iframe,
-      {
-        surfaceWidth: layout.surfaceWidth,
-        surfaceHeight: layout.surfaceHeight,
-        surfaceOffsetLeft: layout.surfaceOffsetLeft,
-        surfaceOffsetTop: layout.surfaceOffsetTop,
-      },
-      heatmap
-    );
-  }, [heatmap, fit.scale, layout, previewSrc]);
+    let cleanup = () => {};
+    let pollId: number | null = null;
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const attachOverlay = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return false;
+      const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`);
+      if (!surface) return false;
+      cleanup();
+      cleanup = syncProductHeatmapOverlay(doc, heatmap);
+      return true;
+    };
+
+    if (!attachOverlay()) {
+      pollId = window.setInterval(() => {
+        attempts += 1;
+        if (attachOverlay() || attempts >= maxAttempts) {
+          if (pollId != null) window.clearInterval(pollId);
+        }
+      }, 100);
+    }
+
+    return () => {
+      if (pollId != null) window.clearInterval(pollId);
+      cleanup();
+    };
+  }, [heatmap, layout.surfaceHeight, layout.surfaceWidth, previewSrc]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -229,7 +235,7 @@ function HeatmapPagePreview({
       if (!doc) return;
       const measured = measureProductHeatmapPreviewSurface(doc);
       if (!measured) return;
-      applyProductHeatmapPreviewFrame(doc, measured);
+      resetProductHeatmapPreviewViewport(doc);
       applyMeasuredLayout(measured);
     };
 
@@ -310,10 +316,13 @@ function HeatmapPagePreview({
               title={`Heatmap preview for ${productTitle}`}
               src={previewSrc}
               scrolling="no"
-              className="absolute left-0 top-0 block border-0 bg-white"
+              className="absolute block border-0 bg-white"
               style={{
                 width: layout.documentWidth,
                 height: layout.documentHeight,
+                left: -layout.surfaceOffsetLeft,
+                top: -layout.surfaceOffsetTop,
+                zIndex: 1,
               }}
             />
           </div>
@@ -524,11 +533,19 @@ export function ProductPageHeatmap() {
         </div>
 
         {previewSrc ?
-          <HeatmapPagePreview
-            previewSrc={previewSrc}
-            heatmap={heatmap}
-            productTitle={selectedPage?.title ?? "product"}
-          />
+          <div className="relative">
+            <HeatmapPagePreview
+              previewSrc={previewSrc}
+              heatmap={heatmap}
+              productTitle={selectedPage?.title ?? "product"}
+            />
+            {!loadingHeatmap && heatmap && heatmap.cells.length === 0 ?
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 p-6 text-center text-custom-sm text-dark-4">
+                No {metric} density for this product in the selected window. Try another metric or browse the live
+                page to collect interactions.
+              </div>
+            : null}
+          </div>
         : null}
       </div>
 
