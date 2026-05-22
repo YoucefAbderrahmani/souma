@@ -2,7 +2,9 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import categoryData from "@/components/Home/Categories/categoryData";
 import shopData from "@/components/Shop/shopData";
 import { compareImportanceTiers, IMPORTANCE_RANKS } from "@/lib/importance-ranking";
+import { catalogAddedAtFromSlug } from "@/lib/catalog-sort";
 import { getProductSizeOptions, parseProductContent } from "@/lib/product-content";
+import { readPromoStartedAt } from "@/lib/vitrina-merchandising";
 import { resolveStorefrontProductId } from "@/server/data-access/product-catalog";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, salesMicroEventTable } from "@/server/db/schema";
@@ -86,6 +88,14 @@ const CLICK_TO_CART_STICKY_MAX = 0.18;
 /** List→promo discount %: below this, nudge “sharpen the offer”; above solid, focus on visibility. */
 const PROMO_DISCOUNT_PCT_WEAK = 6.5;
 const PROMO_DISCOUNT_PCT_SOLID = 14;
+
+/** Promo has been on long enough to judge stale performance (countdown tip). */
+const PROMO_ACTIVE_MIN_AGE_MS = 5 * MS_DAY;
+const PROMO_COUNTDOWN_MIN_VIEWS = 12;
+const PROMO_COUNTDOWN_MAX_ADD_TO_CARTS = 2;
+/** Promo on but shoppers rarely discover it (catalog boost tip). */
+const PROMO_BOOST_MAX_VIEWS = 24;
+const PROMO_BOOST_MIN_VIEWS = 5;
 
 type ProductRow = {
   id: string;
@@ -224,6 +234,21 @@ function isSizeAlreadyDefault(product: ProductRow, sizeLabel: string) {
 function productHasSizeOptions(product: ProductRow) {
   const content = parseProductContent(product.description);
   return content.sizesEnabled && getProductSizeOptions(content).length > 1;
+}
+
+function promoActiveSinceMs(product: ProductRow): number | null {
+  if (product.jomlaPrice == null) return null;
+  const additional = parseProductContent(product.description).additionalInfo;
+  const promoStarted = readPromoStartedAt(additional);
+  if (promoStarted != null) return promoStarted;
+  const listedAt = catalogAddedAtFromSlug(product.slug);
+  return listedAt > 0 ? listedAt : null;
+}
+
+function promoActiveLongEnough(product: ProductRow): boolean {
+  const since = promoActiveSinceMs(product);
+  if (since == null) return false;
+  return Date.now() - since >= PROMO_ACTIVE_MIN_AGE_MS;
 }
 
 function buildDisplaySnapshot(product: ProductRow): VitrinaDisplaySnapshot {
@@ -399,22 +424,36 @@ function buildTips(
     });
   }
 
-  const trendingItem =
-    interaction.views >= 10 ||
-    interaction.hovers >= 12 ||
-    interaction.clicks >= 8 ||
-    (interaction.views >= 8 && interaction.clicks >= 5) ||
-    (interaction.addToCarts >= 2 && interaction.views >= 6);
-  if (trendingItem) {
+  const hasVitrinaPromo = product.jomlaPrice != null;
+  const weakPromoSales =
+    hasVitrinaPromo &&
+    promoActiveLongEnough(product) &&
+    views >= PROMO_COUNTDOWN_MIN_VIEWS &&
+    (interaction.addToCarts <= PROMO_COUNTDOWN_MAX_ADD_TO_CARTS ||
+      (viewToCartPct != null && viewToCartPct < VIEW_TO_CART_PCT_HEALTHY_WITH_PROMO));
+  if (weakPromoSales) {
     tips.push({
       label: "Countdown timer",
       action:
-        interaction.addToCarts >= 2 ?
-          "This item is trending and already converting. Add a This deal ends in... countdown on the product page or catalog card to create urgency without requiring a real sale."
-        : "Traffic is rising on this item. Add a This deal ends in... countdown on the hero area or thumbnail to nudge shoppers before they leave.",
-      priority:
-        interaction.views >= 12 || interaction.clicks >= 10 || interaction.addToCarts >= 3 ? "high" : "medium",
+        interaction.addToCarts === 0 ?
+          `This item has had a Vitrina promo price for a while but no add-to-carts in the last ${SIGNAL_WINDOW_DAYS} days despite ${views} views. Add a “This deal ends in…” countdown on the catalog card and product page to create urgency.`
+        : `Vitrina promo is active but only ${interaction.addToCarts} add-to-cart${interaction.addToCarts === 1 ? "" : "s"} from ${views} views (~${viewToCartPct?.toFixed(1) ?? "0"}% view→cart). Add a “This deal ends in…” countdown so shoppers notice the discount before it slips off the radar.`,
+      priority: "high",
       quickFixId: "trending_countdown",
+    });
+  }
+
+  const lowPromoVisibility =
+    hasVitrinaPromo &&
+    views >= PROMO_BOOST_MIN_VIEWS &&
+    views < PROMO_BOOST_MAX_VIEWS &&
+    interaction.addToCarts <= Math.max(1, Math.floor(views * 0.05));
+  if (lowPromoVisibility) {
+    tips.push({
+      label: "Promo visibility",
+      action: `This item is on Vitrina promo but only ${views} catalog view${views === 1 ? "" : "s"} in the last ${SIGNAL_WINDOW_DAYS} days — shoppers are not discovering the discount. Boost it to the top of the storefront so the promo price shows first in shop grids and new arrivals.`,
+      priority: "high",
+      quickFixId: "promo_catalog_boost",
     });
   }
 
@@ -435,7 +474,7 @@ function buildTips(
         runnerUpColor && topColorSelections > runnerUpSelections ?
           `Shoppers choose "${topColor}" more often than "${runnerUpColor}". Set it as the default color so the product page opens on the most wanted shade.`
         : `"${topColor}" is the most selected color. Move it to the first swatch so the page opens on the shade shoppers want.`,
-      priority: "high",
+      priority: "critical",
       quickFixId: "default_color",
     });
   }
@@ -458,7 +497,7 @@ function buildTips(
         runnerUpSize && topSizeSelections > runnerUpSizeSelections ?
           `Shoppers view and buy size "${topSize}" more than "${runnerUpSize}". Set it as the default size so the Vitrina product page opens on the most wanted fit.`
         : `Size "${topSize}" is the most selected and purchased. Move it to the first size option so shoppers land on the fit they want.`,
-      priority: "high",
+      priority: "critical",
       quickFixId: "default_size",
     });
   }
@@ -556,9 +595,17 @@ function buildQuickFixes(
     if (tip.quickFixId === "trending_countdown") {
       pushFix({
         id: "trending_countdown",
-        label: "Trending countdown",
+        label: "Promo countdown",
         summary:
-          "Add a This deal ends in... countdown on the product hero area for this trending item.",
+          "Add a “This deal ends in…” countdown on the catalog card and product page — the Vitrina promo needs urgency because sales are still low.",
+      });
+    }
+    if (tip.quickFixId === "promo_catalog_boost") {
+      pushFix({
+        id: "promo_catalog_boost",
+        label: "Boost promo to top of store",
+        summary:
+          "Move this discounted item to the top of the storefront catalog (shop, categories, new arrivals) so more shoppers see the Vitrina price.",
       });
     }
   }
@@ -822,7 +869,7 @@ function toRecommendation(
   const maxFixes =
     fixesPerItem != null ? clampVitrinaFixesPerItem(fixesPerItem) : tips.length;
   const cappedTips = tips.slice(0, maxFixes);
-  const quickFixes = buildQuickFixes(product, interaction, aggregate, cappedTips, maxFixes);
+  const quickFixes = buildQuickFixes(product, interaction, aggregate, tips, maxFixes);
   const primaryRecommendation =
     cappedTips[0]?.action ??
     "Refine the title, image, and price to clarify the offer from the catalog thumbnail.";

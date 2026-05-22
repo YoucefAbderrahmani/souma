@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import {
   buildHeroReviewSnippetFromVerifiedReview,
   buildTrendingCountdownEnd,
+  readPromoStartedAt,
   VITRINA_MERCH_KEYS,
   VITRINA_QUICK_FIX_INFO_KEYS,
 } from "@/lib/vitrina-merchandising";
@@ -14,8 +15,8 @@ import {
 import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import {
+  getStorefrontInventoryAliasIds,
   resolveDatabaseProductIdFromClientProductId,
-  resolveStorefrontProductId,
 } from "@/server/data-access/product-catalog";
 import { logAppliedAction } from "@/server/seller-helper/applied-actions";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
@@ -33,6 +34,7 @@ const QUICK_FIX_IDS = new Set<VitrinaQuickFixId>([
   "availability_note",
   "quality_highlight",
   "trending_countdown",
+  "promo_catalog_boost",
   "hero_review_snippet",
 ]);
 
@@ -75,17 +77,73 @@ function reorderDefaultSize(sizes: ProductSizeOption[], sizeLabel: string) {
 
 async function heroSnippetFromBestVerifiedReview(
   productDbId: string,
-  productTitle: string
+  productTitle: string,
+  catalogRating: number
 ): Promise<string | null> {
-  const localId = resolveStorefrontProductId(productTitle, productDbId);
-  if (!localId || localId <= 0) return null;
-  try {
-    const best = await getBestProductReviewForMerch(localId);
-    if (!best?.comment?.trim()) return null;
-    return buildHeroReviewSnippetFromVerifiedReview(best);
-  } catch {
-    return null;
+  const aliasIds = getStorefrontInventoryAliasIds(productTitle, productDbId);
+  for (const localId of aliasIds) {
+    try {
+      const best = await getBestProductReviewForMerch(localId);
+      if (best?.comment?.trim()) {
+        return buildHeroReviewSnippetFromVerifiedReview(best);
+      }
+    } catch {
+      /* try next alias */
+    }
   }
+
+  if (catalogRating > 0) {
+    const stars = Math.max(1, Math.min(5, Math.round(catalogRating)));
+    return `⭐ ${stars}/5 — See customer reviews on the product page.`;
+  }
+
+  return null;
+}
+
+function enrichRequestedQuickFix(
+  requested: VitrinaQuickFixOption,
+  catalog?: VitrinaQuickFixOption
+): VitrinaQuickFixOption | null {
+  const label = requested.label?.trim() || catalog?.label || requested.id;
+  const summary = requested.summary?.trim() || catalog?.summary || label;
+
+  if (requested.id === "default_color") {
+    const color = requested.context?.color?.trim() || catalog?.context?.color?.trim();
+    if (!color) return catalog ?? null;
+    return {
+      id: "default_color",
+      label,
+      summary,
+      context: { color },
+    };
+  }
+
+  if (requested.id === "default_size") {
+    const size = requested.context?.size?.trim() || catalog?.context?.size?.trim();
+    if (!size) return catalog ?? null;
+    return {
+      id: "default_size",
+      label,
+      summary,
+      context: { size },
+    };
+  }
+
+  if (catalog) {
+    return {
+      ...catalog,
+      label,
+      summary,
+      context: { ...catalog.context, ...requested.context },
+    };
+  }
+
+  return {
+    id: requested.id,
+    label,
+    summary,
+    ...(requested.context ? { context: requested.context } : {}),
+  };
 }
 
 function isQuickFixId(value: unknown): value is VitrinaQuickFixId {
@@ -172,39 +230,12 @@ export async function resolveVitrinaQuickFixes(
     return { fixes: [], error: "No quick fixes selected." };
   }
 
-  const recommendation = await getVitrinaProductMarketingRecommendationByProductId(productId, {
-    fixesPerItem: maxFixes,
-  });
-  if (!recommendation) {
-    return { fixes: [], error: "Product recommendation not found." };
-  }
+  const recommendation = await getVitrinaProductMarketingRecommendationByProductId(productId);
+  const allowed = new Map((recommendation?.quickFixes ?? []).map((fix) => [fix.id, fix]));
 
-  const allowed = new Map((recommendation.quickFixes ?? []).map((fix) => [fix.id, fix]));
   const fixes = requestedFixes
-    .map((requested) => {
-      const allowedFix = allowed.get(requested.id);
-      if (!allowedFix) return null;
-
-      if (requested.id === "default_color") {
-        const color = requested.context?.color?.trim() || allowedFix.context?.color?.trim();
-        if (!color) return null;
-        return {
-          ...allowedFix,
-          context: { color },
-        };
-      }
-
-      if (requested.id === "default_size") {
-        const size = requested.context?.size?.trim() || allowedFix.context?.size?.trim();
-        if (!size) return null;
-        return {
-          ...allowedFix,
-          context: { size },
-        };
-      }
-
-      return allowedFix;
-    })
+    .filter((requested) => isQuickFixId(requested.id))
+    .map((requested) => enrichRequestedQuickFix(requested, allowed.get(requested.id)))
     .filter((fix): fix is VitrinaQuickFixOption => Boolean(fix))
     .slice(0, maxFixes);
 
@@ -303,6 +334,26 @@ export async function applyVitrinaQuickFixes(
     if (fix.id === "promo_price" && nextJomlaPrice == null) {
       const vitrinaPrice = Math.max(1, Math.round(nextPrice / (1 + VITRINA_STANDARD_MARKUP)));
       nextJomlaPrice = vitrinaPrice;
+      if (!readPromoStartedAt(nextAdditionalInfo)) {
+        nextAdditionalInfo = upsertAdditionalInfo(
+          nextAdditionalInfo,
+          VITRINA_MERCH_KEYS.promoStartedAt,
+          new Date().toISOString()
+        );
+        contentChanged = true;
+      }
+      applied.push(fix.summary);
+      continue;
+    }
+
+    if (fix.id === "promo_catalog_boost") {
+      const boostAt = new Date().toISOString();
+      nextAdditionalInfo = upsertAdditionalInfo(
+        nextAdditionalInfo,
+        VITRINA_MERCH_KEYS.catalogBoost,
+        boostAt
+      );
+      contentChanged = true;
       applied.push(fix.summary);
       continue;
     }
@@ -329,26 +380,32 @@ export async function applyVitrinaQuickFixes(
         product.rating > 0 ?
           `Customer rating ${product.rating.toFixed(1)}/5 — review quality before you buy.`
         : "Check customer reviews and product details before you buy.";
-      const existingQuality = nextAdditionalInfo.find((entry) => entry.key === VITRINA_QUICK_FIX_INFO_KEYS.quality);
-      if (existingQuality?.value !== ratingLabel) {
+
+      nextAdditionalInfo = upsertAdditionalInfo(
+        nextAdditionalInfo,
+        VITRINA_QUICK_FIX_INFO_KEYS.quality,
+        ratingLabel
+      );
+      contentChanged = true;
+
+      const heroSnippet = await heroSnippetFromBestVerifiedReview(
+        product.id,
+        product.title,
+        product.rating
+      );
+      if (heroSnippet) {
         nextAdditionalInfo = upsertAdditionalInfo(
           nextAdditionalInfo,
-          VITRINA_QUICK_FIX_INFO_KEYS.quality,
-          ratingLabel
+          VITRINA_MERCH_KEYS.heroReview,
+          heroSnippet
         );
-        contentChanged = true;
       }
 
-      const heroSnippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
-      if (heroSnippet) {
-        const existingHero = nextAdditionalInfo.find((entry) => entry.key === VITRINA_MERCH_KEYS.heroReview);
-        if (existingHero?.value !== heroSnippet) {
-          nextAdditionalInfo = upsertAdditionalInfo(nextAdditionalInfo, VITRINA_MERCH_KEYS.heroReview, heroSnippet);
-          contentChanged = true;
-        }
-      }
-
-      applied.push(fix.summary);
+      applied.push(
+        heroSnippet ?
+          fix.summary
+        : `${fix.summary} (Quality line saved; add a written storefront review for a quote on the hero image.)`
+      );
       continue;
     }
 
@@ -370,7 +427,7 @@ export async function applyVitrinaQuickFixes(
     }
 
     if (fix.id === "hero_review_snippet") {
-      const snippet = await heroSnippetFromBestVerifiedReview(product.id, product.title);
+      const snippet = await heroSnippetFromBestVerifiedReview(product.id, product.title, product.rating);
       if (!snippet) {
         applied.push("Hero review overlay skipped — add a written storefront review first.");
         continue;
@@ -415,7 +472,8 @@ export async function applyVitrinaQuickFixes(
     revalidateStorefrontCatalogPaths();
   }
 
-  const storefrontProductId = resolveStorefrontProductId(product.title, product.id);
+  const aliasIds = getStorefrontInventoryAliasIds(product.title, product.id);
+  const storefrontProductId = aliasIds[0] ?? 0;
   const appliedFixIds = fixes
     .map((fix) => fix.id)
     .filter((id, index, all) => all.indexOf(id) === index);

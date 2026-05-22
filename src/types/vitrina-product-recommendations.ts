@@ -31,6 +31,7 @@ export type VitrinaQuickFixId =
   | "availability_note"
   | "quality_highlight"
   | "trending_countdown"
+  | "promo_catalog_boost"
   | "hero_review_snippet";
 
 export type VitrinaQuickFixOption = {

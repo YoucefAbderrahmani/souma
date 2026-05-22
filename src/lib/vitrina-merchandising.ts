@@ -25,6 +25,8 @@ export const VITRINA_QUICK_FIX_INFO_KEYS = {
 export const VITRINA_MERCH_KEYS = {
   trendingCountdown: "Merch: Trending countdown",
   heroReview: "Merch: Hero review",
+  catalogBoost: "Merch: Catalog boost",
+  promoStartedAt: "Merch: Promo started",
 } as const;
 
 const STOREFRONT_STRIP_MAX = 132;
@@ -83,6 +85,23 @@ export function buildHeroReviewSnippetFromVerifiedReview(review: { rating: numbe
   const max = 96;
   const body = oneLine.length > max ? `${oneLine.slice(0, max - 1)}…` : oneLine;
   return `⭐ ${stars}/5 — “${body}”`;
+}
+
+export function readMerchTimestampMs(value?: string | null): number | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function readCatalogBoostAt(additionalInfo: ProductAdditionalInfo[]): number | null {
+  const value = additionalInfo.find((row) => row.key === VITRINA_MERCH_KEYS.catalogBoost)?.value;
+  return readMerchTimestampMs(value);
+}
+
+export function readPromoStartedAt(additionalInfo: ProductAdditionalInfo[]): number | null {
+  const value = additionalInfo.find((row) => row.key === VITRINA_MERCH_KEYS.promoStartedAt)?.value;
+  return readMerchTimestampMs(value);
 }
 
 export function readTrendingCountdownEnd(value?: string | null): Date | null {

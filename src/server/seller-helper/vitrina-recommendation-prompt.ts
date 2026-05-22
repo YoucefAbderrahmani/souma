@@ -64,7 +64,7 @@ Each recommendation must include:
 - isTopRecommendation (boolean; exactly one item in the array must be true)
 priority must be exactly one of: critical, high, medium, low.
 Ground every recommendation in the supplied display and interaction fields.
-Prioritize changes to title, main image, price visibility, default color, default size, promo price, trending countdown timers, hero-image review snippets, and catalog thumbnail messaging.
+Prioritize changes to title, main image, price visibility, default color, default size, promo price, promo catalog boost, stale-promo countdown timers, hero-image review snippets, and catalog thumbnail messaging.
 If interaction data is sparse, lower confidence and avoid inventing metrics.
 Write primaryRecommendation, label, and action in French.`;
 }

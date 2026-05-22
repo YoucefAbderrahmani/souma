@@ -13,6 +13,8 @@ export type Product = {
   id: number;
   /** Ms since epoch from admin slug suffix; used to sort New Arrivals newest-first. */
   catalogAddedAt?: number;
+  /** Vitrina catalog-boost quick fix — sorts ahead of older listings when higher. */
+  catalogBoostAt?: number;
   /** Units available to sell (from catalog `instock`). */
   instock?: number;
   imgs?: {

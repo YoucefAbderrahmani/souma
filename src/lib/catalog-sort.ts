@@ -6,8 +6,22 @@ export function catalogAddedAtFromSlug(slug: string): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-export function sortProductsNewestFirst<T extends { catalogAddedAt?: number }>(products: T[]): T[] {
-  return [...products].sort(
-    (a, b) => (b.catalogAddedAt ?? 0) - (a.catalogAddedAt ?? 0)
-  );
+/** Effective storefront sort position (boost timestamp wins over listing date). */
+export function catalogStorefrontSortKey(product: {
+  catalogAddedAt?: number;
+  catalogBoostAt?: number;
+}): number {
+  return Math.max(product.catalogAddedAt ?? 0, product.catalogBoostAt ?? 0);
+}
+
+export function sortProductsForStorefront<T extends { catalogAddedAt?: number; catalogBoostAt?: number }>(
+  products: T[]
+): T[] {
+  return [...products].sort((a, b) => catalogStorefrontSortKey(b) - catalogStorefrontSortKey(a));
+}
+
+export function sortProductsNewestFirst<T extends { catalogAddedAt?: number; catalogBoostAt?: number }>(
+  products: T[]
+): T[] {
+  return sortProductsForStorefront(products);
 }

@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { catalogAddedAtFromSlug } from "@/lib/catalog-sort";
+import { catalogAddedAtFromSlug, sortProductsForStorefront } from "@/lib/catalog-sort";
 import {
   filterStorefrontHiddenProducts,
   getHiddenStorefrontTitleKeys,
@@ -15,6 +15,7 @@ import {
   getStorefrontMerchHeroStripFromAdditionalInfo,
   getVitrinaMerchandisingFromAdditionalInfo,
   isVitrinaStorefrontMerchExcluded,
+  readCatalogBoostAt,
 } from "@/lib/vitrina-merchandising";
 import { getProductReviewAggregatesByLocalIds, getBestProductReviewsForMerchByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
@@ -121,9 +122,7 @@ function dedupeProductsByTitle(products: Product[]): Product[] {
 
 /** Static seed + DB products: same title only once; database version replaces the static card. */
 function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProducts: Product[]): Product[] {
-  const dbDeduped = dedupeProductsByTitle(dbProducts).sort(
-    (a, b) => (b.catalogAddedAt ?? 0) - (a.catalogAddedAt ?? 0)
-  );
+  const dbDeduped = sortProductsForStorefront(dedupeProductsByTitle(dbProducts));
   const dbTitles = new Set(dbDeduped.map((p) => normalize(p.title)));
   const staticOnly = staticProducts.filter((p) => !dbTitles.has(normalize(p.title)));
   return [...dbDeduped, ...staticOnly];
@@ -140,10 +139,12 @@ function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
   const strip =
     parsed.suppressLiveHeroReviewOverlay ? null : getStorefrontMerchHeroStripFromAdditionalInfo(additional);
   const trending = getVitrinaMerchandisingFromAdditionalInfo(additional).trendingCountdownEndsAt;
+  const catalogBoostAt = readCatalogBoostAt(additional);
   const base = {
     ...product,
     ...(strip ? { heroReviewSnippet: strip } : {}),
     ...(trending ? { trendingCountdownEndsAt: trending.toISOString() } : {}),
+    ...(catalogBoostAt != null ? { catalogBoostAt } : {}),
   };
   if (!parsed.suppressLiveHeroReviewOverlay) return base;
   const { heroReviewSnippet: _h, trendingCountdownEndsAt: _t, ...withoutMerch } = base;
