@@ -5,6 +5,7 @@ export const SELLER_HELPER_NAV = [
   "Vitrina Recommendation",
   "AI Recommendations",
   "Inbox",
+  "Timeline",
   "Security",
   "Alerts",
 ] as const;
@@ -38,6 +39,11 @@ export const SELLER_HELPER_NAV_META: Record<
   Inbox: {
     label: "Inbox",
     description: "Recommendations emailed to each role — mark implemented or dismiss.",
+  },
+  Timeline: {
+    label: "Timeline",
+    description:
+      "Vues, paniers et achats dans le temps — boutique ou par produit, avec repères des actions appliquées.",
   },
   Security: {
     label: "Security",

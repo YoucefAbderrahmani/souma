@@ -66,6 +66,11 @@ const InboxContent = dynamic(
   { loading: () => <SectionLoading label="inbox" /> }
 );
 
+const TimelineContent = dynamic(
+  () => import("./timeline-tab").then((m) => m.TimelineContent),
+  { loading: () => <SectionLoading label="timeline" /> }
+);
+
 function SectionHeading({
   title,
   icon: Icon,
@@ -512,6 +517,7 @@ function SellerHelperDashboardInner({
             onDismiss={dismissInboxItem}
           />
         )}
+        {showPanel("Timeline", <TimelineContent />)}
         {showPanel(
           "Security",
           <SecurityTabContent overview={overview} onClearAllSecurity={clearAllSecurity} />

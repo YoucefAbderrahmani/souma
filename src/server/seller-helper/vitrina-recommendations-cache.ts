@@ -80,3 +80,20 @@ export async function refreshVitrinaRecommendationInCache(
   const next = idx === -1 ? [...current, updated] : current.map((row, i) => (i === idx ? updated : row));
   await writeVitrinaRecommendationsCache(next);
 }
+
+/** Drop catalogue rows from the Vitrina recommendations cache after a product is deleted. */
+export async function removeVitrinaRecommendationsFromCache(
+  productIds: Iterable<string | number>
+): Promise<void> {
+  const keys = new Set<string>();
+  for (const id of Array.from(productIds)) {
+    const s = String(id).trim();
+    if (s) keys.add(s);
+  }
+  if (keys.size === 0) return;
+
+  const current = await readVitrinaRecommendationsCache();
+  const next = current.filter((row) => !keys.has(String(row.productId)));
+  if (next.length === current.length) return;
+  await writeVitrinaRecommendationsCache(next);
+}

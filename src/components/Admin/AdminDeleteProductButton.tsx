@@ -26,7 +26,7 @@ export default function AdminDeleteProductButton({
   const handleClick = () => {
     if (pending) return;
     const ok = window.confirm(
-      `Remove “${productTitle}” from the store?\n\nIt will disappear from New Arrivals, shop pages, and search. This cannot be undone.`
+      `Permanently delete “${productTitle}”?\n\nThis removes the product from the database (images, reviews, analytics, wishlists, order lines) and from the shop. This cannot be undone.`
     );
     if (!ok) return;
 

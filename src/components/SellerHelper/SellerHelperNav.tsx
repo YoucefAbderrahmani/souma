@@ -11,6 +11,9 @@ const SECTION_PREFETCH: Partial<Record<SellerHelperNavItem, () => void>> = {
   Inbox: () => {
     void import("./inbox-tab");
   },
+  Timeline: () => {
+    void import("./timeline-tab");
+  },
   Alerts: () => {
     void import("./sections");
   },

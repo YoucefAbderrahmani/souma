@@ -4,19 +4,11 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { db } from "@/server/db";
-import {
-  categoryTable,
-  costumer_order_to_productTable,
-  imageTable,
-  productsTable,
-  wishlist_to_productTable,
-} from "@/server/db/schema";
+import { categoryTable, imageTable, productsTable } from "@/server/db/schema";
+import { deleteProductCompletely } from "@/server/data-access/delete-product-completely";
 import { parseProductContent, serializeProductContent } from "@/lib/product-content";
 import { mainImageFromColors, reorderColorsWithDefault } from "@/lib/admin-product-colors";
-import {
-  hideStorefrontProductByTitle,
-  unhideStorefrontProductByTitle,
-} from "@/lib/storefront-hidden-products";
+import { unhideStorefrontProductByTitle } from "@/lib/storefront-hidden-products";
 import { saveProductVariantImageFile } from "@/lib/product-variant-image-upload";
 import {
   applySecurityQuickFixes,
@@ -640,39 +632,20 @@ export async function updateProductFullAction(
 
 export async function deleteProductAction(productId: string): Promise<DeleteProductResult> {
   try {
-    const id = String(productId ?? "").trim();
-    if (!id) {
-      return { error: "Missing product id." };
+    const result = await deleteProductCompletely(productId);
+    if ("error" in result) {
+      return { error: result.error };
     }
-
-    const existing = await db
-      .select({ id: productsTable.id, title: productsTable.title })
-      .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .limit(1);
-
-    if (!existing[0]) {
-      return { error: "Product not found." };
-    }
-
-    await hideStorefrontProductByTitle(existing[0].title);
-
-    await db.delete(imageTable).where(eq(imageTable.productId, id));
-    await db.delete(wishlist_to_productTable).where(eq(wishlist_to_productTable.productId, id));
-    await db
-      .delete(costumer_order_to_productTable)
-      .where(eq(costumer_order_to_productTable.productId, id));
-    await db.delete(productsTable).where(eq(productsTable.id, id));
 
     revalidatePath("/admin");
     revalidatePath("/seller-helper");
     revalidateStorefrontCatalogPaths();
-    return { success: true, message: `"${existing[0].title}" removed from the store.` };
+    return {
+      success: true,
+      message: `"${result.title}" permanently deleted (database, analytics, media, and storefront).`,
+    };
   } catch (error) {
     console.error("[deleteProductAction]", error);
-    return {
-      error:
-        "Could not delete this product. Remove it from open orders or wishlists, then try again.",
-    };
+    return { error: "Could not delete this product. Try again." };
   }
 }
