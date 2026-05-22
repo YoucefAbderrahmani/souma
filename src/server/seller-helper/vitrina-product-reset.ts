@@ -13,7 +13,6 @@ import { db } from "@/server/db";
 import { productsTable } from "@/server/db/schema";
 import { revalidateStorefrontCatalogPaths } from "@/server/revalidate-storefront-catalog";
 import { clearVitrinaRecommendationsCache } from "@/server/seller-helper/vitrina-recommendations-cache";
-import { VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES } from "@/lib/vitrina-merchandising";
 import { loadEarliestVitrinaChokepointsByProductDbId } from "@/server/seller-helper/vitrina-chokepoint";
 
 export function stripVitrinaQuickFixFromStructuredContent(
@@ -91,14 +90,15 @@ function normalizeTitleKey(title: string): string {
   return title.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-/** Persist `suppressLiveHeroReviewOverlay` on DB rows so catalog never injects review strips. */
-export async function disableHeroReviewOverlayForExcludedTitles(): Promise<{
+/** Clear `suppressLiveHeroReviewOverlay` so live/persisted hero review strips can show again. */
+export async function clearSuppressLiveHeroReviewOverlayForTitles(titles: string[]): Promise<{
   updatedCount: number;
-  titles: string[];
+  matchedTitles: string[];
 }> {
-  const wanted = new Set(
-    VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES.map((title) => normalizeTitleKey(title))
-  );
+  const wanted = new Set(titles.map(normalizeTitleKey).filter(Boolean));
+  if (wanted.size === 0) {
+    return { updatedCount: 0, matchedTitles: [] };
+  }
 
   const products = await db
     .select({
@@ -109,23 +109,21 @@ export async function disableHeroReviewOverlayForExcludedTitles(): Promise<{
     .from(productsTable);
 
   let updatedCount = 0;
-  const titles: string[] = [];
+  const matchedTitles: string[] = [];
 
   for (const product of products) {
     if (!wanted.has(normalizeTitleKey(product.title))) continue;
-    titles.push(product.title);
+    matchedTitles.push(product.title);
 
     const raw = product.description ?? "";
     if (!isStructuredProductContent(raw)) continue;
 
     const parsed = parseProductContent(raw);
-    if (parsed.suppressLiveHeroReviewOverlay) continue;
+    if (!parsed.suppressLiveHeroReviewOverlay) continue;
 
-    const next = serializeProductContent({
-      ...parsed,
-      suppressLiveHeroReviewOverlay: true,
-    });
-
+    const nextContent = { ...parsed };
+    delete nextContent.suppressLiveHeroReviewOverlay;
+    const next = serializeProductContent(nextContent);
     if (next === raw) continue;
 
     await db
@@ -139,7 +137,7 @@ export async function disableHeroReviewOverlayForExcludedTitles(): Promise<{
     revalidateStorefrontCatalogPaths();
   }
 
-  return { updatedCount, titles };
+  return { updatedCount, matchedTitles };
 }
 
 /** Reset Vitrina quick-fix fields for specific catalogue titles (no timeline log). */

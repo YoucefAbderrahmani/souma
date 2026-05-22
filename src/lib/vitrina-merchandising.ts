@@ -1,21 +1,6 @@
 import type { ProductAdditionalInfo } from "@/lib/product-content";
 import { parseProductContent } from "@/lib/product-content";
 
-/** Catalogue titles with no Vitrina/demo promo overlays or live review hero strip on images. */
-export const VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES = [
-  "Logitech MX Master 3 Mouse",
-  "Apple iMac M1 24-inch 2021",
-  "Pants",
-] as const;
-
-const MERCH_EXCLUDED_TITLE_KEYS = new Set(
-  VITRINA_STOREFRONT_MERCH_EXCLUDED_TITLES.map((title) => title.trim().toLowerCase())
-);
-
-export function isVitrinaStorefrontMerchExcluded(product: { title: string }): boolean {
-  return MERCH_EXCLUDED_TITLE_KEYS.has(product.title.trim().toLowerCase());
-}
-
 /** `additionalInfo` keys written by Vitrina quick fixes (`apply-vitrina-quick-fixes`). */
 export const VITRINA_QUICK_FIX_INFO_KEYS = {
   quality: "Quality",
@@ -149,8 +134,6 @@ export function resolveStorefrontHeroReviewSnippet(product: {
   description?: string | null;
   heroReviewSnippet?: string | null;
 }): string | null {
-  if (isVitrinaStorefrontMerchExcluded(product)) return null;
-
   const parsed = parseProductContent(product.description ?? "");
   if (parsed.suppressLiveHeroReviewOverlay) return null;
 

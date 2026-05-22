@@ -14,7 +14,6 @@ import {
   buildHeroReviewSnippetFromVerifiedReview,
   getStorefrontMerchHeroStripFromAdditionalInfo,
   getVitrinaMerchandisingFromAdditionalInfo,
-  isVitrinaStorefrontMerchExcluded,
   readCatalogBoostAt,
   resolveStorefrontHeroReviewSnippet,
 } from "@/lib/vitrina-merchandising";
@@ -130,11 +129,6 @@ function mergeCatalogWithoutDuplicateTitles(staticProducts: Product[], dbProduct
 }
 
 function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
-  if (isVitrinaStorefrontMerchExcluded(product)) {
-    const { heroReviewSnippet: _h, trendingCountdownEndsAt: _t, ...withoutMerch } = product;
-    return withoutMerch;
-  }
-
   const parsed = parseProductContent(product.description);
   const additional = parsed.additionalInfo;
   const strip =
@@ -168,7 +162,6 @@ async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Pr
 async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Promise<Product[]> {
   const idsWithReviews = products
     .filter((p) => {
-      if (isVitrinaStorefrontMerchExcluded(p)) return false;
       const parsed = parseProductContent(p.description);
       if (parsed.suppressLiveHeroReviewOverlay) return false;
       if (p.heroReviewSnippet?.trim()) return false;
@@ -181,10 +174,6 @@ async function withLiveHeroReviewSnippetsFromDatabase(products: Product[]): Prom
   const bestById = await getBestProductReviewsForMerchByLocalIds(idsWithReviews);
   return products.map((p) => {
     const id = Math.trunc(Number(p.id));
-    if (isVitrinaStorefrontMerchExcluded(p)) {
-      const { heroReviewSnippet: _omit, ...rest } = p;
-      return rest;
-    }
     if (parseProductContent(p.description).suppressLiveHeroReviewOverlay) {
       const { heroReviewSnippet: _omit, trendingCountdownEndsAt: _t, ...rest } = p;
       return rest;
@@ -373,7 +362,6 @@ export async function getHeroReviewSnippetsByStorefrontIds(
 
   for (const product of products) {
     if (!uniqueIds.has(product.id)) continue;
-    if (isVitrinaStorefrontMerchExcluded(product)) continue;
     const snippet = resolveStorefrontHeroReviewSnippet(product);
     if (snippet) {
       snippets[product.id] = snippet;

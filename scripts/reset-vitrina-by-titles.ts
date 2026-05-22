@@ -19,7 +19,7 @@ const TARGET_TITLES = [
 ];
 
 async function main() {
-  const { resetVitrinaForProductTitlesSilent, disableHeroReviewOverlayForExcludedTitles } =
+  const { resetVitrinaForProductTitlesSilent, clearSuppressLiveHeroReviewOverlayForTitles } =
     await import("../src/server/seller-helper/vitrina-product-reset");
 
   const result = await resetVitrinaForProductTitlesSilent(TARGET_TITLES);
@@ -27,8 +27,12 @@ async function main() {
   console.log("Matched:", result.matchedTitles);
   console.log("Updated:", result.updatedCount);
 
-  const overlay = await disableHeroReviewOverlayForExcludedTitles();
-  console.log("Review overlay disabled on DB rows:", overlay.updatedCount, overlay.titles);
+  const overlay = await clearSuppressLiveHeroReviewOverlayForTitles(TARGET_TITLES);
+  console.log(
+    "Cleared suppressLiveHeroReviewOverlay on DB rows:",
+    overlay.updatedCount,
+    overlay.matchedTitles
+  );
 }
 
 main().catch((error) => {

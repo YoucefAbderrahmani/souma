@@ -1,5 +1,3 @@
-import { isVitrinaStorefrontMerchExcluded } from "@/lib/vitrina-merchandising";
-
 /**
  * Storefront promo pills on product photos. Rendered inside
  * `ProductCatalogImageWithMerch` so labels are clipped to the image frame.
@@ -60,8 +58,6 @@ export function productPromoLabelPlacement(entry: ProductPromoLabel): PromoLabel
 }
 
 export function getProductPromoLabels(product: { id: number; title: string }): readonly ProductPromoLabel[] {
-  if (isVitrinaStorefrontMerchExcluded(product)) return [];
-
   const fromId = PRODUCT_PROMO_LABELS_BY_ID[product.id];
   if (fromId?.length) return fromId;
 

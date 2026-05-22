@@ -36,7 +36,6 @@ import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
 import {
   getVitrinaMerchandisingFromAdditionalInfo,
   isVitrinaMerchandisingKey,
-  isVitrinaStorefrontMerchExcluded,
   resolveStorefrontHeroReviewSnippet,
 } from "@/lib/vitrina-merchandising";
 import { ProductCatalogImageWithMerch } from "@/components/Common/ProductCatalogImageWithMerch";
@@ -190,7 +189,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     () => getVitrinaMerchandisingFromAdditionalInfo(parsedContent.additionalInfo),
     [parsedContent.additionalInfo]
   );
-  const hideImageReviewOverlay = isVitrinaStorefrontMerchExcluded(product);
+  const hideImageReviewOverlay = parsedContent.suppressLiveHeroReviewOverlay;
   const heroReviewSnippetForImage = useMemo(
     () => (hideImageReviewOverlay ? null : resolveStorefrontHeroReviewSnippet(product)),
     [hideImageReviewOverlay, product]

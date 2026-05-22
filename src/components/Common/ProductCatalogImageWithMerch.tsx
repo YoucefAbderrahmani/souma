@@ -7,7 +7,7 @@ import type { Product } from "@/types/product";
 import { ProductDemoPromoLabels } from "@/components/Common/ProductDemoPromoLabels";
 import { ProductHeroReviewOverlay } from "@/components/Common/ProductHeroReviewOverlay";
 import { ProductHeroReviewSnippet } from "@/components/Common/ProductHeroReviewSnippet";
-import { isVitrinaStorefrontMerchExcluded } from "@/lib/vitrina-merchandising";
+import { parseProductContent } from "@/lib/product-content";
 
 export type ProductCatalogImageMerchProduct = Pick<Product, "id" | "title" | "description">;
 
@@ -58,9 +58,9 @@ export function ProductCatalogImageWithMerch({
   deferHeroReviewFetch = true,
   fillFrame = false,
 }: Props) {
-  const reviewOverlayDisabled = isVitrinaStorefrontMerchExcluded(product);
-  const snippet = reviewOverlayDisabled ? "" : (heroReviewSnippet?.trim() ?? "");
-  const showReviewOverlay = !reviewOverlayDisabled && showHeroReviewOverlay;
+  const suppressHeroReview = parseProductContent(product.description).suppressLiveHeroReviewOverlay;
+  const snippet = suppressHeroReview ? "" : (heroReviewSnippet?.trim() ?? "");
+  const showReviewOverlay = !suppressHeroReview && showHeroReviewOverlay;
 
   const frameClass = fillFrame
     ? cn("relative isolate block h-full w-full overflow-hidden rounded-lg", className)
