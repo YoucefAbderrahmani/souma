@@ -5,6 +5,11 @@ const nextConfig = {
   // Prevent Next from inferring C:\Users\vada as workspace root,
   // which can dramatically increase memory use during dev compilation.
   outputFileTracingRoot: path.join(__dirname),
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

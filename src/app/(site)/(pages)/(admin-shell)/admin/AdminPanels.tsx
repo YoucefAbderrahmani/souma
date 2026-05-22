@@ -809,7 +809,7 @@ export default function AdminPanels({
                     inputId="admin-product-image"
                     fileName={selectedFileName}
                     onFileChange={(file) => setSelectedFileName(file?.name ?? "No file selected")}
-                    helper="Optional if you use an image URL below. On hosted Vercel, enable Blob storage or use a URL."
+                    helper="JPG, PNG, WebP or GIF up to 4 MB. On Vercel, files are stored in your database if Blob is not configured."
                   />
                   <ProductFormField
                     label="Image URL (optional)"

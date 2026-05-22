@@ -121,6 +121,14 @@ export const wishlist_to_productTable = pgTable(
   ]
 );
 
+/** Admin-uploaded binaries when Vercel Blob / local disk are unavailable (served via /api/media/[id]). */
+export const productMediaTable = pgTable("product_media", {
+  id: uuid().primaryKey().defaultRandom(),
+  contentType: varchar("content_type", { length: 64 }).notNull(),
+  dataBase64: text("data_base64").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 export const imageTable = pgTable("image", {
   id: uuid().primaryKey().defaultRandom(),
   productId: uuid()

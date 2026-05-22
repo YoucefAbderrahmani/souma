@@ -1,5 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { db } from "@/server/db";
+import { productMediaTable } from "@/server/db/schema";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -7,6 +9,9 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
 };
+
+/** Server Actions + Vercel: keep product photos under this size. */
+export const MAX_PRODUCT_IMAGE_BYTES = 4 * 1024 * 1024;
 
 function safeSlugFragment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 80);
@@ -32,14 +37,13 @@ async function saveToVercelBlob(
   fileName: string,
   contentType: string
 ): Promise<string | null> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!token) return null;
   try {
     const { put } = await import("@vercel/blob");
+    const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
     const blob = await put(`products/${fileName}`, buffer, {
       access: "public",
-      token,
       contentType: contentType || "application/octet-stream",
+      ...(token ? { token } : {}),
     });
     return blob.url;
   } catch (error) {
@@ -48,8 +52,27 @@ async function saveToVercelBlob(
   }
 }
 
+async function saveToDatabase(buffer: Buffer, contentType: string): Promise<string | null> {
+  try {
+    const [row] = await db
+      .insert(productMediaTable)
+      .values({
+        contentType: contentType.slice(0, 64) || "application/octet-stream",
+        dataBase64: buffer.toString("base64"),
+      })
+      .returning({ id: productMediaTable.id });
+
+    const id = row?.id;
+    return id ? `/api/media/${id}` : null;
+  } catch (error) {
+    console.error("[product-image-storage] database media save failed:", error);
+    return null;
+  }
+}
+
 /**
- * Persist a product or variant image. Local `public/uploads` in dev; Vercel Blob in production.
+ * Persist a product or variant image.
+ * Order: local disk (dev) → Vercel Blob (if configured) → Postgres `product_media` (works on Vercel without Blob).
  */
 export async function saveProductImageFile(params: {
   slug: string;
@@ -62,6 +85,12 @@ export async function saveProductImageFile(params: {
     return { error: "Missing image file." };
   }
 
+  if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+    return {
+      error: `Image is too large (${Math.round(file.size / 1024)} KB). Maximum is ${Math.round(MAX_PRODUCT_IMAGE_BYTES / 1024)} KB.`,
+    };
+  }
+
   const ext = MIME_TO_EXT[file.type];
   if (!ext) {
     return { error: "Unsupported image type. Use jpg, png, webp, or gif." };
@@ -70,11 +99,13 @@ export async function saveProductImageFile(params: {
   const fileName = buildFileName(slug, fileSuffix, ext);
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  try {
-    const localUrl = await saveToPublicDisk(buffer, fileName);
-    return { url: localUrl };
-  } catch (localError) {
-    console.warn("[product-image-storage] Local disk write failed:", localError);
+  if (!process.env.VERCEL) {
+    try {
+      const localUrl = await saveToPublicDisk(buffer, fileName);
+      return { url: localUrl };
+    } catch (localError) {
+      console.warn("[product-image-storage] Local disk write failed:", localError);
+    }
   }
 
   const blobUrl = await saveToVercelBlob(buffer, fileName, file.type);
@@ -82,15 +113,14 @@ export async function saveProductImageFile(params: {
     return { url: blobUrl };
   }
 
-  if (process.env.VERCEL) {
-    return {
-      error:
-        "Image upload on Vercel needs a Blob store. In the Vercel project → Storage → create Blob, then redeploy (BLOB_READ_WRITE_TOKEN). Or paste an image URL instead of uploading a file.",
-    };
+  const dbUrl = await saveToDatabase(buffer, file.type);
+  if (dbUrl) {
+    return { url: dbUrl };
   }
 
   return {
-    error: "Could not save the image. Check that public/uploads/products is writable on the server.",
+    error:
+      "Could not save the image. Check DATABASE_URL on Vercel, or paste an image URL instead of uploading a file.",
   };
 }
 
