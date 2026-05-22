@@ -1,0 +1,68 @@
+Vitrina Store / Seller Helper — Technologies
+==========================================
+
+CORE APPLICATION
+----------------
+- Language: TypeScript
+- Framework: Next.js 15 (App Router, RSC, API routes)
+- UI: React 19
+- Styling: Tailwind CSS 3, PostCSS, Autoprefixer
+- UI components: Radix UI, class-variance-authority, clsx, tailwind-merge, tailwindcss-animate
+- Forms: React Hook Form, Zod, @hookform/resolvers
+- Client state: Redux Toolkit, react-redux
+- Notifications: Sonner, react-hot-toast
+- Other UI: Swiper, lucide-react, next-themes, react-range-slider-input
+
+BACKEND & DATA
+--------------
+- Database: PostgreSQL (pg driver)
+- ORM / migrations: Drizzle ORM, drizzle-kit
+- Authentication: Better Auth (email/password + Google OAuth)
+- Validation: Zod
+- Uploads: Node.js fs (public/uploads/products) — not Multer
+
+INTEGRATIONS
+------------
+- Payments: Chargily Pay (@chargily/chargily-pay)
+- AI: Google GenAI (@google/genai), OpenRouter (custom client)
+- Smart shopping assistant: custom API + LLM providers
+
+ARCHITECTURE
+------------
+- Next.js API routes (src/app/api/**/route.ts)
+- Server Actions (auth, profile, admin)
+- Server layers: data-access, use-cases, sequence, conception, sales-analyst
+
+ANALYTICS & ADMIN
+-----------------
+- Product micro-events (pa_*) → sales_micro_event
+- Shopping funnel → shopping_sequence
+- Seller Helper / Conception: alerts, heatmaps, recommendations, timeline
+
+HOSTING / ENV (typical)
+-----------------------
+- Vercel (deployment)
+- Neon or compatible Postgres (DATABASE_URL)
+- Env: BETTER_AUTH_*, GOOGLE_CLIENT_*, CHARGILY_*, OPENROUTER_*, etc.
+
+DEV TOOLING
+-----------
+- ESLint, eslint-config-next
+- tsx (scripts)
+- Playwright (devDependency)
+- dotenv
+- Node scripts: DB ensure, seeding, report HTML/PDF
+
+NOT USED IN THIS PROJECT
+------------------------
+- Express.js, Passport.js
+- MongoDB / Mongoose
+- Multer
+- Socket.io / WebSockets
+- Prisma
+
+SUMMARY
+-------
+Next.js 15 + React 19 + TypeScript e-commerce storefront with Better Auth,
+Drizzle/PostgreSQL, Redux, Tailwind, Chargily payments, and LLM-powered
+Seller Helper / assistant features.

@@ -10,8 +10,9 @@ import type {
 } from "@/types/conception-heatmap";
 
 const MS_DAY = 86_400_000;
-export const HEATMAP_GRID_WIDTH = 32;
-export const HEATMAP_GRID_HEIGHT = 48;
+/** Finer grid for smoother Gaussian heatmap (was 32×48). */
+export const HEATMAP_GRID_WIDTH = 48;
+export const HEATMAP_GRID_HEIGHT = 72;
 const DEFAULT_WINDOW_DAYS = 7;
 
 type BucketCounts = Map<string, number>;

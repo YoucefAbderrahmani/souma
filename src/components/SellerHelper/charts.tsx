@@ -817,9 +817,6 @@ export function TimelineChart({
               {hoveredCheckpoint.action.productTitle}
             </p>
           ) : null}
-          <p className="mt-1 text-[9px] uppercase tracking-wide text-orange">
-            Click for details
-          </p>
         </div>
       ) : null}
 

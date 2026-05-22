@@ -1,0 +1,67 @@
+@startuml sequence-session
+' Dual session model: (1) Better Auth login session (2) anonymous browsing session
+' Sources: SessionProvider, middleware.ts, browser-sequence-session.ts, sequence/_cookie.ts
+
+title Session Persistence — Auth + Browsing\n(Legend: Two independent session keys)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor User as user
+participant "Browser" as browser #LightBlue
+participant "SessionProvider\nauthClient.useSession" as authSess #SkyBlue
+participant "Better Auth\n/api/auth/get-session" as ba #Orange
+participant "middleware.ts\n(matcher: /dashboard)" as mw #Pink
+participant "localStorage\nsq_browser_session" as ls #Wheat
+participant "Cookie sq_session\n(httpOnly)" as cookie #Wheat
+participant "Sequence APIs\n/api/sequence/*" as seq #LightGreen
+database "PostgreSQL" as pg #LightGreen
+
+== A) Auth session (login persistence) ==
+
+user -> browser : Load any page
+browser -> authSess : Mount SessionProvider
+authSess -> ba : useSession() → GET /api/auth/get-session\n(credentials: include)
+ba -> pg : Validate session token (unless cookieCache hit)
+ba --> authSess : { user, session } + customSession fields
+authSess --> user : React context session
+
+note over ba
+  **cookieCache** enabled (5 min) in auth.ts —\nreduces DB reads for session enrichment.
+end note
+
+user -> browser : Email sign-in / OAuth complete
+ba -> browser : Set Better Auth session cookie(s)
+browser -> authSess : refetch() after login
+
+== B) Middleware (optimistic /dashboard guard) ==
+
+user -> browser : GET /dashboard
+browser -> mw : Next.js middleware
+mw -> mw : getSessionCookie(request)
+alt no session cookie
+  mw --> browser : 302 Redirect to /
+else cookie present
+  mw --> browser : NextResponse.next()\n(note: not fully secure per comment)
+end
+
+== C) Browsing / analytics session (guest or logged-in) ==
+
+user -> browser : First visit storefront
+browser -> ls : getOrCreateBrowserSequenceSessionId()\ncrypto.randomUUID() if missing
+ls --> browser : session UUID
+
+user -> seq : fetch POST + X-Sequence-Session header
+seq -> cookie : resolveSequenceKey — sync sq_session cookie
+seq -> pg : shopping_sequence / sales_micro_event rows
+
+user -> browser : Tab close from /shop-details
+browser -> seq : sendBeacon /api/sequence/end\n(cookie only, no custom header)
+seq -> cookie : resolveSequenceKeyMaybe()
+seq -> pg : endActiveSequenceIfVisitedProduct
+
+note over ls, cookie
+  **Two keys:** Better Auth cookies (login) vs `sq_browser_session` (funnel/telemetry).\nTelemetry may attach userId via cookie cache without full session DB read.
+end note
+
+@enduml

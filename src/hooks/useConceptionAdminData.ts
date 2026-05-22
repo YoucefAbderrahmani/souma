@@ -369,8 +369,8 @@ export function useConceptionAdminData(
         inbox: [],
         actionMessage:
           deleted > 0 ?
-            `Cleared ${deleted} recommendation(s) from the database. Click Analyze now to start fresh.`
-          : "No stored recommendations in the database. Click Analyze now to generate your first set.",
+            `Cleared ${deleted} recommendation(s).`
+          : "No recommendations to clear.",
       }));
       await load({ background: true });
       return true;
@@ -403,8 +403,8 @@ export function useConceptionAdminData(
         resolvedAlerts: [],
         actionMessage:
           deleted > 0 ?
-            `Cleared ${deleted} alert(s) from the database. Run Analyze now to detect new incidents.`
-          : "No stored alerts in the database. Run Analyze now to generate new alerts.",
+            `Cleared ${deleted} alert(s).`
+          : "No alerts to clear.",
       }));
       await load({ background: true });
       return true;
@@ -435,8 +435,8 @@ export function useConceptionAdminData(
         ...s,
         actionMessage:
           lifted > 0 ?
-            `Unblocked ${lifted} session(s). Live threat signals may still appear from micro-events until you refresh or run Analyze.`
-          : "No active session blocks. Live threat signals are computed from micro-events and may still appear on refresh.",
+            `Unblocked ${lifted} session(s).`
+          : "No active session blocks.",
       }));
       await load({ background: true });
       return true;
@@ -487,36 +487,20 @@ export function useConceptionAdminData(
         (body.vitrinaRecommendations as VitrinaProductMarketingRecommendation[])
       : [];
 
-      let analyzeMessage = `Analysis complete — ${insertedAlerts} alert(s), ${insertedRecommendations} recommendation(s), ${vitrinaRecommendations.length} storefront recommendation(s).`;
+      let analyzeMessage = `Done — ${insertedAlerts} alert(s), ${insertedRecommendations} recommendation(s), ${vitrinaRecommendations.length} Vitrina suggestion(s).`;
       if (emailsSent > 0) {
-        analyzeMessage = `${analyzeMessage} ${emailsSent} role email(s) sent automatically (BREVO_AUTO_SEND_ON_ANALYZE=true).`;
+        analyzeMessage = `${analyzeMessage} ${emailsSent} email(s) sent.`;
       }
       if (emailsFailed > 0) {
-        analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) could not be sent (check BREVO_API_KEY, EMAIL_FROM, and role addresses).`;
+        analyzeMessage = `${analyzeMessage} ${emailsFailed} email(s) failed.`;
       }
       if (baselineInserted > 0 && !llmUsed) {
-        analyzeMessage = `${analyzeMessage} Added ${baselineInserted} baseline recommendation(s) from catalogue/telemetry (AI was unavailable).`;
+        analyzeMessage = `${analyzeMessage} ${baselineInserted} fallback recommendation(s) added.`;
       }
       if (llmUsed && llmSummary) {
-        analyzeMessage = `${analyzeMessage} AI summary (${llmModel ?? "LLM"}): ${llmSummary}`;
+        analyzeMessage = `${analyzeMessage} ${llmSummary}`;
       } else if (llmError) {
-        const needsOpenRouterCredits = llmError.includes("402") || /insufficient credits/i.test(llmError);
-        const geminiQuotaExceeded = /Gemini.*\(429\)|quota exceeded/i.test(llmError);
-        const geminiAlsoFailed = /Gemini\s*:/i.test(llmError);
-
-        if (needsOpenRouterCredits && !geminiConfigured) {
-          analyzeMessage = `${analyzeMessage} OpenRouter has no credits. Add GOOGLE_API_KEY on Vercel (Google AI Studio → Create API key) for free Gemini fallback, or top up OpenRouter.`;
-        } else if (needsOpenRouterCredits && geminiAlsoFailed) {
-          analyzeMessage = `${analyzeMessage} OpenRouter has no credits and Gemini fallback failed: ${llmError}`;
-        } else if (needsOpenRouterCredits && geminiConfigured) {
-          analyzeMessage = `${analyzeMessage} OpenRouter has no credits. Gemini is configured but did not return results — check GOOGLE_API_KEY validity and quota.`;
-        } else if (geminiQuotaExceeded) {
-          analyzeMessage = `${analyzeMessage} Gemini quota exceeded. Top up OpenRouter or wait for the Google quota reset.`;
-        } else {
-          analyzeMessage = `${analyzeMessage} AI analysis unavailable: ${llmError}`;
-        }
-      } else if (!llmUsed) {
-        analyzeMessage = `${analyzeMessage} Set OPENROUTER_API_KEY or GOOGLE_API_KEY to enable full AI analysis.`;
+        analyzeMessage = `${analyzeMessage} Analysis service error.`;
       }
 
       clearVitrinaQuickFixAppliedProductIds();

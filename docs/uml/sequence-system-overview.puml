@@ -1,0 +1,97 @@
+@startuml sequence-system-overview
+' Vue d'ensemble : boutique Vitrina Store + Seller Helper + services externes
+' Sources : sequence-main-flow, sequence-tracking, APIs admin/conception, Better Auth, Brevo, LLM
+
+title Système global Vitrina Store et Seller Helper\n(Visiteur, marchand, collecte, analyse, action)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+skinparam maxMessageSize 220
+
+actor "Visiteur\n(boutique)" as visitor
+actor "Marchand\n(admin)" as merchant
+participant "Vitrina Store\nNext.js + React" as app #LightBlue
+participant "Tracking client\npa_* + sequence" as track #LightGreen
+participant "Routes API\nNext.js" as api #Orange
+participant "Couche serveur\nconception, metrics, LLM" as srv #Wheat
+database "PostgreSQL\n(Neon)" as pg #LightGreen
+participant "Better Auth\n+ Google OAuth" as auth #SkyBlue
+participant "Gemini /\nOpenRouter" as llm #Pink
+participant "Brevo\n(e-mail)" as brevo #Gold
+participant "Chargily Pay" as pay #Red
+
+== Parcours visiteur (collecte) ==
+
+visitor -> app : Navigation catalogue, fiche produit, panier
+app -> track : Contexte global, vues, clics, scroll, heatmap
+track -> api : POST /api/sales-analyst/events\n(batch micro-événements)
+api -> pg : INSERT sales_micro_event
+
+visitor -> api : POST /api/sequence/start|visit-product|end
+api -> pg : shopping_sequence\n(funnel, statut)
+
+opt Achat
+  visitor -> app : Checkout
+  app -> api : POST /api/payments/chargily/checkout
+  api -> pay : Session de paiement
+  pay --> visitor : Paiement
+  api -> pg : Fin de séquence ended_purchase
+end
+
+== Connexion marchand ==
+
+merchant -> app : GET /seller-helper
+app -> auth : Session (cookie)
+auth -> pg : user, session
+alt Non admin
+  app --> merchant : Accès refusé / redirection
+else Admin
+  app -> srv : buildConceptionOverview,\nlist alerts, recommendations, inbox
+  srv -> pg : Agrégations SQL
+  app --> merchant : Dashboard Seller Helper
+end
+
+== Analyse et recommandations ==
+
+merchant -> app : Analyze now
+app -> api : POST /api/admin/conception/analyze
+api -> srv : Agrégation KPI, règles métier
+srv -> pg : Lecture événements, séquences, catalogue
+srv -> llm : Snapshot boutique + catalogue\n(JSON structuré)
+llm --> srv : Alertes + recommandations (JSON)
+srv -> pg : conception_alert,\nconception_recommendation
+
+merchant -> app : Consultation onglets\n(Dashboard, Timeline, Funnel,\nComportement, Vitrina, IA, Alertes, Sécurité)
+app -> api : GET overview, timeline, heatmap,\nvitrina-recommendations, …
+api -> srv : Métriques, heatmap.js, funnel
+srv -> pg : SELECT / agrégats
+app --> merchant : Graphiques et cartes
+
+== Action marchand ==
+
+opt Correctif Vitrina rapide
+  merchant -> app : Appliquer correctif produit
+  app -> api : PATCH catalog / merchandising
+  api -> pg : products, seller_helper_applied_action
+end
+
+opt Envoi recommandation IA
+  merchant -> app : Send email (carte IA)
+  app -> api : POST …/recommendations/send-email
+  api -> brevo : E-mail marketing / support
+  api -> pg : workflow_status, inbox_at, email_sent_at
+end
+
+opt Suivi Inbox
+  merchant -> app : Mark implemented / Dismiss
+  app -> api : PATCH …/inbox
+  api -> pg : implemented_at, dismissed_at
+end
+
+opt Sécurité
+  merchant -> app : Bloquer session suspecte
+  app -> api : POST …/conception/security
+  api -> pg : conception_security_block
+end
+
+@enduml

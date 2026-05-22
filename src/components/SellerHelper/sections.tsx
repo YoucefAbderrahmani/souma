@@ -72,7 +72,7 @@ function SectionHeading({
   count,
 }: {
   title: string;
-  description: string;
+  description?: string;
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   count?: number;
 }) {
@@ -89,7 +89,9 @@ function SectionHeading({
           </span>
         : null}
       </div>
-      <p className="text-custom-sm text-dark-4">{description}</p>
+      {description ?
+        <p className="text-custom-sm text-dark-4">{description}</p>
+      : null}
     </div>
   );
 }
@@ -144,7 +146,6 @@ function HeatmapBands({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs text-dark-4">Intensity derived from scroll depths (7 days)</p>
           <p className="mt-1 text-center text-sm font-medium text-dark">
             {productPageLabel ?? "Most viewed product page"}
           </p>
@@ -189,9 +190,6 @@ function SessionReplayModal({
         <h4 id={`session-replay-${sessionId}`} className="text-lg font-semibold text-dark">
           Replay session #{sessionId}
         </h4>
-        <p className="mt-2 text-custom-sm text-dark-4">
-          Summary computed from the session micro-events. Open admin analytics for event-by-event detail.
-        </p>
         <dl className="mt-4 space-y-2 rounded-lg border border-gray-3 bg-gray-1 p-4 text-custom-sm">
           <div className="flex justify-between gap-3">
             <dt className="text-dark-4">Duration</dt>
@@ -248,23 +246,15 @@ export function UserBehaviorContent({
 
   return (
     <div className={sellerHelperStack}>
-      <SectionHeading
-        title="Behavioral Analysis"
-        description="Heatmaps first, then journeys, scroll depth, and session replays."
-        icon={Users}
-      />
+      <SectionHeading title="Behavioral Analysis" icon={Users} />
 
       <Panel>
         <h4 className="text-base font-semibold text-dark">Product Page Heatmap</h4>
-        <p className="mt-1 text-custom-sm text-dark-4">
-          Select a product page and overlay hover, click, and view intensity on the live layout.
-        </p>
         <ProductPageHeatmap />
       </Panel>
 
       <Panel>
         <h4 className="text-base font-semibold text-dark">Primary User Journeys</h4>
-        <p className="mt-1 text-custom-sm text-dark-4">Most frequent navigation sequences</p>
         <div className="mt-4 flex flex-col gap-2">
           {journeys.length === 0 ?
             <div className={sellerPlaceholder}>No aggregated user journeys in the current window.</div>
@@ -314,7 +304,6 @@ export function UserBehaviorContent({
       <div className={sellerHelperGrid.two}>
         <Panel>
           <h4 className="text-base font-semibold text-dark">Scroll Depth</h4>
-          <p className="mt-1 text-custom-sm text-dark-4">How far shoppers scroll on product pages</p>
           <ul className="mt-3 divide-y divide-gray-3">
             {scrollDepth.length === 0 ?
               <li className="py-4">
@@ -345,7 +334,6 @@ export function UserBehaviorContent({
 
         <Panel>
           <h4 className="text-base font-semibold text-dark">Session Recordings</h4>
-          <p className="mt-1 text-custom-sm text-dark-4">Replay sessions where users abandoned the cart</p>
           <div className="mt-4 space-y-3">
             {sessionReplays.length === 0 ?
               <div className={sellerPlaceholder}>No cart-abandonment sessions detected in the current window.</div>
@@ -449,7 +437,7 @@ export function AiRecommendationsContent({
   const handleClearAll = () => {
     if (
       !window.confirm(
-        "Clear every AI recommendation from the database (active and dismissed)? This cannot be undone. Use Analyze now afterward to generate a fresh set."
+        "Clear every recommendation from the database? This cannot be undone."
       )
     ) {
       return;
@@ -461,12 +449,7 @@ export function AiRecommendationsContent({
   return (
     <div className={sellerHelperStack}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <SectionHeading
-          title="AI Recommendations"
-          description="Saved recommendations from the last LLM analysis. Send email to notify the assigned role — the item then moves to Inbox. Run Analyze now to refresh."
-          icon={Lightbulb}
-          count={recs.length}
-        />
+        <SectionHeading title="AI Recommendations" icon={Lightbulb} count={recs.length} />
         {onClearAllRecommendations ?
           <button
             type="button"
@@ -484,8 +467,7 @@ export function AiRecommendationsContent({
       </div>
       {recommendations.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
-          No recommendations yet. Click <strong>Analyze now</strong> above: the model reads your micro-events and
-          catalogue from the database and writes new cards here (requires API keys in production).
+          No recommendations yet.
         </p>
       : null}
 
@@ -872,7 +854,7 @@ export function AlertsContent({
   const handleClearAllAlerts = () => {
     if (
       !window.confirm(
-        "Clear every alert from the database (active and resolved)? This cannot be undone. Run Analyze now afterward to detect new incidents."
+        "Clear every alert from the database? This cannot be undone."
       )
     ) {
       return;
@@ -884,11 +866,7 @@ export function AlertsContent({
   return (
     <div className={sellerHelperStack}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <SectionHeading
-          title="Alerts"
-          description="Incidents and signals that need attention"
-          icon={Bell}
-        />
+        <SectionHeading title="Alerts" icon={Bell} />
         <div className="flex flex-wrap gap-2 shrink-0">
           <button
             type="button"
@@ -916,7 +894,7 @@ export function AlertsContent({
       </div>
       {alerts.length === 0 ?
         <p className="rounded-lg border border-orange/20 bg-orange/10 px-4 py-3 text-custom-sm text-orange-dark">
-          Run analysis to detect incidents from collected micro-events.
+          No active alerts.
         </p>
       : null}
 
@@ -945,7 +923,6 @@ export function AlertsContent({
           </div>
           <div>
             <h4 className="text-base font-semibold text-dark">Active Alerts</h4>
-            <p className="text-custom-sm text-dark-4">Ongoing incidents that need attention</p>
           </div>
         </div>
 
@@ -1032,7 +1009,6 @@ export function AlertsContent({
             <CheckCircle2 className="h-4 w-4 text-teal" aria-hidden />
             Resolved Alerts
           </h4>
-          <p className="mt-1 text-custom-sm text-dark-4">Recent history</p>
           <ul className="mt-3 space-y-3">
             {resolvedAlerts.length === 0 ?
               <li className="py-4">
@@ -1062,7 +1038,6 @@ export function AlertsContent({
                 <Settings2 className="h-4 w-4 text-orange" aria-hidden />
                 Alert Rules
               </h4>
-              <p className="mt-1 text-custom-sm text-dark-4">Trigger configuration</p>
             </div>
             <button type="button" onClick={() => setRulesOpen(true)} className={sellerGhostButton}>
               Edit

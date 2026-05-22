@@ -26,6 +26,28 @@ const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
   { id: "click", label: "Clicks" },
 ];
 
+const LEGEND_GRADIENT: Record<ConceptionHeatmapMetric, string> = {
+  hover: "linear-gradient(90deg, rgba(191,219,254,0.5) 0%, rgba(59,130,246,0.85) 45%, rgba(29,78,216,1) 100%)",
+  click:
+    "linear-gradient(90deg, rgba(254,215,170,0.5) 0%, rgba(242,122,26,0.85) 50%, rgba(194,65,12,1) 100%)",
+  view: "linear-gradient(90deg, rgba(167,243,208,0.5) 0%, rgba(20,184,166,0.85) 55%, rgba(15,118,110,1) 100%)",
+};
+
+function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric }) {
+  return (
+    <div className="flex items-center gap-2 text-[10px] text-dark-4">
+      <span>Low</span>
+      <div
+        className="h-2 w-28 rounded-full border border-gray-3/80"
+        style={{ background: LEGEND_GRADIENT[metric] }}
+        aria-hidden
+      />
+      <span>High</span>
+      <span className="text-dark-3">· Gaussian density</span>
+    </div>
+  );
+}
+
 const PREVIEW_FALLBACK_WIDTH_PX = HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX;
 const PREVIEW_FALLBACK_HEIGHT_PX = 1800;
 
@@ -420,7 +442,7 @@ export function ProductPageHeatmap() {
   if (pages.length === 0) {
     return (
       <div className={sellerPlaceholder}>
-        No product pages with interaction data yet. Visit product pages to start collecting heatmap signals.
+        No product pages with interaction data yet.
       </div>
     );
   }
@@ -485,10 +507,15 @@ export function ProductPageHeatmap() {
       : null}
 
       <div className="overflow-hidden rounded-xl border border-gray-3 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-3 px-4 py-3 text-xs text-dark-4">
-          <span>
-            {loadingHeatmap ? "Loading heatmap…" : `${heatmap?.cells.length ?? 0} active zones`}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-3 px-4 py-3 text-xs text-dark-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span>
+              {loadingHeatmap ?
+                "Loading heatmap…"
+              : `${heatmap?.cells.length ?? 0} density points · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
+            </span>
+            {!loadingHeatmap && heatmap ? <HeatmapIntensityLegend metric={metric} /> : null}
+          </div>
           <span className="tabular-nums">
             Views {new Intl.NumberFormat("en-US").format(heatmap?.totals.views ?? selectedPage?.views ?? 0)} · Hover{" "}
             {new Intl.NumberFormat("en-US").format(heatmap?.totals.hovers ?? selectedPage?.hovers ?? 0)} · Clicks{" "}

@@ -1,0 +1,90 @@
+@startuml sequence-profile
+' My Account — view & edit profile (no user avatar file upload in UI)
+' Sources: MyAccount/index.tsx, MyAccount/action.ts, use-cases/user.ts, data-access/user.ts
+
+title Profile View / Edit Flow\n(Legend: Client guard → Server Actions → Drizzle → Better Auth for password only)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor User as user
+participant "MyAccount/index.tsx" as ui #LightBlue
+participant "SessionProvider\nauthClient.useSession" as sess #SkyBlue
+participant "updateUserData\nServer Action" as profAct #Wheat
+participant "updateUserPassword\nServer Action" as pwdAct #Wheat
+participant "use-cases/user\nupdateUserData" as uc #White
+participant "data-access/user\nsetUserData" as da #White
+participant "auth.api.changePassword" as ba #Orange
+database "PostgreSQL\nuser table" as pg #LightGreen
+
+== View / access gate ==
+
+user -> ui : Navigate /my-account
+ui -> sess : useSession()
+alt isPending
+  ui --> user : PreLoader
+else no session.user
+  ui -> ui : router.replace("/")
+  ui --> user : Redirect (not signed in)
+else authenticated
+  sess --> ui : user { id, name, lastname, phone, email, … }
+  note over ui
+    Avatar UI uses **static** `/images/users/user-04.jpg`.
+    **Not wired** to session.user.image in current code.
+  end note
+  ui -> ui : form.reset(session fields)
+  ui --> user : Dashboard / Account details tabs
+end
+
+== Edit profile (name, lastname, phone) ==
+
+user -> ui : Submit account details form
+ui -> profAct : userDataAction(FormData + userId)
+activate profAct
+profAct -> profAct : UserDataChangeSchema (Zod)
+alt validation error
+  profAct --> ui : { error }
+  ui --> user : toast.error
+else ok
+  profAct -> uc : updateUserData({ userId, name, lastname, phone })
+  uc -> da : setUserData → db.update(user)
+  da -> pg : UPDATE user SET name, last_name, phone
+  pg --> da : ok
+  da --> profAct : { success: true }
+  profAct --> ui : { success }
+  ui -> sess : refetch()
+  ui --> user : toast.success
+end
+deactivate profAct
+
+== Change password ==
+
+user -> ui : Submit password form
+ui -> pwdAct : passwordAction(FormData)
+activate pwdAct
+pwdAct -> pwdAct : UserPasswordChangeSchema
+pwdAct -> ba : changePassword(\n  currentPassword, newPassword,\n  revokeOtherSessions: true,\n  headers())
+ba -> pg : UPDATE account.password / sessions
+alt wrong current password
+  ba --> pwdAct : throw
+  pwdAct --> ui : { error }
+else success
+  ba --> pwdAct : ok
+  pwdAct --> ui : { success }
+  ui --> user : toast + refetch session
+end
+deactivate pwdAct
+
+== Sign out ==
+
+user -> ui : Logout
+ui -> sess : authClient.signOut()
+sess -> sess : Clear auth cookies
+ui -> ui : router.replace("/")
+
+note over ui, pg
+  **No Multer / no profile avatar upload API.**
+  Google sign-in may store `user.image` URL in DB;\nMy Account page does not display it yet.
+end note
+
+@enduml

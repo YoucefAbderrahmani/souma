@@ -172,8 +172,8 @@ export function InboxContent({
       {filtered.length === 0 ?
         <div className="rounded-lg border border-dashed border-gray-4 bg-gray-1 px-4 py-8 text-center text-custom-sm text-dark-4">
           {inbox.length === 0 ?
-            "No items in any role inbox yet. Send a recommendation email from AI Recommendations to move one here."
-          : "No inbox items for this role. Choose another role or send a new email."}
+            "Inbox is empty."
+          : "No items for this role."}
         </div>
       : <div className="flex flex-col gap-3">
           {filtered.map((rec, index) => (

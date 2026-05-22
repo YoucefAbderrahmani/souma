@@ -87,7 +87,7 @@ export default function AlertRuleSettingsModal({ open, onClose, onSaved }: Props
         error?: string;
       }>(res, "Alert rules API");
       if (!res.ok) throw new Error(body.error || "Save failed");
-      toast.success("Alert rules saved. Run Analyze to apply new thresholds.");
+      toast.success("Alert rules saved.");
       if (body.rules) onSaved?.(body.rules);
       onClose();
     } catch (e) {
@@ -126,10 +126,6 @@ export default function AlertRuleSettingsModal({ open, onClose, onSaved }: Props
             <h4 id="alert-rule-settings-title" className="text-lg font-semibold text-dark">
               Trigger rules
             </h4>
-            <p className="max-w-md text-custom-sm text-dark-4">
-              Control when the rule engine creates alerts during Analyze. Disabled rules are skipped until
-              re-enabled.
-            </p>
           </div>
           <button type="button" onClick={onClose} className={sellerGhostButton} aria-label="Close">
             <X className="h-4 w-4" aria-hidden />

@@ -1,5 +1,9 @@
-import type { ConceptionHeatmapDetailDto, ConceptionHeatmapMetric } from "@/types/conception-heatmap";
+import type { ConceptionHeatmapDetailDto } from "@/types/conception-heatmap";
 import { PRODUCT_HEATMAP_SURFACE_ATTR } from "@/lib/product-heatmap-surface";
+import {
+  createGaussianHeatmapRenderer,
+  type GaussianHeatmapRenderer,
+} from "@/lib/product-heatmap-visual";
 
 export const PRODUCT_HEATMAP_OVERLAY_ATTR = "data-product-heatmap-overlay";
 
@@ -12,39 +16,9 @@ export type HeatmapStageLayout = {
 
 const STAGE_OVERLAY_LAYER_ATTR = "data-product-heatmap-overlay-layer";
 
-function metricTone(metric: ConceptionHeatmapMetric) {
-  if (metric === "hover") return "rgba(59, 130, 246, 0.55)";
-  if (metric === "click") return "rgba(239, 68, 68, 0.58)";
-  return "rgba(16, 185, 129, 0.5)";
-}
-
-function drawHeatmapOnCanvas(canvas: HTMLCanvasElement, heatmap: ConceptionHeatmapDetailDto) {
-  const context = canvas.getContext("2d");
-  if (!context) return;
-
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  if (width <= 0 || height <= 0) return;
-
-  const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
-  canvas.width = Math.floor(width * dpr);
-  canvas.height = Math.floor(height * dpr);
-  context.setTransform(dpr, 0, 0, dpr, 0, 0);
-  context.clearRect(0, 0, width, height);
-
-  const cellWidth = width / heatmap.gridWidth;
-  const cellHeight = height / heatmap.gridHeight;
-  const tone = metricTone(heatmap.metric);
-
-  for (const cell of heatmap.cells) {
-    const alpha = Math.max(0.12, Math.min(0.9, cell.intensity / 100));
-    context.fillStyle = tone.replace(/[\d.]+\)$/, `${alpha})`);
-    context.fillRect(cell.x * cellWidth, cell.y * cellHeight, cellWidth, cellHeight);
-  }
-}
-
 function removeIframeHeatmapCanvas(doc: Document) {
   doc.querySelector(`canvas[${PRODUCT_HEATMAP_OVERLAY_ATTR}]`)?.remove();
+  doc.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`)?.remove();
 }
 
 function readSurfaceOffsetInIframe(iframe: HTMLIFrameElement) {
@@ -62,6 +36,22 @@ function readSurfaceOffsetInIframe(iframe: HTMLIFrameElement) {
   };
 }
 
+async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatmapRenderer> {
+  const layer = document.createElement("div");
+  layer.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
+  layer.setAttribute("aria-hidden", "true");
+  layer.style.position = "absolute";
+  layer.style.left = "0";
+  layer.style.top = "0";
+  layer.style.width = "100%";
+  layer.style.height = "100%";
+  layer.style.pointerEvents = "none";
+  layer.style.overflow = "hidden";
+  layer.style.mixBlendMode = "multiply";
+  container.appendChild(layer);
+  return createGaussianHeatmapRenderer(layer);
+}
+
 /**
  * Overlay lives in the same scaled stage as the iframe so page + heat share one transform.
  */
@@ -71,16 +61,20 @@ export function syncStageHeatmapOverlay(
   layout: HeatmapStageLayout,
   heatmap: ConceptionHeatmapDetailDto | null
 ): () => void {
-  let layer = stage.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`) as HTMLDivElement | null;
-  let canvas = layer?.querySelector(`canvas[${PRODUCT_HEATMAP_OVERLAY_ATTR}]`) as HTMLCanvasElement | null;
+  let mountLayer = stage.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`) as HTMLDivElement | null;
+  let renderer: GaussianHeatmapRenderer | null = null;
+  let rendererReady: Promise<GaussianHeatmapRenderer | null> | null = null;
   let raf = 0;
+  let cancelled = false;
 
   const teardown = () => {
+    cancelled = true;
     if (raf) window.cancelAnimationFrame(raf);
     raf = 0;
-    layer?.remove();
-    layer = null;
-    canvas = null;
+    renderer?.destroy();
+    renderer = null;
+    mountLayer?.remove();
+    mountLayer = null;
     const doc = iframe.contentDocument;
     if (doc) removeIframeHeatmapCanvas(doc);
   };
@@ -90,48 +84,56 @@ export function syncStageHeatmapOverlay(
     return () => {};
   }
 
-  if (!layer) {
-    layer = document.createElement("div");
-    layer.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
-    layer.setAttribute("aria-hidden", "true");
-    layer.style.position = "absolute";
-    layer.style.pointerEvents = "none";
-    layer.style.zIndex = "20";
-    layer.style.overflow = "hidden";
-    stage.appendChild(layer);
-
-    canvas = document.createElement("canvas");
-    canvas.setAttribute(PRODUCT_HEATMAP_OVERLAY_ATTR, "");
-    canvas.style.display = "block";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    layer.appendChild(canvas);
-  }
+  const ensureRenderer = () => {
+    if (renderer) return Promise.resolve(renderer);
+    if (!rendererReady) {
+      if (!mountLayer) {
+        mountLayer = document.createElement("div");
+        mountLayer.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
+        mountLayer.style.position = "absolute";
+        mountLayer.style.pointerEvents = "none";
+        mountLayer.style.zIndex = "20";
+        mountLayer.style.overflow = "hidden";
+        stage.appendChild(mountLayer);
+      }
+      rendererReady = mountGaussianLayer(mountLayer).then((instance) => {
+        if (cancelled) {
+          instance.destroy();
+          return null;
+        }
+        renderer = instance;
+        return instance;
+      });
+    }
+    return rendererReady;
+  };
 
   const sync = () => {
-    if (!layer || !canvas) return;
+    void ensureRenderer().then((instance) => {
+      if (!instance || !mountLayer) return;
 
-    const doc = iframe.contentDocument;
-    if (doc) removeIframeHeatmapCanvas(doc);
+      const doc = iframe.contentDocument;
+      if (doc) removeIframeHeatmapCanvas(doc);
 
-    const offset = readSurfaceOffsetInIframe(iframe);
-    const left = offset?.left ?? 0;
-    const top = offset?.top ?? 0;
-    const width = offset?.width ?? layout.surfaceWidth;
-    const height = offset?.height ?? layout.surfaceHeight;
+      const offset = readSurfaceOffsetInIframe(iframe);
+      const left = offset?.left ?? 0;
+      const top = offset?.top ?? 0;
+      const width = offset?.width ?? layout.surfaceWidth;
+      const height = offset?.height ?? layout.surfaceHeight;
 
-    if (width <= 0 || height <= 0) {
-      layer.style.display = "none";
-      return;
-    }
+      if (width <= 0 || height <= 0) {
+        mountLayer.style.display = "none";
+        return;
+      }
 
-    layer.style.display = "block";
-    layer.style.left = `${left}px`;
-    layer.style.top = `${top}px`;
-    layer.style.width = `${width}px`;
-    layer.style.height = `${height}px`;
+      mountLayer.style.display = "block";
+      mountLayer.style.left = `${left}px`;
+      mountLayer.style.top = `${top}px`;
+      mountLayer.style.width = `${width}px`;
+      mountLayer.style.height = `${height}px`;
 
-    drawHeatmapOnCanvas(canvas, heatmap);
+      instance.repaint(heatmap, width, height);
+    });
   };
 
   const scheduleSync = () => {
@@ -174,36 +176,64 @@ export function syncProductHeatmapOverlay(
   const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
   if (!surface) return () => {};
 
-  const existing = surface.querySelector(
-    `canvas[${PRODUCT_HEATMAP_OVERLAY_ATTR}]`
-  ) as HTMLCanvasElement | null;
+  let mountHost = surface.querySelector(`[${STAGE_OVERLAY_LAYER_ATTR}]`) as HTMLDivElement | null;
+  let renderer: GaussianHeatmapRenderer | null = null;
+  let rendererReady: Promise<GaussianHeatmapRenderer | null> | null = null;
+  let cancelled = false;
+
+  const teardown = () => {
+    cancelled = true;
+    renderer?.destroy();
+    renderer = null;
+    mountHost?.remove();
+    mountHost = null;
+    surface.querySelector(`canvas[${PRODUCT_HEATMAP_OVERLAY_ATTR}]`)?.remove();
+  };
 
   if (!heatmap) {
-    existing?.remove();
+    teardown();
     return () => {};
   }
 
-  const canvas =
-    existing ??
-    (() => {
-      const next = doc.createElement("canvas");
-      next.setAttribute(PRODUCT_HEATMAP_OVERLAY_ATTR, "");
-      next.setAttribute("aria-hidden", "true");
-      next.style.position = "absolute";
-      next.style.inset = "0";
-      next.style.width = "100%";
-      next.style.height = "100%";
-      next.style.pointerEvents = "none";
-      next.style.zIndex = "2147483646";
-      const surfaceStyle = doc.defaultView?.getComputedStyle(surface);
-      if (surfaceStyle?.position === "static") {
-        surface.style.position = "relative";
-      }
-      surface.appendChild(next);
-      return next;
-    })();
+  const surfaceStyle = doc.defaultView?.getComputedStyle(surface);
+  if (surfaceStyle?.position === "static") {
+    surface.style.position = "relative";
+  }
 
-  const draw = () => drawHeatmapOnCanvas(canvas, heatmap);
+  const ensureRenderer = () => {
+    if (renderer) return Promise.resolve(renderer);
+    if (!rendererReady) {
+      if (!mountHost) {
+        mountHost = document.createElement("div");
+        mountHost.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
+        mountHost.style.position = "absolute";
+        mountHost.style.inset = "0";
+        mountHost.style.pointerEvents = "none";
+        mountHost.style.zIndex = "2147483646";
+        mountHost.style.mixBlendMode = "multiply";
+        surface.appendChild(mountHost);
+      }
+      rendererReady = mountGaussianLayer(mountHost).then((instance) => {
+        if (cancelled) {
+          instance.destroy();
+          return null;
+        }
+        renderer = instance;
+        return instance;
+      });
+    }
+    return rendererReady;
+  };
+
+  const draw = () => {
+    const width = Math.max(surface.offsetWidth, surface.getBoundingClientRect().width, 1);
+    const height = Math.max(surface.offsetHeight, surface.getBoundingClientRect().height, 1);
+    void ensureRenderer().then((instance) => {
+      if (!instance) return;
+      instance.repaint(heatmap, width, height);
+    });
+  };
+
   draw();
 
   const observer = new ResizeObserver(() => draw());
@@ -211,6 +241,6 @@ export function syncProductHeatmapOverlay(
 
   return () => {
     observer.disconnect();
-    canvas.remove();
+    teardown();
   };
 }

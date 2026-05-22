@@ -1,0 +1,94 @@
+@startuml activity-system-overview
+' Diagramme d'activité global : parcours visiteur + boucle marchand Seller Helper
+' Sources : storefront, sales-analyst, sequence APIs, admin/conception
+
+title Diagramme d'activité du système\nVitrina Store et Seller Helper
+
+skinparam activity {
+  BackgroundColor LightBlue
+  BorderColor DarkSlateGray
+  FontSize 11
+}
+skinparam partition {
+  BackgroundColor #F8F8F8
+  BorderColor Gray
+}
+
+|Visiteur|
+start
+:Accéder à la boutique\n(catalogue, recherche, catégorie);
+if (Déclencheur parcours ?) then (oui)
+  :Démarrer shopping_sequence\n(/api/sequence/start);
+else (non)
+endif
+:Consulter fiche produit;
+:Enregistrer visit-product\n+ micro-événements pa_*;
+repeat
+  :Interactions\n(clics, scroll, heatmap, panier);
+  :Batch POST\n/api/sales-analyst/events;
+repeat while (Encore sur la boutique ?) is (oui)
+->non;
+
+if (Ajout panier / checkout ?) then (checkout)
+  :Tunnel paiement\n(étapes checkout);
+  if (Paiement Chargily réussi ?) then (oui)
+    :sequence ended_purchase;
+    stop
+  else (non)
+    :Abandon ou erreur;
+  endif
+else (quitte sans achat)
+  if (Avait visité un produit ?) then (oui)
+    :sequence ended_left;
+  endif
+endif
+stop
+
+|#LightGreen|Système (collecte)|
+note right
+  Persistance Neon :
+  sales_micro_event,
+  shopping_sequence
+end note
+
+|Marchand (admin)|
+start
+:Connexion\n(e-mail ou Google OAuth\nvia Better Auth);
+if (Rôle admin ?) then (non)
+  :Accès refusé;
+  stop
+else (oui)
+endif
+:Ouvrir Seller Helper;
+:Consulter Dashboard,\nTimeline, Funnel, Comportement;
+
+partition "Analyse" {
+  :Clic Analyze now;
+  :Agrégation SQL\n(KPI, funnel, heatmap);
+  :Règles métier\n(seuils alertes);
+  :Appel LLM\n(Gemini ou OpenRouter);
+  :Validation JSON (Zod);
+  :Enregistrer alertes\net recommandations;
+}
+
+repeat
+  :Parcourir onglets\n(Vitrina, IA, Alertes, Sécurité);
+  if (Action choisie ?) then (correctif Vitrina)
+    :Appliquer correctif produit;
+    :Journaliser\nseller_helper_applied_action;
+  elseif (envoi e-mail) then
+    :Send email (validation manuelle);
+    :Brevo → équipe cible;
+    :Mise à jour Inbox\n(workflow_status);
+  elseif (Inbox) then
+    :Mark implemented\nou Dismiss;
+  elseif (sécurité) then
+    :Bloquer / lever session suspecte;
+  else (consultation seule)
+  endif
+  :Mesurer effets sur Timeline;
+repeat while (Nouvelle analyse ou suivi ?) is (oui)
+->non;
+stop
+
+@enduml

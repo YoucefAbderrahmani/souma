@@ -3,7 +3,8 @@
 import React, { memo, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { AlertTriangle, BarChart2, Compass, Store, Users, Zap } from "lucide-react";
+import { AlertTriangle, BarChart2, Settings, Users, Zap } from "lucide-react";
+import { SellerHelperLogo } from "./SellerHelperLogo";
 import {
   useConceptionAdminData,
   type ConceptionAdminInitialData,
@@ -16,7 +17,7 @@ import { UserBehaviorContent } from "./sections";
 import { VitrinaRecommendationsContent } from "./vitrina-recommendations";
 import { SecurityTabContent } from "./security-tab";
 import { SellerHelperNav } from "./SellerHelperNav";
-import { SELLER_HELPER_NAV_META, type SellerHelperNavItem } from "./nav";
+import type { SellerHelperNavItem } from "./nav";
 import { useInstantTab } from "@/hooks/useInstantTab";
 import { InstantPanel } from "@/components/ui/InstantPanel";
 import {
@@ -67,21 +68,16 @@ const InboxContent = dynamic(
 
 function SectionHeading({
   title,
-  description,
   icon: Icon,
 }: {
   title: string;
-  description: string;
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }) {
   return (
-    <div className="space-y-1">
-      <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
-        {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
-        {title}
-      </h3>
-      <p className="text-custom-sm text-dark-4">{description}</p>
-    </div>
+    <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
+      {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
+      {title}
+    </h3>
   );
 }
 
@@ -143,22 +139,14 @@ function DashboardMainContent({
 
       <div className={sellerHelperGrid.two}>
         <Panel>
-          <SectionHeading
-            title="Traffic & Sales (24h)"
-            description="Collected event volume (normalized)"
-            icon={BarChart2}
-          />
+          <SectionHeading title="Traffic & Sales (24h)" icon={BarChart2} />
           <div className="mt-4 -mx-1">
             <TrafficChart series={trafficSeries} />
           </div>
         </Panel>
 
         <Panel>
-          <SectionHeading
-            title="Devices"
-            description="Recorded browser context distribution"
-            icon={Users}
-          />
+          <SectionHeading title="Devices" icon={Users} />
           <div className="mt-4 space-y-4">
             {devices.length === 0 ?
               <div className={sellerPlaceholder}>No device breakdown recorded.</div>
@@ -178,7 +166,6 @@ function DashboardMainContent({
       <Panel>
         <SectionHeading
           title="Top Performing Pages"
-          description="Micro-event views and buy clicks by path"
           icon={BarChart2}
         />
         <div className={cn(sellerTableWrap, "mt-4")}>
@@ -239,7 +226,6 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
       <Panel>
         <SectionHeading
           title="Conversion Funnel"
-          description="Product → cart → checkout → payment journey"
           icon={BarChart2}
         />
         <div className="mt-4 space-y-4">
@@ -290,7 +276,6 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
         <Panel>
           <SectionHeading
             title="Detected Friction Points"
-            description="Analytical rules on the conversion funnel"
             icon={AlertTriangle}
           />
           <div className="mt-4 space-y-3">
@@ -396,19 +381,12 @@ function SellerHelperDashboardInner({
         <div className={sellerHeroInner}>
           <div className="max-w-3xl space-y-2">
             <p className="inline-flex items-center gap-2 text-custom-sm font-medium text-orange">
-              {isAdminEmbed ?
-                <BarChart2 className="h-4 w-4" aria-hidden />
-              : <Store className="h-4 w-4" aria-hidden />}
+              <SellerHelperLogo size={22} title="Seller Helper" />
               {isAdminEmbed ? "E-Commerce Intelligence" : "Seller Helper"}
             </p>
             <h2 className="text-2xl font-semibold text-dark sm:text-custom-2">
               {isAdminEmbed ? "Analysis & recommendation system" : "Your store dashboard"}
             </h2>
-            <p className="max-w-2xl text-custom-sm text-dark-4">
-              {isAdminEmbed ?
-                "Same Seller Helper experience as the storefront dashboard — live telemetry, AI recommendations, alerts, and security."
-              : "Start with overview and behavior, then work through funnel, merchandising, and alerts."}
-            </p>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className={overview?.hasEventData ? sellerBadge.live : sellerBadge.muted}>
                 <span className="relative flex h-2 w-2">
@@ -436,7 +414,7 @@ function SellerHelperDashboardInner({
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             {!isAdminEmbed ?
               <Link href="/admin" className={sellerSecondaryButton}>
-                <Compass className="h-4 w-4" aria-hidden />
+                <Settings className="h-4 w-4" aria-hidden />
                 Open admin
               </Link>
             : null}
@@ -478,11 +456,6 @@ function SellerHelperDashboardInner({
         ariaLabel={isAdminEmbed ? "Intelligence sections" : "Seller Helper sections"}
         onSelect={handleSelectNav}
       />
-
-      <div className="rounded-lg border border-gray-3 bg-gray-1 px-4 py-3">
-        <p className="text-sm font-semibold text-dark">{visualNav}</p>
-        <p className="mt-1 text-xs text-dark-4">{SELLER_HELPER_NAV_META[visualNav].description}</p>
-      </div>
 
       <div id="seller-helper-active-section" className="relative min-h-[12rem]">
         {showPanel(

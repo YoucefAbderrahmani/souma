@@ -1,0 +1,43 @@
+@startuml sequence-admin-upload
+' File upload in this codebase = admin product images (NOT user avatar / Multer)
+' Sources: admin/actions.ts, product-variant-image-upload.ts
+
+title Admin Product Image Upload\n(Avatar upload for users: **not implemented**)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor Admin as admin
+participant "AdminPanels /\nEditProductModal" as ui #LightBlue
+participant "admin/actions.ts\nServer Actions" as act #Wheat
+participant "saveProductVariantImageFile\n/ writeFile" as fs #White
+participant "public/uploads/products" as disk #Wheat
+participant "Drizzle\ndata-access" as dal #Orange
+database "PostgreSQL\nproducts, product_image" as pg #LightGreen
+
+admin -> ui : Select image file (FormData)
+ui -> act : createProduct / updateProduct\n(colorImage_* or main image field)
+activate act
+act -> act : Parse FormData, validate admin session\n(implicit via page access)
+alt missing file / bad mime
+  act --> ui : { error: Unsupported image type… }
+else variant color image
+  act -> fs : saveProductVariantImageFile({ slug, file })
+  fs -> disk : mkdir + writeFile\n→ /uploads/products/{slug}-color-*.ext
+  fs --> act : { url }
+else main product image
+  act -> disk : writeFile directly in actions.ts
+  act --> act : mainimage = `/uploads/products/...`
+end
+act -> dal : INSERT/UPDATE products + images
+dal -> pg : Persist URLs
+pg --> act : ok
+act --> ui : revalidate storefront / success
+deactivate act
+ui --> admin : Updated catalog
+
+note over admin, disk
+  **User profile "avatar":** Google OAuth may set `user.image` URL in DB.\nMy Account still shows static placeholder image.\n**No Multer, no /api/upload-avatar route.**
+end note
+
+@enduml

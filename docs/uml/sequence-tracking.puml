@@ -1,0 +1,58 @@
+@startuml sequence-tracking
+' Product analytics + shopping funnel (detailed)
+' Sources: pa-whitelist.ts, product-analytics-client.ts, sales-analyst/events, sequence-db.ts
+
+title Analytics & Funnel Tracking\n(tables: sales_micro_event, shopping_sequence)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 10
+
+actor User as user
+participant "UI hooks/components" as ui #LightBlue
+participant "trackProductAnalytics" as track #SkyBlue
+participant "POST /api/sales-analyst/events" as evRoute #Orange
+participant "insertSalesMicroEvents" as ins #White
+participant "sequence-client" as seq #LightGreen
+participant "POST /api/sequence/*" as seqRoute #Orange
+database "sales_micro_event" as me #LightGreen
+database "shopping_sequence" as ss #LightGreen
+database "conception_security_block" as block #Pink
+database "product_analytics_tracking_config" as cfg #Gray
+
+== Micro-events (pa_*) ==
+
+user -> ui : Interaction on PDP/checkout/etc.
+ui -> track : trackProductAnalytics("pa_*", payload)
+track -> track : Whitelist isPaEventName\nSkip if admin-disabled
+track -> cfg : GET /api/product-analytics/tracking-config\n(cached ~90s)
+track -> track : Queue event (max 40, flush 1.8s)
+track -> evRoute : POST JSON batch\nsessionKey, pagePath, productId, events[]
+evRoute -> evRoute : tryResolveUserIdFromBetterAuthCookieCache
+evRoute -> ins : insertSalesMicroEvents(rows)
+ins -> block : filter blocked session_keys
+ins -> me : INSERT rows\n(event_name, payload_json, sequence_index, …)
+
+opt pagehide / tab close
+  track -> evRoute : navigator.sendBeacon (same body)
+end
+
+== Shopping sequence (funnel rows) ==
+
+user -> ui : search / category / product click
+ui -> seq : sequenceStart*
+seq -> seqRoute : POST /api/sequence/start
+seqRoute -> ss : supersede active → INSERT\nstatus=active, trigger_*
+
+user -> ui : Mount ShopDetails
+ui -> seq : sequenceVisitProduct()
+seqRoute -> ss : SET product_visited_at
+
+user -> ui : Leave PDP or purchase
+ui -> seq : sequenceEndLeave / sequenceEndPurchase
+seqRoute -> ss : UPDATE status\nended_left | ended_purchase\n(only if productVisitedAt NOT NULL)
+
+note over me, ss
+  **Funnel KPI events:** pa_product_view, pa_add_to_cart,\npa_begin_checkout, pa_purchase (see PA_FUNNEL in pa-whitelist.ts)
+end note
+
+@enduml

@@ -1,0 +1,46 @@
+@startuml sequence-google-oauth
+' Google OAuth — Better Auth social provider
+' Sources: auth-client.ts, auth.ts, api/auth/[...all]/route.ts
+
+title Google OAuth Flow\n(Legend: Browser redirect → Google → /api/auth/callback/google → Postgres)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor User as user
+participant "signin-form.tsx\nsignup-form.tsx" as form #LightBlue
+participant "authClient\n(better-auth/react)" as client #SkyBlue
+participant "Better Auth\n/api/auth/*" as api #Orange
+participant "Google OAuth" as google #Red
+database "PostgreSQL\n(user, account, session)" as pg #LightGreen
+
+user -> form : Click "Sign In/Up with Google"
+activate form
+form -> client : signIn.social({ provider: "google", callbackURL: "/" })
+client -> api : GET redirect to Google\n(baseURL from BETTER_AUTH_URL / window.origin)
+api -> google : OAuth authorize\n(redirect_uri = {baseURL}/api/auth/callback/google)
+google --> user : Consent screen
+user -> google : Approve
+google -> api : Authorization code callback
+activate api
+api -> google : Exchange code for tokens + profile
+google --> api : profile (name, email, picture, sub…)
+api -> api : mapProfileToUser(profile)\n→ name, lastname, phone, image URL
+api -> pg : UPSERT user + account(provider=google)\nCREATE session
+alt GOOGLE_CLIENT_ID/SECRET missing
+  note over api : socialProviders undefined;\nGoogle button would fail at runtime
+else Neon quota on DB write
+  api --> form : 503 DATABASE_QUOTA_EXCEEDED\n(route wrapper)
+else success
+  api --> user : Set-Cookie + redirect to callbackURL (/)
+  deactivate api
+  form -> client : useSession() refetch
+  client --> user : Session with custom fields\n(lastname, phone, image from DB plugin)
+end
+deactivate form
+
+note over api
+  **customSession plugin** (auth.ts): on each session read,\nloads lastname, image, phone from `user` table via Drizzle.
+end note
+
+@enduml

@@ -26,21 +26,16 @@ import {
 
 function SectionHeading({
   title,
-  description,
   icon: Icon,
 }: {
   title: string;
-  description: string;
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }) {
   return (
-    <div className="space-y-1">
-      <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
-        {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
-        {title}
-      </h3>
-      <p className="text-custom-sm text-dark-4">{description}</p>
-    </div>
+    <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-dark">
+      {Icon ? <Icon className="h-5 w-5 text-orange" aria-hidden /> : null}
+      {title}
+    </h3>
   );
 }
 
@@ -90,7 +85,7 @@ export function SecurityTabContent({
   const handleClearAllSecurity = () => {
     if (
       !window.confirm(
-        "Unblock all sessions in the blocklist? Live suspicious-activity signals are computed from micro-events and may still appear after refresh. Run Analyze to refresh stored alerts."
+        "Unblock all sessions in the blocklist?"
       )
     ) {
       return;
@@ -109,11 +104,7 @@ export function SecurityTabContent({
     <>
       <div className={sellerHelperStack}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <SectionHeading
-            title="Sécurité & intégrité des données"
-            description="Signaux calculés à partir des micro-événements des 7 derniers jours"
-            icon={Shield}
-          />
+          <SectionHeading title="Sécurité & intégrité des données" icon={Shield} />
           {onClearAllSecurity ?
             <button
               type="button"
@@ -153,11 +144,7 @@ export function SecurityTabContent({
 
         {security ?
           <Panel>
-            <SectionHeading
-              title="Formule du score de sécurité"
-              description="Le score est recalculé à chaque rafraîchissement"
-              icon={Shield}
-            />
+            <SectionHeading title="Formule du score de sécurité" icon={Shield} />
             <p className="mt-3 text-custom-sm text-dark-3">{security.scoreFormula}</p>
             <p className="mt-2 text-xs text-dark-4">
               Dernier calcul : {new Date(security.computedAt).toLocaleString("fr-FR")}
@@ -167,11 +154,7 @@ export function SecurityTabContent({
 
         <div className={sellerHelperGrid.two}>
           <Panel>
-            <SectionHeading
-              title="Activité des menaces (24h)"
-              description="Évolution des événements issus de sessions à risque"
-              icon={AlertTriangle}
-            />
+            <SectionHeading title="Activité des menaces (24h)" icon={AlertTriangle} />
             {hasThreatActivity ?
               <div className="mt-4 -mx-1">
                 <ThreatActivityChart series={security?.threatActivity24h ?? []} />
@@ -183,11 +166,7 @@ export function SecurityTabContent({
           </Panel>
 
           <Panel>
-            <SectionHeading
-              title="Types de menaces"
-              description="Distribution sur 7 jours"
-              icon={Ban}
-            />
+            <SectionHeading title="Types de menaces" icon={Ban} />
             <div className="mt-4 space-y-4">
               {threatTypes7d.length === 0 || threatTypes7d.every((item) => item.count === 0) ?
                 <div className={sellerPlaceholder}>Aucun type de menace détecté.</div>
@@ -207,11 +186,7 @@ export function SecurityTabContent({
         </div>
 
         <Panel>
-          <SectionHeading
-            title="Activités suspectes détectées"
-            description="Sessions à risque et actions recommandées"
-            icon={AlertTriangle}
-          />
+          <SectionHeading title="Activités suspectes détectées" icon={AlertTriangle} />
           {incidents.length === 0 ?
             <div className={cn(sellerPlaceholder, "mt-4")}>Aucune activité suspecte détectée.</div>
           : <div className="mt-4 space-y-3">
@@ -252,11 +227,7 @@ export function SecurityTabContent({
         </Panel>
 
         <Panel>
-          <SectionHeading
-            title="Sessions bloquées"
-            description="Liste noire active pour la collecte micro-événements"
-            icon={Ban}
-          />
+          <SectionHeading title="Sessions bloquées" icon={Ban} />
           {blockedIdentities.length === 0 ?
             <div className={cn(sellerPlaceholder, "mt-4")}>Aucune session bloquée pour le moment.</div>
           : <div className={cn(sellerTableWrap, "mt-4")}>
@@ -296,11 +267,7 @@ export function SecurityTabContent({
 
         {(security?.notes ?? []).length > 0 ?
           <Panel>
-            <SectionHeading
-              title="Notes du moteur"
-              description="Signaux issus des micro-événements en direct"
-              icon={Shield}
-            />
+            <SectionHeading title="Notes du moteur" icon={Shield} />
             <ul className="mt-4 space-y-2 text-custom-sm text-dark-3">
               {(security?.notes ?? []).map((note) => (
                 <li key={note} className="rounded-lg border border-gray-3 bg-gray-1 px-3 py-2.5">

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
+import { SellerHelperLogo } from "@/components/SellerHelper/SellerHelperLogo";
 import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
 import { buildConceptionOverview } from "@/server/conception/metrics";
 import {
@@ -76,6 +77,9 @@ export default async function SellerHelperPage() {
           {isAdmin ?
             <SellerHelperDashboard initialData={initialData} initialError={initialError} />
           : <div className={`${sellerPanel} ${sellerPanelPadding} text-center`}>
+              <div className="mx-auto mb-4 flex justify-center">
+                <SellerHelperLogo size={48} title="Seller Helper" />
+              </div>
               <h2 className="text-2xl font-semibold text-dark">Seller Helper</h2>
               <p className="mt-3 text-dark-4">You do not have permission to access this page.</p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

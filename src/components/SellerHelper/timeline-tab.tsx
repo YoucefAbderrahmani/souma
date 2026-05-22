@@ -231,9 +231,6 @@ export function TimelineContent() {
           <LineChart className="h-5 w-5 text-orange" aria-hidden />
           Timeline
         </h3>
-        <p className="text-custom-sm text-dark-4">
-          Plot any combination of metrics over time. Switch between whole-store and per-product views.
-        </p>
       </div>
 
       <div className={cn(sellerPanel, sellerPanelPadding, "space-y-4")}>
@@ -344,7 +341,6 @@ export function TimelineContent() {
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-dark-4">Metrics</span>
-            <span className="text-xs text-dark-4">Pick what to plot — choose more than one to compare.</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {TIMELINE_METRIC_IDS.map((metric) => {
@@ -457,13 +453,6 @@ export function TimelineContent() {
           ))}
         </div>
       : null}
-
-      <p className="text-xs text-dark-4">
-        Tip: combine a volume metric (e.g. {showStoreMode ? "views" : "product views"}) with a rate metric (e.g. conversion rate) to spot when traffic moves but conversion does not.{" "}
-        <button type="button" onClick={() => void loadProducts()} className={cn(sellerGhostButton, "ml-1 inline-flex h-auto px-0 py-0 text-xs underline")}>
-          Re-sync product list
-        </button>
-      </p>
 
       <AppliedActionDetailsModal action={activeAction} onClose={() => setActiveAction(null)} />
     </div>

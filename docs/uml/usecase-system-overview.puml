@@ -1,0 +1,84 @@
+@startuml usecase-system-overview
+' Cas d'utilisation globaux du système e-commerce + Seller Helper
+
+title Cas d'utilisation du système\nVitrina Store et Seller Helper
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Visiteur" as V
+actor "Marchand\n(admin)" as M
+actor "Équipe\nmarketing" as MK
+actor "Support\ntechnique" as ST
+
+rectangle "Boutique Vitrina Store" {
+  usecase "Parcourir le catalogue" as UC1
+  usecase "Consulter une fiche produit" as UC2
+  usecase "Ajouter au panier" as UC3
+  usecase "Passer commande\n(Chargily)" as UC4
+  usecase "Laisser des avis /\nfeedback" as UC5
+  usecase "Utiliser l'assistant\nrecherche produit" as UC6
+}
+
+rectangle "Collecte et suivi comportemental" {
+  usecase "Enregistrer micro-événements\n(clics, scroll, contexte)" as UC7
+  usecase "Suivre le tunnel d'achat\n(shopping_sequence)" as UC8
+  usecase "Générer cartes de chaleur\npar produit" as UC9
+}
+
+rectangle "Seller Helper (marchand)" {
+  usecase "Se connecter\n(e-mail ou Google)" as UC10
+  usecase "Consulter le tableau de bord" as UC11
+  usecase "Analyser la boutique\n(Analyze now)" as UC12
+  usecase "Consulter alertes\net seuils" as UC13
+  usecase "Lire recommandations IA\net Vitrina" as UC14
+  usecase "Appliquer correctifs\nmerchandising" as UC15
+  usecase "Envoyer une recommandation\npar e-mail" as UC16
+  usecase "Gérer l'Inbox\n(implémenté / rejet)" as UC17
+  usecase "Suivre l'évolution\n(Timeline)" as UC18
+  usecase "Bloquer sessions\nsuspectes" as UC19
+}
+
+rectangle "Services système" {
+  usecase "Analyser par règles métier" as UC20
+  usecase "Générer recommandations\n(LLM)" as UC21
+  usecase "Envoyer e-mails\ntransactionnels (Brevo)" as UC22
+}
+
+V --> UC1
+V --> UC2
+V --> UC3
+V --> UC4
+V --> UC5
+V --> UC6
+
+UC2 ..> UC7 : <<include>>
+UC2 ..> UC8 : <<include>>
+UC3 ..> UC7
+UC4 ..> UC8
+
+M --> UC10
+M --> UC11
+M --> UC12
+M --> UC13
+M --> UC14
+M --> UC15
+M --> UC16
+M --> UC17
+M --> UC18
+M --> UC19
+
+UC12 ..> UC20 : <<include>>
+UC12 ..> UC21 : <<include>>
+UC11 ..> UC9 : <<extend>>
+UC14 ..> UC9 : <<extend>>
+
+UC16 --> UC22
+MK <-- UC16 : reçoit e-mail
+ST <-- UC16 : reçoit e-mail
+
+UC15 ..> UC18 : <<extend>>
+UC17 ..> UC18 : <<extend>>
+
+@enduml

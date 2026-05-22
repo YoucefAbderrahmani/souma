@@ -1,0 +1,85 @@
+@startuml sequence-main-flow
+' End-to-end storefront request lifecycle (simplified)
+' Sources: RootAppShell, SiteChrome, catalog APIs, shop-details, Checkout, Chargily
+
+title Main Storefront Request Lifecycle\n(Browse → Product → Cart → Checkout → Payment)
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 10
+skinparam maxMessageSize 200
+
+actor User as user
+participant "Next.js App Router\n(pages + RSC)" as next #LightBlue
+participant "SiteChrome\nHeader, SequenceRouteWatcher" as chrome #SkyBlue
+participant "Redux + localStorage\n(cart)" as cart #Wheat
+participant "sequence-client" as seq #LightGreen
+participant "product-analytics-client" as pa #LightGreen
+participant "API Routes" as api #Orange
+participant "Server data-access\n(Drizzle)" as dal #White
+database "PostgreSQL" as pg #LightGreen
+participant "Chargily Pay API" as chargily #Red
+
+== App bootstrap ==
+
+user -> next : GET /*
+next -> next : RootAppShell → SessionProvider\n→ SiteChrome (unless embed=1)
+chrome -> pa : ensureUnloadHook, load tracking-config
+chrome -> seq : (on navigation) sequence cookies/LS id
+
+== Browse catalog ==
+
+user -> next : GET /shop, /, category
+opt user searches header
+  user -> chrome : Submit search
+  chrome -> seq : POST /api/sequence/start\n{ triggerType: search }
+  chrome -> pa : track pa_search
+  seq -> pg : shopping_sequence INSERT
+end
+opt user opens category
+  chrome -> seq : sequenceStartCategory
+  seq -> pg : new shopping_sequence row
+end
+opt user clicks product card
+  chrome -> seq : sequenceStartProduct(title)
+  seq -> pg : supersede active + INSERT product trigger
+end
+
+== Product detail page ==
+
+user -> next : GET /shop-details?productId=N
+next -> dal : loadCatalogProductForPdp (RSC)\n+ JSON-LD metadata
+dal -> pg : SELECT product, inventory
+next --> user : HTML + ShopDetails client
+user -> seq : POST /api/sequence/visit-product
+seq -> pg : UPDATE productVisitedAt
+user -> pa : pa_product_view, pa_global_context, …
+loop every ~1.8s batch
+  pa -> api : POST /api/sales-analyst/events
+  api -> pg : INSERT sales_micro_event (batch)
+end
+
+== Cart & checkout ==
+
+user -> cart : addToCart (Redux)
+user -> pa : pa_add_to_cart
+user -> next : GET /checkout
+user -> pa : pa_begin_checkout, pa_checkout_step
+user -> api : POST /api/payments/chargily/checkout
+api -> dal : validateInventoryForPurchase
+dal -> pg : inventory check
+api -> chargily : create checkout session
+chargily --> user : Redirect to pay.chargily.*
+opt payment success (client)
+  user -> pa : pa_purchase
+  user -> seq : sequenceEndPurchase()
+  seq -> pg : status ended_purchase
+end
+
+== Leave without purchase ==
+
+user -> chrome : Navigate away from /shop-details
+chrome -> seq : sequenceEndLeave()
+chrome -> pa : pa_navigation + flush beacon
+seq -> pg : ended_left (if productVisitedAt set)
+
+@enduml

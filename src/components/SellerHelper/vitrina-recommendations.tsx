@@ -357,14 +357,11 @@ export function VitrinaRecommendationsContent({
           <Megaphone className="h-5 w-5 text-orange" aria-hidden />
           Vitrina Recommendation
         </h3>
-        <p className="text-custom-sm text-dark-4">
-          Search the catalog, filter by category, and sort by interaction or merchandising priority.
-        </p>
       </div>
 
       {preparedRecommendations.length === 0 ?
         <div className={sellerPlaceholder}>
-          No Vitrina recommendations yet. Run analysis to generate storefront merchandising suggestions.
+          No Vitrina recommendations yet.
         </div>
       : <div className="space-y-4">
           <section className={vitrinaSectionShell} aria-label="Featured highlights">

@@ -1,0 +1,86 @@
+@startuml sequence-auth
+' Vitrina Store — Email authentication (Better Auth)
+' Sources: signin-form.tsx, signin/action.ts, signup-form.tsx, signup/action.ts, auth.ts
+
+title Email Sign-In / Sign-Up Flow\n(Legend: Next.js Server Action → Better Auth API → PostgreSQL)
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+
+actor User as user
+participant "signin-form.tsx\n/signup-form.tsx" as form #LightBlue
+participant "Server Action\nloginEmail / signUpEmail" as action #Wheat
+participant "validatedAction\n(Zod)" as zod #LightGray
+participant "auth.api\n(signInEmail / signUpEmail)" as api #Orange
+participant "Better Auth\nhandler" as ba #Orange
+database "PostgreSQL\n(user, session, account)" as pg #LightGreen
+
+== Sign in (email + password) ==
+
+user -> form : Submit email/password
+activate form
+form -> action : POST (useActionState formaction)
+activate action
+action -> zod : safeParse(FormData)\nLoginSchema
+alt validation fails
+  zod --> action : { error: first Zod message }
+  action --> form : ActionState.error
+  form --> user : toast.error
+else valid
+  zod --> action : { email, password }
+  action -> api : auth.api.signInEmail(\n  body, headers())
+  activate api
+  api -> ba : Create/validate credentials
+  ba -> pg : INSERT/SELECT session, user
+  alt invalid credentials
+    ba --> api : throw
+    api --> action : catch → "Invalid email or password"
+    action --> form : { error }
+    form --> user : toast.error
+  else Neon quota exceeded
+    ba --> api : DB quota error
+    api --> action : friendly quota message
+    action --> form : { error }
+  else success
+    ba --> api : session + Set-Cookie\n(via nextCookies plugin)
+    api --> action : void
+    deactivate api
+    action --> form : { success: true }
+    deactivate action
+    form -> form : router.replace("/")\nauthClient.useSession refetch
+    form --> user : Redirect home (signed in)
+  end
+end
+deactivate form
+
+== Sign up (email + password + profile fields) ==
+
+user -> form : Submit SignUpSchema fields
+form -> action : signUpEmail(FormData)
+activate action
+action -> zod : SignUpSchema parse
+alt invalid
+  zod --> form : error
+else valid
+  action -> api : auth.api.signUpEmail(\n  name, lastname, phone, email, password)
+  api -> ba : Register user\n(additionalFields: role, lastname, phone)
+  ba -> pg : INSERT user, account, session
+  alt duplicate email/phone
+    ba --> action : error "duplicate"
+    action --> form : Account already exists…
+  else success
+    ba --> action : result + cookies
+    action --> form : { success: true }
+    form --> user : router.replace("/")
+  end
+end
+deactivate action
+
+note over ba, pg
+  **Not in this codebase:** Express, Passport, JWT hand-rolled auth.
+  Session cookies are managed by Better Auth (`BETTER_AUTH_SECRET`).
+end note
+
+@enduml

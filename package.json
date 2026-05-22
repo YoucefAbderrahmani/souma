@@ -29,7 +29,15 @@
     "report:seller-helper-graduation:pdf": "node scripts/build-seller-helper-graduation-report.mjs --pdf",
     "report:seller-helper-graduation-fr:merge": "node scripts/merge-graduation-fr.mjs",
     "report:seller-helper-graduation-fr:html": "node scripts/merge-graduation-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs",
-    "report:seller-helper-graduation-fr:pdf": "node scripts/merge-graduation-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs --pdf"
+    "report:seller-helper-graduation-fr:pdf": "node scripts/merge-graduation-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs --pdf",
+    "report:seller-helper-application-fr:html": "node scripts/build-seller-helper-graduation-report-fr.mjs --application",
+    "report:seller-helper-application-fr:pdf": "node scripts/merge-application-report-fr.mjs && node scripts/build-seller-helper-graduation-report-fr.mjs --application --pdf",
+    "report:seller-helper-application-fr:build": "node scripts/build-seller-helper-graduation-report-fr.mjs --application --pdf",
+    "report:seller-helper-application-fr:merge": "node scripts/merge-application-report-fr.mjs",
+    "report:seller-helper-application-fr:docx": "node scripts/build-seller-helper-application-docx.mjs",
+    "report:seller-helper-application-fr:docx:humanized": "node scripts/build-seller-helper-application-docx.mjs --humanized",
+    "uml:render": "node scripts/render-uml.mjs",
+    "uml:render:svg": "node scripts/render-uml.mjs --svg"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {
@@ -51,6 +59,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
+    "heatmap.js": "^2.0.5",
     "lucide-react": "^0.542.0",
     "next": "^15.5.15",
     "next-themes": "^0.4.6",
@@ -75,10 +84,13 @@
     "@types/pg": "^8.15.5",
     "@types/react": "19.0.12",
     "@types/react-dom": "19.0.4",
+    "cheerio": "^1.2.0",
     "drizzle-kit": "^0.31.4",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.15",
+    "html-to-docx": "^1.8.0",
     "npm-force-resolutions": "^0.0.10",
+    "pdf-parse": "^2.4.5",
     "playwright": "^1.51.0",
     "tsx": "^4.20.3",
     "typescript": "5.2.2"

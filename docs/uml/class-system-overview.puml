@@ -1,0 +1,151 @@
+@startuml class-system-overview
+' Modèle de classes / données du système (couches + entités principales)
+' Aligné sur src/server/db/schema.ts et modules conception
+
+title Modèle de classes du système\n(Vitrina Store + Seller Helper)
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Présentation" #LightBlue {
+  class SellerHelperDashboard {
+    +onglets: Dashboard, Timeline, Funnel, …
+    +analyzeNow()
+    +sendEmail()
+  }
+  class VitrinaStorefront {
+    +catalogue, PDP, panier, checkout
+  }
+  class TrackingClient {
+    +track(pa_*)
+    +flushEvents()
+  }
+}
+
+package "API (Next.js)" #Orange {
+  class ConceptionApi {
+    +/admin/conception/analyze
+    +/admin/conception/overview
+    +/admin/conception/recommendations
+    +/admin/conception/inbox
+    +/admin/conception/alerts
+    +/admin/conception/heatmap
+    +/admin/conception/security
+  }
+  class EventsApi {
+    +/sales-analyst/events
+  }
+  class SequenceApi {
+    +/sequence/start
+    +/sequence/visit-product
+    +/sequence/end
+  }
+  class AuthApi {
+    +/api/auth/*
+  }
+}
+
+package "Domaine serveur" #Wheat {
+  class ConceptionMetrics {
+    +buildConceptionOverview()
+    +funnel, timeline, heatmap
+  }
+  class LlmAnalysis {
+    +runLlmAnalysis(snapshot)
+    +validate(Zod)
+  }
+  class AlertRules {
+    +evaluateThresholds()
+  }
+  class EmailHandoff {
+    +sendViaBrevo()
+  }
+}
+
+package "Persistance PostgreSQL" #LightGreen {
+  class User {
+    +id, email, role
+  }
+  class Session {
+    +token, userId
+  }
+  class Product {
+    +id, title, price, stock
+  }
+  class ShoppingSequence {
+    +sessionKey
+    +triggerType, status
+    +productVisitedAt
+  }
+  class SalesMicroEvent {
+    +sessionKey
+    +eventName, payloadJson
+    +productLocalId
+  }
+  class ConceptionAlert {
+    +alertType, severity
+    +fingerprint
+  }
+  class ConceptionRecommendation {
+    +priority, analysis
+    +workflowStatus
+    +inboxAt, emailSentAt
+  }
+  class SellerHelperAppliedAction {
+    +kind, productLocalId
+    +occurredAt
+  }
+  class ConceptionSecurityBlock {
+    +sessionKey, reason
+  }
+  class ConceptionAlertSettings {
+    +settingsJson
+  }
+}
+
+package "Services externes" #Pink {
+  class BetterAuth
+  class GeminiOpenRouter
+  class Brevo
+  class Chargily
+  class NeonPostgres
+}
+
+SellerHelperDashboard --> ConceptionApi
+VitrinaStorefront --> EventsApi
+VitrinaStorefront --> SequenceApi
+TrackingClient --> EventsApi
+SellerHelperDashboard --> AuthApi
+
+ConceptionApi --> ConceptionMetrics
+ConceptionApi --> LlmAnalysis
+ConceptionApi --> AlertRules
+ConceptionApi --> EmailHandoff
+EventsApi --> SalesMicroEvent
+SequenceApi --> ShoppingSequence
+AuthApi --> BetterAuth
+
+ConceptionMetrics --> SalesMicroEvent
+ConceptionMetrics --> ShoppingSequence
+ConceptionMetrics --> Product
+LlmAnalysis --> GeminiOpenRouter
+LlmAnalysis --> ConceptionAlert
+LlmAnalysis --> ConceptionRecommendation
+AlertRules --> ConceptionAlert
+EmailHandoff --> Brevo
+EmailHandoff --> ConceptionRecommendation
+
+BetterAuth --> User
+BetterAuth --> Session
+User "1" -- "0..*" Session
+Product "1" -- "0..*" SalesMicroEvent
+ShoppingSequence "1" -- "0..*" SalesMicroEvent : même sessionKey
+ConceptionRecommendation "0..*" -- "0..1" SellerHelperAppliedAction : suivi Timeline
+User "1" -- "0..*" ShoppingSequence
+
+NeonPostgres ..> SalesMicroEvent : héberge
+NeonPostgres ..> ConceptionAlert
+NeonPostgres ..> ConceptionRecommendation
+
+@enduml

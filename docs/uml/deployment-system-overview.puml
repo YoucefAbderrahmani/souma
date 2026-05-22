@@ -1,0 +1,86 @@
+@startuml deployment-system-overview
+' Déploiement production : Vercel + Neon + services managés
+' Variables : POSTGRES_URL, GOOGLE_*, BREVO, GEMINI, OPENROUTER, CHARGILY, NEXT_PUBLIC_APP_URL
+
+title Diagramme de déploiement du système\nVitrina Store et Seller Helper
+
+skinparam componentStyle rectangle
+skinparam node {
+  BackgroundColor White
+  BorderColor DarkSlateGray
+}
+
+cloud "Internet" {
+  actor "Visiteur" as visitor
+  actor "Marchand\n(admin)" as merchant
+}
+
+node "Poste client" as client {
+  component "Navigateur" as browser {
+    [Pages Next.js\n(RSC + React 19)] as pages
+    [Tracking client\npa_* + sequence] as track
+    [Redux panier] as cart
+  }
+}
+
+node "Vercel\n(serverless / edge)" as vercel #LightBlue {
+  package "Application Next.js 15" {
+    [App Router\nboutique + checkout] as storefront
+    [Seller Helper UI\n/seller-helper] as sh_ui
+    [Routes API\n/api/*] as api
+    [Better Auth\n/api/auth/*] as auth_mod
+    [Couche serveur\nconception, metrics, LLM] as srv
+  }
+  folder "Variables d'environnement" as env {
+    [Secrets Neon, Brevo,\nGoogle, LLM, Chargily]
+  }
+}
+
+node "Neon\n(PostgreSQL serverless)" as neon #LightGreen {
+  database "PostgreSQL" as pg {
+    frame "Données métier" {
+      [user, session]
+      [products, orders]
+      [sales_micro_event]
+      [shopping_sequence]
+      [conception_alert]
+      [conception_recommendation]
+      [seller_helper_applied_action]
+      [conception_security_block]
+    }
+  }
+}
+
+cloud "Services externes" as ext {
+  component "Google OAuth 2.0" as google #SkyBlue
+  component "Google Gemini API" as gemini #Pink
+  component "OpenRouter API" as orouter #Pink
+  component "Brevo\n(e-mail transactionnel)" as brevo #Gold
+  component "Chargily Pay API" as chargily #Red
+}
+
+visitor --> browser : HTTPS
+merchant --> browser : HTTPS
+browser --> vercel : HTTPS\n(NEXT_PUBLIC_APP_URL)
+api --> pg : Drizzle + pg\n(POSTGRES_URL / NEON_DATABASE_URL)
+auth_mod --> google : OAuth
+srv --> gemini : Analyse IA
+srv --> orouter : Fallback LLM
+api --> brevo : REST API\n(recommandations)
+api --> chargily : Checkout paiement
+env ..> api : injection secrets
+env ..> auth_mod
+env ..> srv
+
+note bottom of vercel
+  Build Git → déploiement automatique
+  Preview / Production séparés
+  CDN + HTTPS gérés par Vercel
+end note
+
+note right of neon
+  Base unique pour
+  vitrine, auth et Seller Helper
+end note
+
+@enduml
