@@ -32,7 +32,7 @@ async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatm
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
   layer.style.mixBlendMode = "multiply";
-  layer.style.opacity = "1";
+  layer.style.opacity = "0.9";
   container.appendChild(layer);
   return createGaussianHeatmapRenderer(layer);
 }

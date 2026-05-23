@@ -28,6 +28,7 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
         aria-hidden
       />
       <span className="font-medium text-dark-3">High</span>
+      <span className="text-dark-4">· Gaussian blend</span>
     </div>
   );
 }
