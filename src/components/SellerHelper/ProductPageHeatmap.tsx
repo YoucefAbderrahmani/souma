@@ -8,6 +8,7 @@ import type {
   ConceptionHeatmapPageOption,
 } from "@/types/conception-heatmap";
 import { productDetailsHref, productHeatmapPreviewHref } from "@/lib/product-page-link";
+import { HEATMAP_LEGEND_GRADIENT } from "@/lib/product-heatmap-visual";
 import { HeatmapPreviewFrame } from "./HeatmapPreviewFrame";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -17,23 +18,16 @@ const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
   { id: "click", label: "Clicks" },
 ];
 
-const LEGEND_GRADIENT: Record<ConceptionHeatmapMetric, string> = {
-  hover: "linear-gradient(90deg, #dbeafe 0%, #60a5fa 38%, #2563eb 72%, #1e3a8a 100%)",
-  click: "linear-gradient(90deg, #fef3c7 0%, #fb923c 40%, #ea580c 72%, #991b1b 100%)",
-  view: "linear-gradient(90deg, #ccfbf1 0%, #2dd4bf 40%, #0d9488 72%, #064e3b 100%)",
-};
-
 function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric }) {
   return (
-    <div className="flex items-center gap-2 text-[10px] text-dark-4">
-      <span>Low</span>
+    <div className="flex items-center gap-2.5 text-[10px] text-dark-4">
+      <span className="font-medium text-dark-3">Low</span>
       <div
-        className="h-2 w-28 rounded-full border border-gray-3/80"
-        style={{ background: LEGEND_GRADIENT[metric] }}
+        className="h-2.5 w-32 rounded-full border border-gray-3/90 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06)]"
+        style={{ background: HEATMAP_LEGEND_GRADIENT[metric] }}
         aria-hidden
       />
-      <span>High</span>
-      <span className="text-dark-3">· smooth density</span>
+      <span className="font-medium text-dark-3">High</span>
     </div>
   );
 }
@@ -227,7 +221,7 @@ export function ProductPageHeatmap() {
             <span>
               {loadingHeatmap ?
                 "Loading heatmap…"
-              : `${heatmap?.cells.length ?? 0} density points · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
+              : `${heatmap?.cells.length ?? 0} zones · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
             </span>
             {!loadingHeatmap && heatmap ? <HeatmapIntensityLegend metric={metric} /> : null}
           </div>
