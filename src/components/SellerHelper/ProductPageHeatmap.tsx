@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLiveDataRefresh } from "@/hooks/useLiveDataRefresh";
 import type {
   ConceptionHeatmapDetailDto,
@@ -8,7 +8,16 @@ import type {
   ConceptionHeatmapPageOption,
 } from "@/types/conception-heatmap";
 import { productDetailsHref, productHeatmapPreviewHref } from "@/lib/product-page-link";
-import { HeatmapPreviewFrame } from "./HeatmapPreviewFrame";
+import {
+  HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX,
+  mergeProductHeatmapPreviewLayout,
+  measureProductHeatmapPreviewSurface,
+  PRODUCT_HEATMAP_SURFACE_ATTR,
+  resetProductHeatmapPreviewViewport,
+  type ProductHeatmapSurfaceMeasure,
+} from "@/lib/product-heatmap-surface";
+import { syncStageHeatmapOverlay, type HeatmapStageLayout } from "@/lib/product-heatmap-overlay";
+import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
 const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
@@ -34,7 +43,310 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
         aria-hidden
       />
       <span>High</span>
-      <span className="text-dark-3">· density on product surface</span>
+      <span className="text-dark-3">· Gaussian density</span>
+    </div>
+  );
+}
+
+const PREVIEW_FALLBACK_WIDTH_PX = HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX;
+const PREVIEW_FALLBACK_HEIGHT_PX = 1800;
+
+function createPreviewFallbackLayout(): ProductHeatmapSurfaceMeasure {
+  return {
+    documentWidth: PREVIEW_FALLBACK_WIDTH_PX,
+    documentHeight: PREVIEW_FALLBACK_HEIGHT_PX,
+    width: PREVIEW_FALLBACK_WIDTH_PX,
+    height: PREVIEW_FALLBACK_HEIGHT_PX,
+    offsetLeft: 0,
+    offsetTop: 0,
+  };
+}
+
+function toPreviewLayoutState(measure: ProductHeatmapSurfaceMeasure) {
+  return {
+    documentWidth: measure.documentWidth,
+    documentHeight: measure.documentHeight,
+    surfaceWidth: measure.width,
+    surfaceHeight: measure.height,
+    surfaceOffsetLeft: measure.offsetLeft,
+    surfaceOffsetTop: measure.offsetTop,
+  };
+}
+
+function HeatmapPagePreview({
+  previewSrc,
+  heatmap,
+  productTitle,
+}: {
+  previewSrc: string;
+  heatmap: ConceptionHeatmapDetailDto | null;
+  productTitle: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const layoutLockedRef = useRef(false);
+  const [previewLayoutReady, setPreviewLayoutReady] = useState(false);
+  const [layout, setLayout] = useState(() => toPreviewLayoutState(createPreviewFallbackLayout()));
+  const [fit, setFit] = useState({
+    scale: 1,
+    width: PREVIEW_FALLBACK_WIDTH_PX,
+    height: PREVIEW_FALLBACK_HEIGHT_PX,
+  });
+
+  const updateFit = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const availableWidth = container.clientWidth;
+    const availableHeight = container.clientHeight;
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    const scale = Math.min(
+      availableWidth / layout.surfaceWidth,
+      availableHeight / layout.surfaceHeight
+    );
+    setFit({
+      scale,
+      width: layout.surfaceWidth * scale,
+      height: layout.surfaceHeight * scale,
+    });
+  }, [layout]);
+
+  useEffect(() => {
+    layoutLockedRef.current = false;
+    setPreviewLayoutReady(false);
+    setLayout(toPreviewLayoutState(createPreviewFallbackLayout()));
+    setFit({
+      scale: 1,
+      width: PREVIEW_FALLBACK_WIDTH_PX,
+      height: PREVIEW_FALLBACK_HEIGHT_PX,
+    });
+  }, [previewSrc]);
+
+  useLayoutEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    iframe.style.width = `${Math.max(1, Math.round(layout.documentWidth))}px`;
+    iframe.style.height = `${Math.max(1, Math.round(layout.documentHeight))}px`;
+  }, [layout.documentHeight, layout.documentWidth, previewSrc]);
+
+  useLayoutEffect(() => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    if (!doc) return;
+    resetProductHeatmapPreviewViewport(doc);
+  }, [
+    layout.documentHeight,
+    layout.documentWidth,
+    layout.surfaceHeight,
+    layout.surfaceOffsetLeft,
+    layout.surfaceOffsetTop,
+    layout.surfaceWidth,
+    previewSrc,
+  ]);
+
+  const stageLayout = useMemo<HeatmapStageLayout>(
+    () => ({
+      surfaceWidth: layout.surfaceWidth,
+      surfaceHeight: layout.surfaceHeight,
+      surfaceOffsetLeft: layout.surfaceOffsetLeft,
+      surfaceOffsetTop: layout.surfaceOffsetTop,
+    }),
+    [
+      layout.surfaceHeight,
+      layout.surfaceOffsetLeft,
+      layout.surfaceOffsetTop,
+      layout.surfaceWidth,
+    ]
+  );
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const iframe = iframeRef.current;
+    if (!stage || !iframe || !heatmap || !previewLayoutReady) return () => {};
+
+    let cleanup = () => {};
+    let pollId: number | null = null;
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const attachOverlay = () => {
+      const doc = iframe.contentDocument;
+      if (!doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`)) return false;
+      cleanup();
+      cleanup = syncStageHeatmapOverlay(stage, iframe, stageLayout, heatmap);
+      return true;
+    };
+
+    if (!attachOverlay()) {
+      pollId = window.setInterval(() => {
+        attempts += 1;
+        if (attachOverlay() || attempts >= maxAttempts) {
+          if (pollId != null) window.clearInterval(pollId);
+        }
+      }, 100);
+    }
+
+    return () => {
+      if (pollId != null) window.clearInterval(pollId);
+      cleanup();
+    };
+  }, [heatmap, previewLayoutReady, previewSrc, stageLayout]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => updateFit());
+    observer.observe(container);
+    updateFit();
+
+    return () => observer.disconnect();
+  }, [updateFit]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    let contentObserver: ResizeObserver | null = null;
+    let syncTimer: number | null = null;
+    let pollFrame = 0;
+    let pollAttempts = 0;
+    const maxPollAttempts = 90;
+
+    const applyMeasuredLayout = (measured: ProductHeatmapSurfaceMeasure) => {
+      setLayout((current) => {
+        const currentMeasure: ProductHeatmapSurfaceMeasure = {
+          width: current.surfaceWidth,
+          height: current.surfaceHeight,
+          offsetLeft: current.surfaceOffsetLeft,
+          offsetTop: current.surfaceOffsetTop,
+          documentWidth: current.documentWidth,
+          documentHeight: current.documentHeight,
+        };
+        const merged = mergeProductHeatmapPreviewLayout(
+          currentMeasure,
+          measured,
+          layoutLockedRef.current
+        );
+        layoutLockedRef.current = merged.locked;
+        if (merged.locked) {
+          setPreviewLayoutReady(true);
+        }
+        const next = toPreviewLayoutState(merged.layout);
+        if (
+          current.documentWidth === next.documentWidth &&
+          current.documentHeight === next.documentHeight &&
+          current.surfaceWidth === next.surfaceWidth &&
+          current.surfaceHeight === next.surfaceHeight &&
+          current.surfaceOffsetLeft === next.surfaceOffsetLeft &&
+          current.surfaceOffsetTop === next.surfaceOffsetTop
+        ) {
+          return current;
+        }
+        return next;
+      });
+    };
+
+    const syncPageSize = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const measured = measureProductHeatmapPreviewSurface(doc);
+      if (!measured) return;
+      resetProductHeatmapPreviewViewport(doc);
+      applyMeasuredLayout(measured);
+    };
+
+    const scheduleSync = () => {
+      if (syncTimer != null) window.clearTimeout(syncTimer);
+      syncTimer = window.setTimeout(() => {
+        syncTimer = null;
+        syncPageSize();
+      }, 120);
+    };
+
+    const pollUntilReady = () => {
+      if (layoutLockedRef.current || pollAttempts >= maxPollAttempts) return;
+      pollAttempts += 1;
+      syncPageSize();
+      if (!layoutLockedRef.current) {
+        pollFrame = window.requestAnimationFrame(pollUntilReady);
+      }
+    };
+
+    const attachContentObserver = () => {
+      contentObserver?.disconnect();
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+
+      const surface = doc.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null;
+      if (!surface) {
+        pollFrame = window.requestAnimationFrame(pollUntilReady);
+        return;
+      }
+
+      contentObserver = new ResizeObserver(() => scheduleSync());
+      contentObserver.observe(surface);
+      syncPageSize();
+      pollFrame = window.requestAnimationFrame(pollUntilReady);
+    };
+
+    const handleLoad = () => attachContentObserver();
+
+    iframe.addEventListener("load", handleLoad);
+    if (iframe.contentDocument?.readyState === "complete") {
+      attachContentObserver();
+    }
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      contentObserver?.disconnect();
+      if (syncTimer != null) window.clearTimeout(syncTimer);
+      window.cancelAnimationFrame(pollFrame);
+    };
+  }, [previewSrc]);
+
+  const displayScale = fit.scale;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-[min(56vh,600px)] w-full overflow-hidden bg-gray-1 p-2"
+    >
+      <div className="flex h-full w-full items-center justify-center">
+        <div
+          className="relative overflow-hidden rounded-sm border border-gray-3 bg-white shadow-sm"
+          style={{ width: fit.width, height: fit.height }}
+        >
+          <div
+            ref={stageRef}
+            className="relative overflow-hidden"
+            style={{
+              width: Math.round(layout.surfaceWidth),
+              height: Math.round(layout.surfaceHeight),
+              transform: `scale(${displayScale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <iframe
+              key={previewSrc}
+              ref={iframeRef}
+              title={`Heatmap preview for ${productTitle}`}
+              src={previewSrc}
+              scrolling="no"
+              className="absolute block border-0 bg-white"
+              style={{
+                width: layout.documentWidth,
+                height: layout.documentHeight,
+                left: -Math.round(layout.surfaceOffsetLeft),
+                top: -Math.round(layout.surfaceOffsetTop),
+                zIndex: 0,
+              }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -241,7 +553,7 @@ export function ProductPageHeatmap() {
 
         {previewSrc ?
           <div className="relative">
-            <HeatmapPreviewFrame
+            <HeatmapPagePreview
               previewSrc={previewSrc}
               heatmap={heatmap}
               productTitle={selectedPage?.title ?? "product"}

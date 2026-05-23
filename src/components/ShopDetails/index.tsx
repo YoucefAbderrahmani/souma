@@ -28,7 +28,6 @@ import type { Product } from "@/types/product";
 import { resolveTrackingProductId } from "@/lib/product-page-link";
 import { cn } from "@/lib/utils";
 import { HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX } from "@/lib/product-heatmap-surface";
-import { HeatmapPreviewLayer } from "@/components/ShopDetails/HeatmapPreviewLayer";
 import {
   formatProductAvailableQuantity,
   productAvailableQuantity,
@@ -509,7 +508,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       : (
         <>
           <div ref={pa.surfaceRef} data-product-heatmap-surface="" className="relative">
-            {isHeatmapPreview ? <HeatmapPreviewLayer /> : null}
             <section
               className={
                 compactEmbed ?
