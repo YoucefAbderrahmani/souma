@@ -31,6 +31,7 @@ async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatm
   layer.style.height = "100%";
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
+  layer.style.mixBlendMode = "multiply";
   layer.style.opacity = "1";
   container.appendChild(layer);
   return createGaussianHeatmapRenderer(layer);
@@ -57,6 +58,7 @@ export function syncStageHeatmapOverlay(
     raf = 0;
     renderer?.destroy();
     renderer = null;
+    rendererReady = null;
     mountLayer?.remove();
     mountLayer = null;
   };
@@ -66,6 +68,8 @@ export function syncStageHeatmapOverlay(
     return () => {};
   }
 
+  cancelled = false;
+
   const ensureRenderer = () => {
     if (renderer) return Promise.resolve(renderer);
     if (!rendererReady) {
@@ -73,6 +77,8 @@ export function syncStageHeatmapOverlay(
         mountLayer = document.createElement("div");
         mountLayer.setAttribute(STAGE_OVERLAY_LAYER_ATTR, "");
         mountLayer.style.position = "absolute";
+        mountLayer.style.left = "0";
+        mountLayer.style.top = "0";
         mountLayer.style.pointerEvents = "none";
         mountLayer.style.zIndex = "20";
         mountLayer.style.overflow = "hidden";

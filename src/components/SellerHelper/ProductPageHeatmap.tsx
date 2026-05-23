@@ -16,7 +16,7 @@ import {
   resetProductHeatmapPreviewViewport,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncProductHeatmapOverlay } from "@/lib/product-heatmap-overlay";
+import { syncStageHeatmapOverlay, type HeatmapStageLayout } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -146,9 +146,25 @@ function HeatmapPagePreview({
     previewSrc,
   ]);
 
+  const stageLayout = useMemo<HeatmapStageLayout>(
+    () => ({
+      surfaceWidth: layout.surfaceWidth,
+      surfaceHeight: layout.surfaceHeight,
+      surfaceOffsetLeft: layout.surfaceOffsetLeft,
+      surfaceOffsetTop: layout.surfaceOffsetTop,
+    }),
+    [
+      layout.surfaceHeight,
+      layout.surfaceOffsetLeft,
+      layout.surfaceOffsetTop,
+      layout.surfaceWidth,
+    ]
+  );
+
   useLayoutEffect(() => {
+    const stage = stageRef.current;
     const iframe = iframeRef.current;
-    if (!iframe || !heatmap) return () => {};
+    if (!stage || !iframe || !heatmap || !previewLayoutReady) return () => {};
 
     let cleanup = () => {};
     let pollId: number | null = null;
@@ -157,10 +173,9 @@ function HeatmapPagePreview({
 
     const attachOverlay = () => {
       const doc = iframe.contentDocument;
-      const surface = doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`);
-      if (!doc || !surface) return false;
+      if (!doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`)) return false;
       cleanup();
-      cleanup = syncProductHeatmapOverlay(doc, heatmap);
+      cleanup = syncStageHeatmapOverlay(stage, iframe, stageLayout, heatmap);
       return true;
     };
 
@@ -177,7 +192,7 @@ function HeatmapPagePreview({
       if (pollId != null) window.clearInterval(pollId);
       cleanup();
     };
-  }, [heatmap, previewLayoutReady, previewSrc]);
+  }, [heatmap, previewLayoutReady, previewSrc, stageLayout]);
 
   useEffect(() => {
     const container = containerRef.current;
