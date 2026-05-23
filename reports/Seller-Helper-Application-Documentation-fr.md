@@ -147,106 +147,27 @@ Seller Helper et Vitrina Store reposent sur une application TypeScript hébergé
 
 Nous avons privilégié la maintenabilité (un seul langage côté client et serveur), un coût maîtrisé pour une boutique pilote (offres Neon et Vercel adaptées), la sécurité (authentification déléguée, secrets en variables d'environnement) et l'évolutivité (API Next.js, schéma SQL versionné, modèle de langage interchangeable).
 
-### 5.2 Langages et frameworks applicatifs
+### 5.2 Stack technique (synthèse)
 
-| Composant | Technologie | Rôle dans le projet |
+| Domaine | Technologies | Rôle dans le projet |
 | --- | --- | --- |
-| Langage principal | **TypeScript** | Typage statique sur tout le code applicatif et serveur ; réduction des erreurs en production. |
-| Framework web | **Next.js 15** (App Router) | Pages boutique, panneau admin, routes API Seller Helper, rendu hybride serveur / client. |
-| Interface utilisateur | **React 19** | Composants du Seller Helper, vitrine, formulaires et tableaux de bord. |
-| Styles | **Tailwind CSS 3** | Mise en page responsive, design system partagé (panneaux, badges, graphiques). |
-| Formulaires | **React Hook Form** + **Zod** | Validation des entrées admin et des sorties structurées du LLM. |
-| État client | **Redux Toolkit** | État global de la boutique (panier, catalogue) en complément des hooks React. |
+| Application | **TypeScript**, **Next.js 15**, **React 19**, **Tailwind CSS**, Redux Toolkit | Monorepo boutique + admin ; routes API et modules serveur (conception, e-mail, auth). |
+| Formulaires & contrats | **React Hook Form**, **Zod** | Entrées admin et validation stricte des sorties LLM. |
+| Données | **PostgreSQL** (Neon), **Drizzle ORM**, **pg** | Micro-événements, alertes, recommandations, catalogue ; migrations SQL au build. |
+| Auth & e-mail | **Better Auth** (Google OAuth), **Brevo** | Accès administrateur ; envoi manuel des recommandations par rôle. |
+| IA | **Gemini**, **OpenRouter** | Analyse LLM ; second fournisseur en secours. |
+| Déploiement | **Vercel** | HTTPS, serverless, secrets par environnement. |
+| UI Seller Helper | **heatmap.js**, graphiques **SVG**, Lucide, Swiper | Heatmaps, Dashboard, Timeline, Funnel. |
 
-L'application est organisée en **monorepo**, code front et back dans le même dépôt, routes API sous le dossier applicatif Next.js, logique métier dans des modules serveur dédiés (conception, e-mail, authentification).
+### 5.3 Outils de développement
 
-### 5.3 Base de données, PostgreSQL et Neon
+**ESLint**, **Drizzle Kit** et **tsx** (seed catalogue, simulation de trafic, tests métier). L'application reste un monorepo : front, API et logique métier partagent le même dépôt TypeScript.
 
-Les événements comportementaux, alertes, recommandations, utilisateurs et catalogue sont persistés dans **PostgreSQL**.
-
-| Élément | Détail |
-| --- | --- |
-| Hébergement | **Neon**, base PostgreSQL serverless, adaptée au déploiement Vercel (connexion via URL injectée : POSTGRES_URL, NEON_DATABASE_URL ou DATABASE_URL). |
-| Accès données | **Drizzle ORM**, requêtes typées, schéma TypeScript aligné sur les tables SQL. |
-| Migrations | Scripts SQL dans le dossier drizzle et scripts d'assurance au build (tables micro-événements, inbox, rôles e-mail, etc.). |
-| Driver | **node-postgres (pg)**, connexion depuis les routes API et jobs d'analyse. |
-
-Neon permet de **séparer** l'environnement de développement et de production, avec sauvegardes et montée en charge sans gérer un serveur PostgreSQL dédié. Les agrégations Seller Helper (funnel, timeline, heatmap) s'exécutent en SQL ou via Drizzle sur cette base unique.
-
-### 5.4 Authentification, Better Auth et Google
-
-L'accès au Seller Helper et à l'administration boutique est protégé par **Better Auth**, bibliothèque d'authentification intégrée à Next.js.
-
-| Fonctionnalité | Implémentation |
-| --- | --- |
-| Comptes marchands | E-mail / mot de passe et **connexion Google** (OAuth 2.0 via GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET). |
-| Sessions | Cookies sécurisés, plugin Next.js ; vérification du rôle **administrateur** avant exposition des données Seller Helper. |
-| Persistance | Adaptateur **Drizzle** sur les tables utilisateur, session et vérification Better Auth. |
-
-La connexion **Google** simplifie l'onboarding des marchands (un clic depuis la page de connexion). Seuls les comptes autorisés accèdent aux métriques et aux actions sensibles (analyse, envoi d'e-mails, correctifs catalogue).
-
-### 5.5 Intelligence artificielle, Gemini et OpenRouter
-
-L'analyse avancée (chapitre 7) s'appuie sur des **modèles de langage** accessibles par API :
-
-| Service | Usage |
-| --- | --- |
-| **Google Gemini** (API Google GenAI) | Modèle principal pour générer résumé, alertes et recommandations à partir du snapshot boutique + catalogue. |
-| **OpenRouter** | Passerelle alternative si Gemini est indisponible ou sans crédits ; modèle configurable par variables d'environnement. |
-| **Zod** | Validation stricte du JSON renvoyé par le LLM (priorités, longueurs, champs obligatoires) avant insertion en base. |
-
-Deux fournisseurs d'API limitent les interruptions en production tout en gardant un format de sortie uniforme pour l'interface.
-
-### 5.6 E-mails transactionnels, Brevo
-
-L'envoi des recommandations aux rôles marketing et support passe par **Brevo** (ex-Sendinblue), API SMTP transactionnelle.
-
-| Aspect | Détail |
-| --- | --- |
-| Déclenchement | Action manuelle **Send email** sur une carte IA (pas d'envoi automatique sans validation). |
-| Configuration | Clé API Brevo, expéditeur vérifié (EMAIL_FROM), modèle transactionnel optionnel. |
-| Contenu | Titre, analyse, recommandation et rôle destinataire formatés pour lecture directe par l'équipe. |
-
-Brevo a été choisi pour sa simplicité d'intégration REST, son usage courant en PME et sa compatibilité avec un volume d'e-mails modéré typique d'une boutique pilote.
-
-### 5.7 Déploiement et hébergement, Vercel
-
-La plateforme Vitrina Store (dont Seller Helper) est déployée sur **Vercel**, plateforme alignée sur Next.js.
-
-| Aspect | Bénéfice |
-| --- | --- |
-| Build et déploiement | Pipeline lié au dépôt Git ; build Next.js avec scripts de vérification des tables avant mise en ligne. |
-| Variables d'environnement | Secrets (Neon, Brevo, Google, clés LLM) configurés par environnement preview / production. |
-| URL et domaine | VERCEL_URL pour les callbacks ; NEXT_PUBLIC_APP_URL pour les appels API côté client. |
-| Performance | Déploiement edge / serverless des routes API ; pages statiques ou dynamiques selon le besoin. |
-
-Vercel évite de maintenir un serveur VPS tout en offrant HTTPS, CDN et logs centralisés pour le suivi des incidents.
-
-### 5.8 Visualisation et expérience Seller Helper
-
-| Besoin | Technologie |
-| --- | --- |
-| Cartes de chaleur produit | **heatmap.js**, rendu Gaussian des clics et survols, superposé à l'aperçu fiche produit. |
-| Graphiques Dashboard / Timeline | Composants **SVG** maison (courbes, barres, entonnoir), légers, sans dépendance chart lourde. |
-| Icônes et navigation | **Lucide React** |
-| Carrousels recommandations Vitrina | **Swiper** |
-| Notifications UI | **Sonner** / **react-hot-toast** |
-
-### 5.9 Outils de développement et qualité
-
-| Outil | Rôle |
-| --- | --- |
-| **ESLint** + config Next.js | Lint du code TypeScript / React. |
-| **Drizzle Kit** | Génération et suivi des migrations schéma. |
-| **tsx** | Exécution de scripts TypeScript (seed produits, simulation trafic, tests). |
-| **Playwright** | Génération des rapports PDF (rendu HTML → PDF). |
-| **Git** | Versionnement du code et collaboration équipe. |
-
-### 5.10 Synthèse de l'architecture technique
+### 5.4 Synthèse de l'architecture technique
 
 Côté visiteur, la navigation sur la boutique Next.js alimente des micro-événements envoyés aux routes API puis stockés dans Neon (PostgreSQL). Côté marchand, la connexion passe par Better Auth (Google ou e-mail) pour accéder au Seller Helper. L'action Analyze now déclenche agrégation SQL, règles métier et appel Gemini ou OpenRouter, puis enregistre alertes et recommandations. Enfin, l'envoi par Brevo, le suivi dans l'Inbox et la Timeline permettent de mesurer les effets.
 
-Les chapitres 6 et 7 détaillent la collecte et l'analyse ; les chapitres 8 à 11 décrivent l'expérience marchand dans l'application. Les figures UML du système (déploiement, classes, séquences, cas d'utilisation, activité) sont présentées au chapitre 9.
+Le chapitre 2 détaille la collecte, l'analyse et l'expérience marchand dans l'interface. Les figures UML (déploiement, classes, séquences, cas d'utilisation, activité) figurent dans la section architecture de restitution du chapitre 2.
 
 
 ## Chapitre 6. Collecte des données, groupes, motivations et enregistrement
@@ -427,25 +348,11 @@ L'application est accessible depuis l'espace administrateur de la boutique, en p
 
 L'accès est réservé aux comptes administrateurs authentifiés.
 
-### 8.4 Les neuf modules de navigation
-
-| Module | Intitulé | Mission |
-| --- | --- | --- |
-| Dashboard | Overview | Synthèse : trafic, appareils, pages populaires, indicateurs clés. |
-| Timeline | Timeline | Évolution des métriques dans le temps et repères d'actions. |
-| User Behavior | Behavior | Cartes de chaleur, parcours, engagement sur les fiches produit. |
-| Conversion Funnel | Funnel | Abandons entre vue produit, panier, paiement et achat. |
-| Vitrina Recommendation | Vitrina | Suggestions merchandising produit par produit. |
-| AI Recommendations | AI | Actions priorisées avant envoi par e-mail. |
-| Inbox | Inbox | Suivi des recommandations déjà communiquées à l'équipe. |
-| Alerts | Alerts | Incidents actifs et historique des résolutions. |
-| Security | Security | Sessions suspectes et fiabilité des données. |
-
-### 8.5 Valeur ajoutée
+### 8.4 Valeur ajoutée
 
 Trois points forts ressortent :
 
-- **Centralisation** : neuf écrans couvrant tout le cycle décisionnel du marchand.
+- **Centralisation** : neuf écrans couvrant tout le cycle décisionnel du marchand (détail au chapitre 11).
 - **Priorisation** : tri par importance, scores de confiance, assignation marketing ou support technique.
 - **Boucle fermée** : analyse, envoi d'e-mail, suivi Inbox, mesure sur la Timeline, le marchand voit si son action a porté ses fruits.
 
@@ -504,25 +411,6 @@ Les schémas suivants résument l'architecture globale de Vitrina Store et Selle
 
 *Figure 9.5.* Deux couloirs d'activité (visiteur et marchand admin) se rejoignent sur la persistance Neon ; la boucle marchand relie consultation, analyse, action et mesure sur la Timeline.
 
-
-
-### 9.6 Chaîne complète en cinq temps
-
-1. **Collecte** sur la boutique (chapitre 6).
-2. **Transmission et stockage** sécurisés des événements.
-3. **Analyse** par règles et LLM (chapitre 7).
-4. **Restitution** dans les neuf modules de l'interface.
-5. **Actualisation** continue jusqu'à la prochaine analyse.
-
-### 9.7 Agrégation continue pour l'affichage
-
-Même sans lancer **Analyze now**, l'interface s'appuie sur des agrégats recalculés, indicateurs du Dashboard, courbes de la Timeline, cartes de chaleur, entonnoir du Funnel. Les fenêtres temporelles (quinze minutes, vingt-quatre heures, sept jours) sont les mêmes que celles utilisées pour l'analyse, ce qui garantit la cohérence entre un graphique et une alerte.
-
-### 9.8 Affichage et actualisation
-
-L'interface charge en parallèle la vue d'ensemble, les alertes, les recommandations actives et la boîte de réception. Un rafraîchissement automatique (environ toutes les cinq secondes) maintient les chiffres à jour ; pendant une analyse en cours, l'actualisation est suspendue pour garantir un affichage cohérent.
-
-
 ## Chapitre 10. Workflow et parcours utilisateur
 
 ### 10.1 Le cycle observer – analyser – agir – mesurer
@@ -533,18 +421,9 @@ Il lance ensuite Lancer **Analyze now** pour générer alertes et recommandation
 
 Pour la mise en œuvre, Choisir une recommandation, lire le détail, puis **Send email** pour l'adresser au rôle concerné (marketing ou support). La carte migre vers l'**Inbox**. Pour le catalogue, appliquer un correctif rapide Vitrina ou modifier la fiche produit.
 
-Enfin, il Sur la Timeline, comparer l'évolution des ventes ou du taux de conversion avant et après l'action ; les repères d'actions appliquées marquent la date des interventions.
+Enfin, il Sur la Timeline, comparer l'évolution des ventes ou du taux de conversion avant et après l'action ; les repères d'actions appliquées marquent la date des interventions. L'en-tête propose *Live data*, sessions sur quinze minutes, **Refresh** et **Analyze now**.
 
-### 10.2 Actions transversales de l'en-tête
-
-| Action | Effet |
-| --- | --- |
-| Indicateur Live data | Confirme que la boutique envoie des événements récents. |
-| Sessions / 15 min | Montre l'activité immédiate. |
-| Refresh | Recharge manuellement toutes les données. |
-| Analyze now | Lance le job d'analyse complet. |
-
-### 10.3 Recommandations et boîte de réception
+### 10.2 Recommandations et boîte de réception
 
 Les recommandations IA restent dans l'onglet AI Recommendations tant qu'elles n'ont pas été envoyées. **Send email** :
 
@@ -554,7 +433,7 @@ Les recommandations IA restent dans l'onglet AI Recommendations tant qu'elles n'
 
 L'analyse automatique n'envoie jamais d'e-mail sans validation humaine. Dans l'Inbox, le marchand peut marquer une action comme implémentée ou la classer sans suite.
 
-### 10.4 Répartition par rôles
+### 10.3 Répartition par rôles
 
 Deux rôles par défaut structurent la collaboration :
 
@@ -563,13 +442,13 @@ Deux rôles par défaut structurent la collaboration :
 
 Le routage s'effectue selon le thème de chaque recommandation. Des filtres par rôle dans l'Inbox permettent à chaque membre de l'équipe de suivre ses tâches.
 
-### 10.5 Classement et priorisation
+### 10.4 Classement et priorisation
 
 Alertes et recommandations sont triées par niveau d'importance (critique, élevée, moyenne, faible) afin que le marchand traite en premier les leviers à fort impact commercial estimé.
 
 ## Chapitre 11. Description des modules de l'interface
 
-Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son apport pour la boutique.
+Ce chapitre détaille chaque écran dans l'ordre de la barre de navigation Seller Helper, son rôle, ses éléments principaux et son apport pour la boutique.
 
 ### 11.1 Dashboard, vue d'ensemble
 
@@ -588,21 +467,19 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 
 **Impact.** Lecture immédiate sans export complexe ; détection rapide d'un trafic anormal ou d'une chute de conversion.
 
-### 11.2 Timeline, suivi temporel
+### 11.2 Tunnel de conversion
 
-**Rôle.** Suivre l'évolution des métriques dans le temps, pour toute la boutique ou un produit choisi, et visualiser les actions déjà menées.
+**Rôle.** Visualiser les pertes entre consultation produit, panier, passage au paiement et achat final.
 
 **Éléments principaux.**
 
-- Choix de période : 24 heures, 7 jours, 30 jours.
-- Métriques sélectionnables : vues, sessions, ajouts panier, ventes, taux de conversion.
-- Filtre boutique entière ou produit ciblé.
-- Courbes lissées avec infobulles au survol.
-- Repères d'actions avec fenêtre de détail (titre, date, objectif).
+- Graphique en entonnoir avec volumes par étape.
+- Taux de passage entre étapes.
+- Cartes de friction lorsque le système détecte un goulet (explication et piste d'action).
 
-{{CAPTURE:Figure 11.2 — Capture d'écran, onglet Timeline}}
+{{CAPTURE:Figure 11.2 — Capture d'écran, onglet Conversion Funnel}}
 
-**Impact.** Relier cause et effet entre une modification de vitrine et l'évolution des ventes.
+**Impact.** Diagnostic lisible des abandons ; ciblage des corrections (frais de port visibles, paiement invité, formulaire mobile simplifié).
 
 ### 11.3 Comportement utilisateur
 
@@ -618,21 +495,7 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 
 **Impact.** Repositionner boutons et contenus ; augmenter les clics vers le panier sans refonte complète du site.
 
-### 11.4 Tunnel de conversion
-
-**Rôle.** Visualiser les pertes entre consultation produit, panier, passage au paiement et achat final.
-
-**Éléments principaux.**
-
-- Graphique en entonnoir avec volumes par étape.
-- Taux de passage entre étapes.
-- Cartes de friction lorsque le système détecte un goulet (explication et piste d'action).
-
-{{CAPTURE:Figure 11.4 — Capture d'écran, onglet Conversion Funnel}}
-
-**Impact.** Diagnostic lisible des abandons ; ciblage des corrections (frais de port visibles, paiement invité, formulaire mobile simplifié).
-
-### 11.5 Recommandation Vitrina
+### 11.4 Recommandation Vitrina
 
 **Rôle.** Proposer des améliorations concrètes par produit : titre, description, images, prix, stock.
 
@@ -642,11 +505,11 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 - Actions de correctif rapide ou marquage « appliqué ».
 - Mise à jour après chaque analyse.
 
-{{CAPTURE:Figure 11.5 — Capture d'écran, onglet Recommandation Vitrina}}
+{{CAPTURE:Figure 11.4 — Capture d'écran, onglet Recommandation Vitrina}}
 
 **Impact.** Actions opérationnelles au niveau de chaque article ; meilleure présentation catalogue et gestion des ruptures.
 
-### 11.6 Recommandations IA
+### 11.5 Recommandations IA
 
 **Rôle.** Afficher les actions intelligentes encore non envoyées par e-mail.
 
@@ -656,11 +519,11 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 - Rôle destinataire (marketing ou support).
 - Bouton **Send email** et panneau **Details** pour l'analyse complète.
 
-{{CAPTURE:Figure 11.6 — Capture d'écran, onglet Recommandations IA}}
+{{CAPTURE:Figure 11.5 — Capture d'écran, onglet Recommandations IA}}
 
 **Impact.** Plan d'action stratégique validé humainement avant communication à l'équipe.
 
-### 11.7 Inbox
+### 11.6 Inbox
 
 **Rôle.** Gérer les recommandations déjà communiquées : suivi d'exécution et clôture.
 
@@ -670,25 +533,30 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 - Actions **Mark implemented** et **Dismiss**.
 - Historique des dates d'envoi et de clôture.
 
-{{CAPTURE:Figure 11.7 — Capture d'écran, onglet Inbox}}
+{{CAPTURE:Figure 11.6 — Capture d'écran, onglet Inbox}}
 
 **Impact.** Outil de suivi d'équipe léger ; réduction du délai entre recommandation et mise en ligne.
 
-### 11.8 Alertes
+### 11.7 Timeline, suivi temporel et journal d'activité
 
-**Rôle.** Signaler les anomalies récentes nécessitant une attention immédiate.
+**Rôle.** Suivre l'évolution des métriques dans le temps, pour toute la boutique ou un produit choisi, visualiser les actions déjà menées sur les courbes et consulter le journal des opérations Seller Helper.
 
 **Éléments principaux.**
 
-- Liste par sévérité.
-- Paramétrage des seuils (conversion, trafic, panier, erreurs, performance).
-- Historique des alertes résolues avec détail (volumes, sessions concernées).
+- Choix de période : 24 heures, 7 jours, 30 jours.
+- Métriques sélectionnables : vues, sessions, ajouts panier, ventes, taux de conversion.
+- Filtre boutique entière ou produit ciblé.
+- Courbes lissées avec infobulles au survol ; cartes de synthèse (moyenne, pic, fenêtre).
+- Repères d'actions sur la chronologie avec fenêtre de détail (titre, date, objectif).
+- Panneau **Activity log** sous les graphiques : liste chronologique des actions enregistrées dans la fenêtre temporelle (correctifs Vitrina, résolution d'alertes, recommandations IA appliquées, blocages ou déblocages sécurité).
+- Pour chaque entrée du journal : type coloré, produit concerné ou portée boutique, résumé, horodatage, badge **conversion** (évolution du taux vue→achat sur une fenêtre minimale de quinze minutes après l'action).
+- Actions sur une entrée : **Details** (modal de détail), **Revert to chokepoint** (retour à l'état sauvegardé avant la mutation), **Reset to default** (réinitialisation merchandising Vitrina du produit), **Email revert request** (demande de retour arrière par e-mail au rôle assigné, lorsque applicable).
 
-{{CAPTURE:Figure 11.8 — Capture d'écran, onglet Alertes}}
+{{CAPTURE:Figure 11.7 — Capture d'écran, onglet Timeline avec Activity log}}
 
-**Impact.** Réactivité pendant les campagnes ; limitation des pertes liées aux incidents techniques.
+**Impact.** Relier cause et effet entre une modification de vitrine et l'évolution des ventes ; auditer et, si besoin, annuler une action tout en mesurant son effet sur la conversion.
 
-### 11.9 Sécurité
+### 11.8 Sécurité
 
 **Rôle.** Surveiller les sessions suspectes ou automatisées et documenter la fiabilité du suivi.
 
@@ -698,9 +566,23 @@ Ce chapitre détaille chaque écran, son rôle, ses éléments principaux et son
 - Liste détaillée et action de remise à zéro des signaux affichés.
 - Recommandations pour un suivi fiable.
 
-{{CAPTURE:Figure 11.9 — Capture d'écran, onglet Sécurité}}
+{{CAPTURE:Figure 11.8 — Capture d'écran, onglet Sécurité}}
 
 **Impact.** Confiance dans les métriques ; évitement de dépenses publicitaires sur trafic non qualifié.
+
+### 11.9 Alertes
+
+**Rôle.** Signaler les anomalies récentes nécessitant une attention immédiate.
+
+**Éléments principaux.**
+
+- Liste par sévérité.
+- Paramétrage des seuils (conversion, trafic, panier, erreurs, performance).
+- Historique des alertes résolues avec détail (volumes, sessions concernées).
+
+{{CAPTURE:Figure 11.9 — Capture d'écran, onglet Alertes}}
+
+**Impact.** Réactivité pendant les campagnes ; limitation des pertes liées aux incidents techniques.
 
 
 
@@ -724,7 +606,7 @@ L'interface ne permet pas de supprimer arbitrairement produits, commandes ou his
 
 ### 12.5 Lien avec l'onglet Sécurité
 
-L'onglet **Security** de l'application matérialise ces principes, synthèse des sessions suspectes, motifs d'alerte, recommandations pour préserver la **fiabilité des métriques** utilisées dans tout le reste du système (chapitre 11, section 11.9).
+L'onglet **Security** de l'application matérialise ces principes, synthèse des sessions suspectes, motifs d'alerte, recommandations pour préserver la **fiabilité des métriques** utilisées dans tout le reste du système (chapitre 11, section 11.8).
 
 
 ## Chapitre 13. Impacts et bénéfices pour le marchand
@@ -757,7 +639,7 @@ L'onglet **Security** de l'application matérialise ces principes, synthèse des
 
 Ce projet a abouti à un système d'analyse et de recommandation pour les boutiques en ligne, déployé via Seller Helper sur Vitrina Store. L'essentiel ne se limite pas à l'interface, la chaîne complète, problèmes marchands, collecte ciblée, analyse par règles et par modèle de langage, restitution dans l'application et règles de confidentialité, constitue la valeur du travail.
 
-En combinant Dashboard, Timeline, Comportement, Funnel, optimisation produit (Vitrina et correctifs rapides), recommandations IA, Inbox, alertes et sécurité, Seller Helper va au-delà de la simple visualisation de métriques pour aider le marchand à prioriser ses décisions.
+En combinant Dashboard, Funnel, Comportement, optimisation produit (Vitrina et correctifs rapides), recommandations IA, Inbox, Timeline (courbes et journal Activity log), sécurité et alertes, Seller Helper va au-delà de la simple visualisation de métriques pour aider le marchand à prioriser ses décisions.
 
 Retenons notamment, une réponse coordonnée aux six freins majeurs des e-commerçants ; six groupes de signaux, chacun lié à une question commerciale ; des seuils explicables complétés par le modèle de langage ; des actions possibles depuis l'interface (correctifs Vitrina, e-mails par rôle, Inbox) ; un suivi dans le temps via la Timeline ; des politiques de confidentialité et un module Sécurité pour des métriques fiables ; enfin une chaîne technique cohérente (TypeScript, Next.js, Neon, Vercel, Better Auth, Google, Brevo).
 

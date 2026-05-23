@@ -69,7 +69,7 @@ function styleHeadings($) {
     if ($el.hasClass("chapter-title")) {
       mergeStyle(
         $el,
-        `font-family: ${FONT}; font-size: 13pt; font-weight: 700; color: ${ACCENT}; margin: 22pt 0 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid ${ACCENT};`
+        `font-family: ${FONT}; font-size: 16pt; font-weight: 700; color: ${ACCENT}; margin: 24pt 0 10pt; padding-bottom: 6pt; border-bottom: 2.5pt solid ${ACCENT}; width: 100%;`
       );
       return;
     }
@@ -89,6 +89,13 @@ function styleHeadings($) {
   $("h3").each((_, el) => {
     const $el = $(el);
     if ($el.hasClass("chapter-title")) return;
+    if ($el.hasClass("section-title")) {
+      mergeStyle(
+        $el,
+        `font-family: ${FONT}; font-size: 13pt; font-weight: 700; color: ${ACCENT}; margin: 16pt 0 6pt; padding-bottom: 3pt; border-bottom: 1pt solid ${ACCENT};`
+      );
+      return;
+    }
     mergeStyle(
       $el,
       `font-family: ${FONT}; font-size: 11pt; font-weight: 700; color: #0F172A; margin: 14pt 0 6pt;`

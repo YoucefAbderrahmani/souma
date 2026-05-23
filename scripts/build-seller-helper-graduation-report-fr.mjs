@@ -17,6 +17,11 @@ const ROOT = path.join(__dirname, "..");
 
 const PROFILE_KEY = process.argv.includes("--application") ? "application" : "graduation";
 
+const srcOverride = process.argv.find((a) => a.startsWith("--src="))?.slice(6);
+const outHtmlOverride = process.argv.find((a) => a.startsWith("--out-html="))?.slice(11);
+const metaFileArg = process.argv.find((a) => a.startsWith("--meta-file="))?.slice(12);
+const includeCodeBlocks = process.argv.includes("--with-code");
+
 const PROFILES = {
   graduation: {
     srcMd: path.join(ROOT, "reports", "Seller-Helper-Graduation-Report-fr.md"),
@@ -68,10 +73,19 @@ const PROFILES = {
 };
 
 const PROFILE = PROFILES[PROFILE_KEY];
-const SRC_MD = PROFILE.srcMd;
-const OUT_HTML = PROFILE.outHtml;
+const SRC_MD =
+  srcOverride ?
+    path.isAbsolute(srcOverride) ? srcOverride : path.join(ROOT, srcOverride)
+  : PROFILE.srcMd;
+const OUT_HTML =
+  outHtmlOverride ?
+    path.isAbsolute(outHtmlOverride) ? outHtmlOverride : path.join(ROOT, outHtmlOverride)
+  : PROFILE.outHtml;
 const OUT_PDF = PROFILE.outPdf;
-const META = PROFILE.meta;
+const META =
+  metaFileArg && fs.existsSync(metaFileArg) ?
+    { ...PROFILE.meta, ...JSON.parse(fs.readFileSync(metaFileArg, "utf8")) }
+  : PROFILE.meta;
 
 /* -------------------------------------------------------------------------- */
 
@@ -148,6 +162,22 @@ function renderMarkdown(md) {
   while (i < lines.length) {
     const line = lines[i];
 
+    if (/^<!--\s*PAGE_BREAK\s*-->/.test(line.trim())) {
+      closeListIfAny();
+      out += '<div class="page-break" style="page-break-after: always;"></div>';
+      i += 1;
+      continue;
+    }
+
+    if (/^<!--\s*PAGE_NUMBER_START\s*-->/.test(line.trim())) {
+      closeListIfAny();
+      out +=
+        '<div class="page-numbering-start page-break" style="page-break-before: always;"></div>' +
+        '<p class="page-number-anchor" style="font-size:1pt;line-height:1pt;color:#ffffff;margin:0;">SH_PAGE_NUMBER_1</p>';
+      i += 1;
+      continue;
+    }
+
     if (/^```/.test(line)) {
       closeListIfAny();
       const lang = line.replace(/^```/, "").trim();
@@ -158,7 +188,7 @@ function renderMarkdown(md) {
         i += 1;
       }
       i += 1;
-      if (PROFILE_KEY === "application") {
+      if (PROFILE_KEY === "application" && !includeCodeBlocks) {
         continue;
       }
       out += `<pre class="code${lang ? ` language-${escapeHtml(lang)}` : ""}"><code>${escapeHtml(code.join("\n"))}</code></pre>`;
@@ -234,6 +264,48 @@ function renderMarkdown(md) {
         closeChapterIfAny();
         out += pushChapterOpening(text);
         inChapter = true;
+        i += 1;
+        continue;
+      }
+
+      if (level === 2 && /^Introduction\s+générale/i.test(text)) {
+        closeChapterIfAny();
+        out += `<h2 id="${slugify(text)}">${renderInline(text)}</h2>`;
+        i += 1;
+        continue;
+      }
+
+      if (level === 2 && /^Conclusion\s+générale/i.test(text)) {
+        closeChapterIfAny();
+        out += `<h2 id="${slugify(text)}">${renderInline(text)}</h2>`;
+        i += 1;
+        continue;
+      }
+
+      if (level === 2 && /^Table des matières/i.test(text)) {
+        closeChapterIfAny();
+        out += `<h2 id="${slugify(text)}">${renderInline(text)}</h2>`;
+        i += 1;
+        continue;
+      }
+
+      if (level === 2 && /^Remerciements/i.test(text)) {
+        closeChapterIfAny();
+        out += `<h2 id="${slugify(text)}">${renderInline(text)}</h2>`;
+        i += 1;
+        continue;
+      }
+
+      if (level === 2 && /^Résumé/i.test(text)) {
+        closeChapterIfAny();
+        out += `<h2 id="${slugify(text)}">${renderInline(text)}</h2>`;
+        i += 1;
+        continue;
+      }
+
+      if (level === 3 && PROFILE_KEY === "application" && /^\d+\s+\S/.test(text)) {
+        const slug = slugify(text);
+        out += `<h3 class="section-title" id="${slug}">${renderInline(text)}</h3>`;
         i += 1;
         continue;
       }
@@ -388,11 +460,23 @@ function applicationPrintCss() {
   }
   body.document-application .cover { min-height: auto; padding: 22mm 20mm 18mm; }
   body.document-application .chapter-title {
-    font-size: 13.5pt;
-    margin-top: 1rem;
-    padding-bottom: 0.2rem;
+    font-size: 15.5pt;
+    margin-top: 1.1rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 2.5pt solid var(--accent);
+    width: 100%;
   }
-  body.document-application h3 { margin-top: 0.5rem; }
+  body.document-application .section-title {
+    font-size: 12.5pt;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0.85rem 0 0.25rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1pt solid var(--accent);
+    page-break-after: avoid;
+  }
+  body.document-application h3:not(.section-title) { margin-top: 0.5rem; }
   body.document-application code {
     font-family: inherit;
     font-size: inherit;
@@ -533,12 +617,23 @@ function buildHtml(bodyHtml) {
     border-bottom: 1px solid var(--line);
   }
   .chapter-title {
-    font-size: 13pt;
+    font-size: 15.5pt;
     color: var(--accent);
-    border-bottom: 2px solid var(--accent);
-    margin-top: 1.1rem;
+    border-bottom: 2.5pt solid var(--accent);
+    margin-top: 1.15rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.35rem;
+    width: 100%;
   }
-  h3 {
+  h3.section-title {
+    font-size: 12.5pt;
+    margin: 0.75rem 0 0.22rem;
+    color: var(--accent);
+    font-weight: 700;
+    padding-bottom: 0.15rem;
+    border-bottom: 1pt solid var(--accent);
+  }
+  h3:not(.section-title) {
     font-size: 10.8pt;
     margin: .6rem 0 .2rem;
     color: #0f172a;

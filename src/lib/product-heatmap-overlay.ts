@@ -31,7 +31,6 @@ async function mountGaussianLayer(container: HTMLElement): Promise<GaussianHeatm
   layer.style.height = "100%";
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
-  layer.style.mixBlendMode = "multiply";
   layer.style.opacity = "1";
   container.appendChild(layer);
   return createGaussianHeatmapRenderer(layer);
@@ -207,7 +206,12 @@ export function syncProductHeatmapOverlay(
 
   const draw = () => {
     const { width, height } = getProductHeatmapSurfacePaintSize(surface);
+    if (width <= 0 || height <= 0) {
+      if (mountHost) mountHost.style.display = "none";
+      return;
+    }
     if (mountHost) {
+      mountHost.style.display = "block";
       mountHost.style.width = `${width}px`;
       mountHost.style.height = `${height}px`;
     }

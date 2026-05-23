@@ -324,8 +324,6 @@ Vercel évite de maintenir un serveur VPS tout en offrant HTTPS, CDN et logs cen
 | **ESLint** + config Next.js | Lint du code TypeScript / React. |
 | **Drizzle Kit** | Génération et suivi des migrations schéma. |
 | **tsx** | Exécution de scripts TypeScript (seed produits, simulation trafic, tests). |
-| **Playwright** | Génération des rapports PDF (rendu HTML → PDF). |
-| **Git** | Versionnement du code et collaboration équipe. |
 
 ### 5.10 Synthèse de l'architecture technique
 

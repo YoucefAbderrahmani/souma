@@ -16,7 +16,7 @@ import {
   resetProductHeatmapPreviewViewport,
   type ProductHeatmapSurfaceMeasure,
 } from "@/lib/product-heatmap-surface";
-import { syncStageHeatmapOverlay, type HeatmapStageLayout } from "@/lib/product-heatmap-overlay";
+import { syncProductHeatmapOverlay } from "@/lib/product-heatmap-overlay";
 import { cn } from "@/lib/utils";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
 
@@ -50,13 +50,6 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
 
 const PREVIEW_FALLBACK_WIDTH_PX = HEATMAP_REFERENCE_VIEWPORT_WIDTH_PX;
 const PREVIEW_FALLBACK_HEIGHT_PX = 1800;
-
-function isPreviewLayoutMeasured(layout: ReturnType<typeof toPreviewLayoutState>) {
-  return (
-    layout.surfaceWidth < PREVIEW_FALLBACK_WIDTH_PX - 2 ||
-    layout.surfaceHeight < PREVIEW_FALLBACK_HEIGHT_PX - 2
-  );
-}
 
 function createPreviewFallbackLayout(): ProductHeatmapSurfaceMeasure {
   return {
@@ -93,6 +86,7 @@ function HeatmapPagePreview({
   const stageRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const layoutLockedRef = useRef(false);
+  const [previewLayoutReady, setPreviewLayoutReady] = useState(false);
   const [layout, setLayout] = useState(() => toPreviewLayoutState(createPreviewFallbackLayout()));
   const [fit, setFit] = useState({
     scale: 1,
@@ -121,6 +115,7 @@ function HeatmapPagePreview({
 
   useEffect(() => {
     layoutLockedRef.current = false;
+    setPreviewLayoutReady(false);
     setLayout(toPreviewLayoutState(createPreviewFallbackLayout()));
     setFit({
       scale: 1,
@@ -151,25 +146,9 @@ function HeatmapPagePreview({
     previewSrc,
   ]);
 
-  const stageLayout = useMemo<HeatmapStageLayout>(
-    () => ({
-      surfaceWidth: layout.surfaceWidth,
-      surfaceHeight: layout.surfaceHeight,
-      surfaceOffsetLeft: layout.surfaceOffsetLeft,
-      surfaceOffsetTop: layout.surfaceOffsetTop,
-    }),
-    [
-      layout.surfaceHeight,
-      layout.surfaceOffsetLeft,
-      layout.surfaceOffsetTop,
-      layout.surfaceWidth,
-    ]
-  );
-
   useLayoutEffect(() => {
-    const stage = stageRef.current;
     const iframe = iframeRef.current;
-    if (!stage || !iframe || !heatmap || !isPreviewLayoutMeasured(layout)) return () => {};
+    if (!iframe || !heatmap) return () => {};
 
     let cleanup = () => {};
     let pollId: number | null = null;
@@ -178,9 +157,10 @@ function HeatmapPagePreview({
 
     const attachOverlay = () => {
       const doc = iframe.contentDocument;
-      if (!doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`)) return false;
+      const surface = doc?.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`);
+      if (!doc || !surface) return false;
       cleanup();
-      cleanup = syncStageHeatmapOverlay(stage, iframe, stageLayout, heatmap);
+      cleanup = syncProductHeatmapOverlay(doc, heatmap);
       return true;
     };
 
@@ -197,7 +177,7 @@ function HeatmapPagePreview({
       if (pollId != null) window.clearInterval(pollId);
       cleanup();
     };
-  }, [heatmap, layout, previewSrc, stageLayout]);
+  }, [heatmap, previewLayoutReady, previewSrc]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -236,6 +216,9 @@ function HeatmapPagePreview({
           layoutLockedRef.current
         );
         layoutLockedRef.current = merged.locked;
+        if (merged.locked) {
+          setPreviewLayoutReady(true);
+        }
         const next = toPreviewLayoutState(merged.layout);
         if (
           current.documentWidth === next.documentWidth &&

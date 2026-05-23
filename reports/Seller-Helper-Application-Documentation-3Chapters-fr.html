@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Système Intelligent d'Analyse et de Recommandation pour les Sites E-Commerce</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --ink-soft: #374151;
+    --muted: #6b7280;
+    --line: #d1d5db;
+    --line-soft: #e5e7eb;
+    --accent: #b54708;
+    --accent-soft: #fef3c7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #ffffff; color: var(--ink); }
+  body {
+    font-family: "Cambria", "Georgia", "Times New Roman", serif;
+    font-size: 10pt;
+    line-height: 1.3;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .document { padding: 0 0 2rem; }
+
+  .cover {
+    min-height: 100vh;
+    padding: 28mm 22mm 22mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    page-break-after: always;
+  }
+  .cover-header p { margin: .15rem 0; }
+  .cover-univ { font-size: 14pt; font-weight: 700; letter-spacing: .02em; }
+  .cover-faculty { font-size: 13pt; font-weight: 600; }
+  .cover-framework { font-size: 12pt; font-style: italic; color: var(--ink-soft); }
+
+  .cover-title-block { margin: 1.2rem 0; }
+  .cover-kicker {
+    text-transform: uppercase;
+    letter-spacing: .35em;
+    font-size: 10pt;
+    color: var(--muted);
+    margin-bottom: .35rem;
+  }
+  .cover-title {
+    font-family: "Cambria", "Georgia", serif;
+    font-size: 22pt;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 .85rem;
+    line-height: 1.25;
+  }
+  .cover-subtitle {
+    font-size: 12pt;
+    color: var(--ink-soft);
+    font-style: italic;
+    max-width: 145mm;
+    margin: 0 auto;
+    line-height: 1.45;
+  }
+  .cover-theme {
+    font-size: 10.5pt;
+    color: var(--muted);
+    max-width: 145mm;
+    margin: 0.5rem auto 0;
+    line-height: 1.4;
+  }
+
+  .cover-people {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin: 1.5rem 0 0;
+    text-align: left;
+  }
+  .cover-people-col { flex: 1; }
+  .cover-label {
+    text-transform: uppercase;
+    letter-spacing: .2em;
+    font-size: 9pt;
+    color: var(--muted);
+    margin: 0 0 .25rem;
+  }
+  .cover-name { margin: .1rem 0; font-size: 11pt; font-weight: 600; color: var(--ink); }
+
+  .cover-year {
+    margin-top: 1.5rem;
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+  }
+
+  main.body {
+    padding: 14mm 16mm 6mm;
+  }
+  .doc-title {
+    font-size: 18pt;
+    font-weight: 700;
+    margin: 0 0 .35rem;
+    color: #111827;
+    line-height: 1.25;
+  }
+  h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: .9rem 0 .3rem;
+    padding-bottom: .15rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter-title {
+    font-size: 15.5pt;
+    color: var(--accent);
+    border-bottom: 2.5pt solid var(--accent);
+    margin-top: 1.15rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.35rem;
+    width: 100%;
+  }
+  h3.section-title {
+    font-size: 12.5pt;
+    margin: 0.75rem 0 0.22rem;
+    color: var(--accent);
+    font-weight: 700;
+    padding-bottom: 0.15rem;
+    border-bottom: 1pt solid var(--accent);
+  }
+  h3:not(.section-title) {
+    font-size: 10.8pt;
+    margin: .6rem 0 .2rem;
+    color: #0f172a;
+    font-weight: 700;
+  }
+  h4 {
+    font-size: 10.3pt;
+    margin: .45rem 0 .15rem;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  p { margin: .3rem 0; text-align: justify; }
+  ul, ol { margin: .25rem 0 .45rem 1.2rem; padding-left: .8rem; }
+  ul li, ol li { margin: .08rem 0; }
+  strong { color: #111827; }
+  em { color: var(--ink-soft); }
+  hr.divider {
+    border: none;
+    border-top: 1px dashed var(--line);
+    margin: 1.25rem 0;
+  }
+  @media print {
+    hr.divider { page-break-after: always; border: none; height: 0; margin: 0; }
+  }
+
+  code {
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+    font-size: 9.5pt;
+    background: #f5f3ff;
+    color: #4338ca;
+    padding: 0 .25rem;
+    border-radius: 3px;
+  }
+  pre.code {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: .55rem .75rem;
+    border-radius: 6px;
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+    font-size: 8.4pt;
+    overflow-x: auto;
+    margin: .5rem 0 .75rem;
+    line-height: 1.35;
+    page-break-inside: avoid;
+  }
+  pre.code code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    border-radius: 0;
+  }
+
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin: .4rem 0 .65rem;
+    font-size: 9.4pt;
+  }
+  table.data th, table.data td {
+    border: 1px solid var(--line);
+    padding: .25rem .4rem;
+    vertical-align: top;
+    text-align: left;
+  }
+  table.data thead th {
+    background: #f3f4f6;
+    font-weight: 700;
+    color: #111827;
+  }
+  table.data tbody tr:nth-child(even) { background: #fafafa; }
+
+  section.chapter { }
+  section.chapter .chapter-title { page-break-after: avoid; }
+
+  @media print {
+    @page { size: A4; margin: 12mm 13mm 14mm 13mm; }
+    body { font-size: 9.9pt; }
+    .cover { padding: 20mm 18mm 16mm; min-height: auto; }
+    pre.code { white-space: pre-wrap; font-size: 8.1pt; }
+    h2 { page-break-after: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    table.data, pre.code, section.cover { page-break-inside: avoid; }
+    hr.divider { page-break-after: always; border: none; height: 0; margin: 0; }
+  }
+  
+  body.document-application { font-size: 10.2pt; line-height: 1.38; }
+  body.document-application main.body { padding: 10mm 14mm 8mm; }
+  body.document-application h2 { margin: 0.55rem 0 0.25rem; page-break-after: avoid; }
+  body.document-application h3 { margin: 0.4rem 0 0.15rem; page-break-after: avoid; }
+  body.document-application p { margin: 0.22rem 0; orphans: 2; widows: 2; }
+  body.document-application ul, body.document-application ol { margin: 0.15rem 0 0.35rem 1.1rem; }
+  body.document-application table.data { page-break-inside: auto; margin: 0.3rem 0 0.45rem; }
+  body.document-application .media-spacer {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: #fff;
+    page-break-inside: avoid;
+  }
+  body.document-application .media-spacer.is-diagram {
+    min-height: 70mm;
+    height: 70mm;
+  }
+  body.document-application .media-spacer.is-capture {
+    min-height: 92mm;
+    height: 92mm;
+  }
+  body.document-application p.figure-caption {
+    font-size: 9pt;
+    color: #475569;
+    margin: 0.2rem 0 0.5rem;
+    text-align: justify;
+    font-style: italic;
+  }
+  body.document-application .cover { min-height: auto; padding: 22mm 20mm 18mm; }
+  body.document-application .chapter-title {
+    font-size: 15.5pt;
+    margin-top: 1.1rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 2.5pt solid var(--accent);
+    width: 100%;
+  }
+  body.document-application .section-title {
+    font-size: 12.5pt;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0.85rem 0 0.25rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1pt solid var(--accent);
+    page-break-after: avoid;
+  }
+  body.document-application h3:not(.section-title) { margin-top: 0.5rem; }
+  body.document-application code {
+    font-family: inherit;
+    font-size: inherit;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+  }
+  @media print {
+    body.document-application hr.divider { display: none !important; }
+    body.document-application h2, body.document-application h3, body.document-application h4 {
+      page-break-after: avoid;
+    }
+    body.document-application table.data, body.document-application p, body.document-application li {
+      page-break-inside: auto;
+    }
+    body.document-application pre.code { display: none !important; }
+    body.document-application section.chapter { page-break-before: auto; }
+  }
+
+  .colophon {
+    margin-top: 2rem;
+    font-size: 9pt;
+    color: var(--muted);
+    border-top: 1px solid var(--line-soft);
+    padding-top: .75rem;
+  }
+</style>
+</head>
+<body class="document-application">
+  <section class="cover">
+    <div class="cover-header">
+      <p class="cover-univ">Université des Sciences et de la Technologie Houari Boumediène</p>
+      <p class="cover-faculty">Faculté d'Informatique</p>
+      <p class="cover-framework">Projet pluridisciplinaire — Plateforme Vitrina Store</p>
+    </div>
+
+    <div class="cover-title-block">
+      <p class="cover-kicker">Rapport de présentation</p>
+      <h1 class="cover-title">Système Intelligent d'Analyse et de Recommandation pour les Sites E-Commerce</h1>
+      <p class="cover-subtitle">Application Seller Helper — Plateforme Vitrina Store · Rapport de présentation</p>
+      <p class="cover-theme">Description du fonctionnement, des interfaces et du workflow de l'application Seller Helper intégrée à la boutique en ligne Vitrina Store.</p>
+    </div>
+
+    <div class="cover-people">
+      <div class="cover-people-col">
+        <p class="cover-label">Encadrement</p>
+        <p class="cover-name">Encadrement académique — Faculté d'Informatique</p>
+      </div>
+      <div class="cover-people-col">
+        <p class="cover-label">Présenté par</p>
+        <p class="cover-name">BELKACEMI ABDELMOUMENE</p><p class="cover-name">ABDERRAHMANI YOUCEF</p><p class="cover-name">CHALLAL RIAD</p><p class="cover-name">AMINE</p>
+      </div>
+    </div>
+
+    <p class="cover-year">Année universitaire 2025 / 2026</p>
+  </section>
+  <main class="body">
+    <h2 id="remerciements">Remerciements</h2><p>Nous remercions l'encadrement académique de la Faculté d'Informatique et l'équipe Vitrina Store pour le soutien apporté à la conception et au déploiement du système. Nous adressons également nos remerciements aux marchands qui ont testé le Seller Helper sur leurs boutiques ; leurs retours ont guidé l'organisation des écrans, la priorisation des recommandations et la formulation des actions proposées.</p><div class="page-break" style="page-break-after: always;"></div><h2 id="resume">Résumé</h2><p>Le commerce en ligne produit beaucoup de données que les petits marchands transforment peu en décisions concrètes. Ce document décrit le système d'analyse et de recommandation développé pour les boutiques en ligne, déployé via l'application Seller Helper sur Vitrina Store.</p><p>La première partie situe le projet, contexte, difficultés rencontrées par les marchands, outils existants et motivations. La seconde expose les technologies retenues (TypeScript, Next.js, Neon, Vercel, Better Auth, Google, Brevo, modèle de langage), la collecte et le traitement des signaux, puis l'organisation de l'interface Seller Helper. Le marchand peut ainsi suivre l'activité, lancer une analyse, agir sur la boutique et mesurer l'effet de ses décisions.</p><div class="page-break" style="page-break-after: always;"></div><h2 id="table-des-matieres">Table des matières</h2><p><strong>Introduction générale</strong> Introduction générale ....................................... 1 Contexte .................................................... 1 Objectif du document ........................................ 1</p><p><strong>Chapitre 1</strong> 1 Problématique ............................................. 2 2 Étude et analyse de l'existant ............................ 2 3 Motivations et besoins .................................... 3</p><p><strong>Chapitre 2</strong> 1 Collecte des données, groupes, motivations et enregistrement .... 5 2 Analyse des données, règles métier et intelligence artificielle (LLM) .... 7 3 Présentation générale de l'application .................... 9 4 Architecture de restitution et flux dans l'interface ..... 10 5 Workflow et parcours utilisateur ......................... 11 6 Description des modules de l'interface ................... 11 7 Confidentialité, sécurité et politiques d'usage .......... 14 8 Impacts et bénéfices pour le marchand .................... 14</p><p><strong>Chapitre 3</strong> 1 Technologies, langages et outils utilisés ................ 16</p><p><strong>Conclusion générale</strong> Conclusion générale ........................................ 17</p><div class="page-break" style="page-break-after: always;"></div><div class="page-numbering-start page-break" style="page-break-before: always;"></div><p class="page-number-anchor" style="font-size:1pt;line-height:1pt;color:#ffffff;margin:0;">SH_PAGE_NUMBER_1</p><h2 id="introduction-generale">Introduction générale</h2><p>Le commerce électronique s'est imposé comme un pilier majeur de l'économie numérique, mais la plupart des boutiques en ligne peinent encore à exploiter pleinement leur potentiel. Derrière des investissements importants en publicité, en acquisition de trafic et en optimisation technique, une réalité persiste, une large majorité des visiteurs quittent les sites sans acheter, faute d'une compréhension fine de leur comportement et d'outils d'aide à la décision réellement exploitables par les marchands.</p><p>L'enjeu n'est plus seulement de collecter des données, mais de les transformer en actions concrètes pour un e-commerçant souvent seul ou en petite équipe. Le travail présenté ici vise un outil d'analyse et de recommandation qui rapproche les indicateurs du terrain, passer de « voir des métriques » à « savoir quoi modifier sur la boutique ».</p><h3 id="contexte">Contexte</h3><p>Les e-commerçants opèrent dans un environnement concurrentiel et complexe, multiplication des canaux d'acquisition, exigences élevées des utilisateurs, diversité des appareils, pression sur les coûts publicitaires et besoin de rentabilité à court terme. Le site e-commerce concentre les efforts marketing, supporte les parcours d'achat et cristallise les décisions sur les produits, les prix et l'expérience utilisateur.</p><p>Pourtant, beaucoup de marchands disposent d'informations dispersées, statistiques d'audience, données de campagnes, indicateurs techniques, sans cadre unifié pour les interpréter et agir. Les outils existants sont souvent trop génériques, trop complexes ou peu adaptés aux petites structures sans équipe data. Dans les marchés émergents, notamment en Algérie, cette contrainte est accentuée par des ressources limitées, une forte dépendance au mobile et un recours massif aux réseaux sociaux comme point d'entrée vers la boutique.</p><p>Relier l'analyse du comportement à des recommandations précises et utilisables sur le terrain est au cœur du projet, une vision synthétique, adaptée aux objectifs de la boutique et compatible avec le temps et les compétences du marchand.</p><h3 id="objectif-du-document">Objectif du document</h3><p>Ce rapport vise à formaliser la problématique e-commerce et le positionnement par rapport à l'existant ; expliquer pourquoi chaque famille de données est collectée et comment elle est traitée (règles et modèle de langage) ; décrire les technologies et services cloud employés (Neon, Vercel, Brevo, authentification Google, etc.) ; présenter l'application Seller Helper, ses écrans et le parcours du marchand ; enfin aborder la confidentialité et les effets attendus sur l'activité commerciale.</p><div class="page-break" style="page-break-after: always;"></div><section class="chapter" id="chapter-1"><h2 class="chapter-title">Chapitre 1</h2><h3 class="section-title" id="1-problematique">1 Problématique</h3><p>Les e-commerçants font face à des difficultés liées entre elles. Nous les regroupons en six thèmes ; Seller Helper les prend en charge de manière coordonnée dans une même interface.</p><h4 id="1-1-manque-de-visibilite-sur-le-comportement-des-visiteurs">1.1 Manque de visibilité sur le comportement des visiteurs</h4><p>Le vendeur ne sait pas toujours où cliquent ses visiteurs, jusqu'où ils font défiler les pages ni quels éléments retiennent leur attention. Seller Helper propose l'onglet Comportement utilisateur (cartes de chaleur, parcours, scroll) et enregistre les interactions spatiales (voir chapitre 6).</p><h4 id="1-2-absence-d-analyse-du-tunnel-de-conversion">1.2 Absence d'analyse du tunnel de conversion</h4><p>Les abandons entre fiche produit, panier et paiement restent souvent invisibles. L'onglet Conversion Funnel, les alertes d'abandon de panier et les recommandations issues de l'analyse couvrent ce point.</p><h4 id="1-3-difficulte-a-mesurer-le-retour-sur-investissement-publicitaire">1.3 Difficulté à mesurer le retour sur investissement publicitaire</h4><p>Sans lien clair entre campagnes et ventes, le budget publicitaire est difficile à piloter. Le Dashboard et la Timeline affichent sources de trafic et conversion dans le temps ; le contexte de campagne est intégré à la collecte (chapitre 6, premier groupe de données).</p><h4 id="1-4-performance-technique-insuffisante">1.4 Performance technique insuffisante</h4><p>Un site lent ou mal adapté au mobile fait fuir les visiteurs. Des alertes performance, des recommandations techniques pour le support et des signaux de lenteur en collecte (groupe 5) permettent d'agir.</p><h4 id="1-5-manque-de-recommandations-concretes">1.5 Manque de recommandations concrètes</h4><p>Les outils classiques livrent des métriques sans priorisation ni plan d'action. Les recommandations IA (règles et modèle de langage), les fiches Recommandation Vitrina, l'Inbox et l'envoi par e-mail aux rôles concernés comblent cette lacune.</p><h4 id="1-6-suivi-des-stocks-et-de-la-rentabilite-catalogue">1.6 Suivi des stocks et de la rentabilité catalogue</h4><p>Ruptures et présentation produit dégradée font perdre des ventes. Des recommandations par produit, l'analyse catalogue envoyée au modèle de langage et les correctifs merchandising rapides adressent ce sujet.</p><p>Ces six thèmes sont traités depuis une interface unique, décrite à partir du chapitre 8.</p><h3 class="section-title" id="2-etude-et-analyse-de-l-existant">2 Étude et analyse de l'existant</h3><h4 id="2-1-panorama-du-commerce-en-ligne">2.1 Panorama du commerce en ligne</h4><p>Le commerce en ligne repose sur une multitude de petites boutiques qui, avec des moyens limités, doivent piloter des vitrines de plus en plus complexes. L'enjeu n'est plus seulement d'avoir un site ou de drainer du trafic, mais de <strong>transformer ce trafic en ventes</strong> avec des données fiables et compréhensibles par le marchand lui-même.</p><h4 id="2-2-contexte-regional-micro-marchands-et-outils">2.2 Contexte régional, micro-marchands et outils</h4><p>Dans les marchés émergents comme l'Algérie, la trajectoire typique passe souvent des réseaux sociaux à une boutique structurée. Les marchands investissent dans la publicité et le référencement ; une fois la boutique en place, ils se retrouvent avec des sources fragmentées (réseaux sociaux, paiement, analytics génériques). Le besoin n'est pas de « plus de chiffres », mais d'un outillage qui rapproche <strong>observation et action</strong> sur la boutique.</p><h4 id="2-3-familles-d-outils-analytiques-et-marketing">2.3 Familles d'outils analytiques et marketing</h4><table class="data"><thead><tr><th>Famille</th><th>Exemples</th><th>Orientation</th></tr></thead><tbody><tr><td>Analytics généralistes</td><td>Google Analytics 4, Mixpanel</td><td>Mesure, segmentation, reporting</td></tr><tr><td>Heatmaps et sessions</td><td>Hotjar, Microsoft Clarity</td><td>Compréhension UX</td></tr><tr><td>Personnalisation enterprise</td><td>Dynamic Yield, Bloomreach, Optimizely</td><td>Grandes enseignes</td></tr><tr><td>Marketing automation</td><td>Klaviyo, Rebuy, Recommbee</td><td>Campagnes, CRM</td></tr></tbody></table><h4 id="2-4-comparaison-synthetique-avec-l-existant">2.4 Comparaison synthétique avec l'existant</h4><table class="data"><thead><tr><th>Outil / famille</th><th>Rôle principal</th><th>Action rapide par produit (SKU)</th><th>Lien action → métrique</th><th>Cible typique</th></tr></thead><tbody><tr><td>Google Analytics 4, Mixpanel</td><td>Mesure, reporting</td><td>Non</td><td>Non</td><td>Toutes tailles</td></tr><tr><td>Hotjar, Microsoft Clarity</td><td>Heatmaps, UX</td><td>Non</td><td>Non</td><td>UX / marketing</td></tr><tr><td>Plateformes enterprise</td><td>Personnalisation, A/B</td><td>Partiel</td><td>Partiel</td><td>Grandes enseignes</td></tr><tr><td>Outils marketing (Klaviyo, etc.)</td><td>Campagnes, CRM</td><td>Indirect</td><td>Indirect</td><td>Équipes marketing</td></tr><tr><td><strong>Seller Helper (Vitrina Store)</strong></td><td>Pilotage marchand opérationnel</td><td><strong>Oui</strong> (correctifs Vitrina)</td><td><strong>Oui</strong> (jalons Timeline)</td><td><strong>Petites boutiques locales</strong></td></tr></tbody></table><p>Les outils existants se concentrent sur la mesure pure ou le marketing, mais laissent une lacune, un marchand seul qui doit décider rapidement quoi changer sur chaque produit, sans interprétation complexe.</p><h4 id="2-5-positionnement-de-la-solution-seller-helper">2.5 Positionnement de la solution Seller Helper</h4><p>Seller Helper ne remplace pas les solutions ci-dessus ; il les complète en se focalisant sur l'action au niveau de la boutique. Intégré à Vitrina Store, il propose des correctifs ciblés par produit, des recommandations priorisées et un suivi des effets dans le temps. Il relie visibilité et capacité à agir de manière mesurable, développée aux chapitres 5 à 13.</p><h3 class="section-title" id="3-motivations-et-besoins">3 Motivations et besoins</h3><p>Le projet part d'un constat fréquent sur le terrain, les e-commerçants, surtout dans les marchés émergents, investissent temps et budget (stocks, Facebook, Google, TikTok, SEO) sans outils adaptés pour mesurer, comprendre et améliorer leur site. Le taux de conversion moyen oscille souvent entre 1 % et 3 % ; la majorité des visiteurs repartent sans acheter, souvent parce que le vendeur voit peu le comportement réel.</p><p>Les solutions classiques (Google Analytics, Hotjar, etc.) restent complexes, génériques ou coûteuses pour de petites structures. Elles livrent des données brutes sans interprétation ni plan d'action clair.</p><p>Les modèles de langage récents permettent d'automatiser des analyses autrefois confiées à des consultants. Nous avons orienté le développement vers une interface simple et tournée vers l'action, pour rendre plus accessibles des pratiques e-commerce, quelle que soit la taille de la boutique.</p><p>Deux besoins principaux se dégagent, une visibilité en temps réel sur la boutique, du premier clic à la commande ; et la transformation de cette visibilité en actions concrètes, sans compétences avancées en data ou en développement.</p><p>Les sections suivantes présentent les technologies, la collecte, l'analyse par modèle de langage et l'interface Seller Helper.</p><div class="page-break" style="page-break-after: always;"></div></section><section class="chapter" id="chapter-2"><h2 class="chapter-title">Chapitre 2</h2><h3 class="section-title" id="1-collecte-des-donnees-groupes-motivations-et-enregistrement">1 Collecte des données, groupes, motivations et enregistrement</h3><p>Avant que le marchand ne voie le moindre graphique ou la moindre recommandation dans Seller Helper, la boutique collecte en continu des signaux issus du comportement réel des visiteurs. Cette étape est indispensable, sans données fiables, aucune alerte ni aucune suggestion ne peut être fondée. Nous précisons quels groupes de données sont enregistrés et pourquoi chacun a été retenu dans le cadre du projet.</p><h4 id="1-1-principe-observer-la-boutique-comme-un-tableau-de-bord-terrain">1.1 Principe, observer la boutique comme un tableau de bord terrain</h4><p>Chaque visite sur une fiche produit ou chaque passage au panier laisse une trace anonymisée, liée à une session de visite (une visite logique, sans nom ni adresse). L'objectif n'est pas de surveiller des individus, mais de comprendre comment la vitrine fonctionne en agrégat, d'où vient le trafic, où les acheteurs hésitent, quelles pages ralentissent, où les clics se concentrent. Ces réponses orientent ensuite l'analyse et, in fine, les écrans du Seller Helper.</p><h4 id="1-2-groupe-1-contexte-et-origine-du-trafic">1.2 Groupe 1, Contexte et origine du trafic</h4><p>Données enregistrées. Type d'appareil (mobile, ordinateur, tablette), source de visite (réseaux sociaux, recherche, lien direct), paramètres de campagne, langue, taille de l'écran, page d'entrée.</p><p>Intérêt pour le projet :</p><ul><li>Le marchand doit savoir <strong>qui</strong> consulte la boutique et <strong>depuis où</strong> : une campagne Instagram et une recherche Google ne demandent pas les mêmes corrections.</li><li>La répartition par appareil explique des écarts de conversion (formulaire trop long sur mobile, images trop lourdes).</li><li>Ces signaux alimentent le <strong>Dashboard</strong> (segmentation appareils) et enrichissent le contexte envoyé au modèle d'analyse.</li></ul><p>Sans ce groupe, les recommandations risqueraient d'être génériques alors que le problème est localisé (par exemple 80 % du trafic sur mobile).</p><h4 id="1-3-groupe-2-engagement-sur-la-fiche-produit">1.3 Groupe 2, Engagement sur la fiche produit</h4><p>Données enregistrées. Ouverture d'une fiche produit, temps passé sur la page, identification du produit consulté (titre, catégorie, prix affiché).</p><p>Intérêt pour le projet :</p><ul><li>Une vue produit est la <strong>première étape du tunnel d'achat</strong> : sans volume de vues, impossible de calculer un taux de conversion.</li><li>Le temps de présence distingue un simple survol d'un intérêt réel ; il complète les cartes de chaleur pour repérer les pages « vues mais ignorées ».</li><li>Ces données servent la <strong>Timeline</strong> (courbe des vues), le <strong>tunnel de conversion</strong> (étape initiale) et le classement des <strong>pages les plus actives</strong>.</li></ul><p>Ces données permettent de répondre à la question, « Est-ce que les visiteurs regardent vraiment mes produits ? »</p><h4 id="1-4-groupe-3-parcours-d-achat-et-conversion">1.4 Groupe 3, Parcours d'achat et conversion</h4><p>Données enregistrées. Ajout au panier, entrée dans le tunnel de paiement, étapes du checkout, achat confirmé.</p><p>Intérêt pour le projet :</p><ul><li>C'est le cœur du <strong>chiffre d'affaires</strong> : le marchand doit voir où le parcours se brise (panier abandonné, paiement non finalisé).</li><li>Les ratios entre étapes (vue → panier → paiement → achat) alimentent le <strong>Conversion Funnel</strong> et déclenchent des alertes (abandon massif de panier, chute de conversion).</li><li>Le modèle d'analyse reçoit ces ratios pour formuler des recommandations ciblées (frais de port, guest checkout, confiance au paiement).</li></ul><p>Sans ce groupe, Seller Helper ne pourrait pas prioriser les actions à impact direct sur les ventes.</p><h4 id="1-5-groupe-4-interactions-spatiales-clics-et-survols">1.5 Groupe 4, Interactions spatiales (clics et survols)</h4><p>Données enregistrées. Position relative des clics et des survols sur la surface de la fiche produit (zones de la page, pas d'identité personnelle).</p><p>Intérêt pour le projet :</p><ul><li>Les totaux de vues ne disent pas <strong>où</strong> le visiteur clique : un bouton d'achat peut être invisible, une galerie sous-utilisée.</li><li>L'agrégation en <strong>carte de chaleur</strong> permet au marchand de réorganiser visuels, prix et appels à l'action sans supposer le bon emplacement.</li><li>Ce groupe est unique à une aide à la décision <strong>orientée merchandising</strong> ; il justifie l'onglet <strong>Comportement utilisateur</strong>.</li></ul><p>Nous collectons ces données pour relier comportement visuel et décision de mise en page, difficile avec de simples compteurs de pages vues.</p><h4 id="1-6-groupe-5-qualite-technique-performance-et-erreurs">1.6 Groupe 5, Qualité technique (performance et erreurs)</h4><p>Données enregistrées. Temps de chargement perçu, indicateurs de lenteur d'affichage (dont le rendu principal de la page), erreurs techniques côté navigateur sur le parcours sensible (notamment paiement).</p><p>Intérêt pour le projet :</p><ul><li>Une page lente fait fuir avant tout clic ; la performance est un levier de conversion souvent sous-estimé par les petits marchands.</li><li>Les erreurs JavaScript au checkout peuvent bloquer des ventes sans que le marchand en ait connaissance autrement.</li><li>Ces signaux alimentent les <strong>alertes</strong> (lenteur, erreurs techniques) et des recommandations assignées au <strong>support technique</strong>.</li></ul><p>Ce groupe garantit que Seller Helper traite aussi les causes techniques, pas uniquement marketing.</p><h4 id="1-7-groupe-6-fiabilite-des-sessions-securite">1.7 Groupe 6, Fiabilité des sessions (sécurité)</h4><p>Données enregistrées. Vélocité anormale d'événements, incohérences de navigation, motifs de sessions suspectes (bots, trafic artificiel).</p><p>Intérêt pour le projet :</p><ul><li>Des métriques faussées par du trafic non humain peuvent entraîner de mauvaises décisions (budget pub gaspillé, fausse alerte de pic).</li><li>Le marchand doit pouvoir <strong>filtrer ou bloquer</strong> des sessions aberrantes et garder confiance dans ses chiffres.</li><li>Ce groupe alimente l'onglet <strong>Sécurité</strong> et complète le contexte d'analyse lors de pics de trafic.</li></ul><h4 id="1-8-synthese-et-enregistrement">1.8 Synthèse et enregistrement</h4><table class="data"><thead><tr><th>Groupe</th><th>Question métier à laquelle il répond</th><th>Onglets Seller Helper principalement concernés</th></tr></thead><tbody><tr><td>Contexte et trafic</td><td>D'où viennent mes visiteurs et sur quel appareil ?</td><td>Dashboard</td></tr><tr><td>Engagement produit</td><td>Mes fiches sont-elles vraiment consultées ?</td><td>Dashboard, Timeline, Funnel</td></tr><tr><td>Parcours d'achat</td><td>Où abandonne-t-on avant d'acheter ?</td><td>Funnel, Alertes, Recommandations IA</td></tr><tr><td>Interactions spatiales</td><td>Où cliquer et où regarder sur la page ?</td><td>Comportement utilisateur</td></tr><tr><td>Qualité technique</td><td>La boutique est-elle lente ou cassée ?</td><td>Alertes, Recommandations IA</td></tr><tr><td>Fiabilité sessions</td><td>Mes chiffres sont-ils crédibles ?</td><td>Sécurité, Alertes</td></tr></tbody></table><p>Les événements validés sont transmis par lots au serveur, associés à une session et horodatés, puis stockés de manière durable. Les données sensibles sont limitées ; les cartes de chaleur n'affichent que des agrégats par zone, jamais une personne identifiable.</p><h3 class="section-title" id="2-analyse-des-donnees-regles-metier-et-intelligence-artificielle-llm">2 Analyse des données, règles métier et intelligence artificielle (LLM)</h3><p>Une fois les données collectées et agrégées, elles doivent être interprétées avant d'apparaître sous forme de cartes et de graphiques dans Seller Helper. Cette étape d'analyse combine un moteur de règles déterministes (seuils, comparaisons dans le temps) et un modèle de langage (LLM) qui transforme les signaux en textes utilisable sur le terrains pour le marchand.</p><h4 id="2-1-de-la-donnee-brute-aux-signaux-exploitables">2.1 De la donnée brute aux signaux exploitables</h4><p>Le système calcule d'abord des indicateurs synthétiques sur des fenêtres glissantes, quinze minutes pour l'activité en direct, vingt-quatre heures pour le trafic horaire, sept jours pour le tunnel, les pages populaires et le comportement. Il en déduit par exemple :</p><ul><li>le taux de conversion actuel par rapport à la semaine précédente ;</li><li>le volume d'événements sur les quinze dernières minutes par rapport à une baseline ;</li><li>le taux d'abandon entre panier et achat ;</li><li>le nombre de sessions avec lenteur ou erreur au paiement.</li></ul><p>Ces signaux constituent l'entrée commune des règles métier et du LLM. Sans cette couche, le modèle recevrait des données trop brutes et peu fiables.</p><h4 id="2-2-moteur-de-regles-alertes-et-recommandations-de-base">2.2 Moteur de règles, alertes et recommandations de base</h4><p>Avant tout appel à l'intelligence artificielle, un catalogue de règles compare les signaux à des seuils configurables par le marchand :</p><table class="data"><thead><tr><th>Type de détection</th><th>Exemple de situation</th><th>Intérêt pour le marchand</th></tr></thead><tbody><tr><td>Chute de conversion</td><td>Taux d'achat nettement inférieur à la période de référence</td><td>Réagir vite après une modification de prix ou une campagne ratée</td></tr><tr><td>Pic de trafic anormal</td><td>Afflux soudain d'événements</td><td>Distinguer succès viral, campagne ou trafic suspect</td></tr><tr><td>Abandon massif de panier</td><td>Beaucoup de paniers, peu d'achats sur deux heures</td><td>Cibler paiement, frais de port, confiance</td></tr><tr><td>Erreurs techniques</td><td>Erreurs fréquentes sur le checkout</td><td>Éviter des ventes perdues « silencieuses »</td></tr><tr><td>Lenteur d'affichage</td><td>Pages produit trop lentes sur plusieurs sessions</td><td>Améliorer performance mobile</td></tr></tbody></table><p>Les règles produisent des alertes (incidents à traiter) et certaines recommandations structurées (par exemple faible passage vue → panier). Elles sont explicables, chaque alerte indique le ratio ou le volume qui l'a déclenchée. Des empreintes temporelles évitent de spammer le marchand avec le même incident toutes les minutes.</p><h4 id="2-3-usage-d-un-llm-pour-l-analyse-des-donnees">2.3 Usage d'un LLM pour l'analyse des données</h4><p>Pour dépasser des seuils fixes, le projet s'appuie sur un grand modèle de langage (LLM), principalement <strong>Gemini</strong> (Google), avec possibilité de passage par <strong>OpenRouter</strong> selon la configuration de la plateforme.</p><p><strong>Ce qui est envoyé au modèle.</strong> Un instantané structuré, sans données personnelles : résumé de l'activité sur sept jours (sessions, événements, tunnel), signaux de sécurité et de performance, extrait du <strong>catalogue produits</strong> (titres, stocks, prix, catégories). Le modèle reçoit aussi les <strong>profils de rôles</strong> (marketing, support technique) pour formuler des actions adaptées à chaque destinataire.</p><p><strong>Ce que le modèle doit produire.</strong> Une réponse au format structuré (JSON validé) contenant :</p><ul><li>un <strong>résumé</strong> de la situation de la boutique en quelques phrases ;</li><li>jusqu'à six <strong>alertes</strong> complémentaires (titre, gravité, description) ;</li><li>jusqu'à huit <strong>recommandations</strong> (titre, analyse, texte d'action, priorité, score de confiance, rôle suggéré).</li></ul><p>Intérêt du modèle de langage</p><ul><li>Les petites boutiques ont des situations <strong>hétérogènes</strong> (secteur, saison, stock) ; le modèle peut <strong>croiser</strong> catalogue et comportement (« stock faible sur le produit le plus vu »).</li><li>Il formule des recommandations en <strong>langage naturel</strong> compréhensible par un marchand non technique.</li><li>Il propose des pistes <strong>contextualisées</strong> que des seuils fixes ne couvrent pas (merchandising, confiance, mobile).</li></ul><p>Contrôles prévus, La sortie du LLM est validée (schéma strict, priorités, longueurs, champs obligatoires) avant enregistrement. Si le service est indisponible ou non configuré, des recommandations de secours sont générées à partir du catalogue et des signaux déjà calculés, le marchand n'est jamais face à un écran vide. L'envoi par e-mail et le déplacement vers l'Inbox restent manuels, le LLM suggère, le marchand décide.</p><h4 id="2-4-complements-d-analyse-catalogue-vitrina">2.4 Compléments d'analyse, catalogue Vitrina</h4><p>En parallèle du LLM, un module dédié analyse chaque produit du catalogue (présentation, prix, stock, signaux de vue) pour alimenter l'onglet Recommandation Vitrina. Cette couche est plus opérationnelle par article ; elle complète les recommandations transverses du LLM.</p><h4 id="2-5-du-resultat-de-l-analyse-a-l-application">2.5 Du résultat de l'analyse à l'application</h4><p>Lorsque le marchand clique sur <strong>Analyze now</strong>, la chaîne s'exécute, agrégation → règles → appel LLM → enrichissement (rôles, indices économiques) → enregistrement des alertes et recommandations. Ce n'est qu'ensuite que l'interface Seller Helper affiche les résultats, cartes dans Recommandations IA, liste dans Alertes, courbes déjà alimentées par la collecte continue.</p><p>Les sections suivantes présentent comment ces résultats sont présentés et utilisés dans l'application proprement dite.</p><h4 id="complement-validation-zod-des-sorties-llm-implementation">Complément  -  validation Zod des sorties LLM (implémentation)</h4><p>Le module src/server/conception/llm-analysis.ts définit llmAnalysisSchema (Zod) : summary, jusqu'à six alerts, huit recommendations avec sévérités/priorités bornées. parseAnalysisJson extrait le JSON (extractJsonObject), normalise les champs, puis safeParse  -  en cas d'échec, aucune persistance partielle. Snapshot utilisateur borné via llm-catalog-snapshot.ts et télémetrie Neon.</p><h3 class="section-title" id="3-presentation-generale-de-l-application">3 Présentation générale de l'application</h3><h4 id="3-1-definition-et-role">3.1 Définition et rôle</h4><p>Le Seller Helper est un compagnon d'aide à la décision pour les petits marchands e-commerce. Il centralise en un seul espace :</p><ul><li>une <strong>vue d'ensemble</strong> de l'activité de la boutique ;</li><li>des <strong>analyses comportementales</strong> (cartes de chaleur, parcours, tunnel d'achat) ;</li><li>des <strong>recommandations</strong> issues de règles métier, du catalogue et de l'intelligence artificielle ;</li><li>un <strong>suivi opérationnel</strong> des actions envoyées à l'équipe (Inbox) ;</li><li>la <strong>surveillance des incidents</strong> (alertes, sécurité).</li></ul><p>Son rôle n'est pas de remplacer un outil statistique externe, mais de réduire le temps entre un signal faible et une décision concrète sur la vitrine.</p><h4 id="3-2-integration-dans-vitrina-store">3.2 Intégration dans Vitrina Store</h4><p>L'application est accessible depuis l'espace administrateur de la boutique, en page dédiée ou en module intégré au panneau d'administration. Elle s'alimente automatiquement des événements générés par les visites sur les pages produit et le parcours d'achat de la même boutique. Aucune configuration analytique complexe n'est requise du marchand, le suivi est actif dès que la boutique reçoit du trafic.</p><h4 id="3-3-public-cible">3.3 Public cible</h4><table class="data"><thead><tr><th>Profil</th><th>Usage principal</th></tr></thead><tbody><tr><td>Propriétaire de boutique</td><td>Vision globale, priorisation des actions à fort impact.</td></tr><tr><td>Responsable marketing</td><td>Merchandising, tunnel de conversion, recommandations catalogue.</td></tr><tr><td>Support technique</td><td>Alertes incidents, erreurs de paiement, performance, sécurité.</td></tr></tbody></table><p>L'accès est réservé aux comptes administrateurs authentifiés.</p><h4 id="3-4-valeur-ajoutee">3.4 Valeur ajoutée</h4><p>Trois points forts ressortent :</p><ul><li><strong>Centralisation</strong> : neuf écrans couvrant tout le cycle décisionnel du marchand (détail au chapitre 11).</li><li><strong>Priorisation</strong> : tri par importance, scores de confiance, assignation marketing ou support technique.</li><li><strong>Boucle fermée</strong> : analyse, envoi d'e-mail, suivi Inbox, mesure sur la Timeline, le marchand voit si son action a porté ses fruits.</li></ul><h3 class="section-title" id="4-architecture-de-restitution-et-flux-dans-l-interface">4 Architecture de restitution et flux dans l'interface</h3><p>Après la collecte et l'analyse (chapitres 6 et 7), les étapes collecte et analyse. Le présent chapitre décrit comment les résultats sont restitués dans Seller Helper et maintenus à jour.</p><h4 id="4-1-chaine-complete-en-cinq-temps">4.1 Chaîne complète en cinq temps</h4><ol><li><strong>Collecte</strong> sur la boutique (chapitre 6).</li><li><strong>Transmission et stockage</strong> sécurisés des événements.</li><li><strong>Analyse</strong> par règles et LLM (chapitre 7).</li><li><strong>Restitution</strong> dans les neuf modules de l'interface.</li><li><strong>Actualisation</strong> continue jusqu'à la prochaine analyse.</li></ol><h4 id="4-2-agregation-continue-pour-l-affichage">4.2 Agrégation continue pour l'affichage</h4><p>Même sans lancer <strong>Analyze now</strong>, l'interface s'appuie sur des agrégats recalculés, indicateurs du Dashboard, courbes de la Timeline, cartes de chaleur, entonnoir du Funnel. Les fenêtres temporelles (quinze minutes, vingt-quatre heures, sept jours) sont les mêmes que celles utilisées pour l'analyse, ce qui garantit la cohérence entre un graphique et une alerte.</p><h4 id="4-3-affichage-et-actualisation">4.3 Affichage et actualisation</h4><p>L'interface charge en parallèle la vue d'ensemble, les alertes, les recommandations actives et la boîte de réception. Un rafraîchissement automatique (environ toutes les cinq secondes) maintient les chiffres à jour ; pendant une analyse en cours, l'actualisation est suspendue pour garantir un affichage cohérent.</p><h4 id="4-1-modelisation-uml-du-systeme">4.1 Modélisation UML du système</h4><p>Les schémas suivants résument l'architecture globale de Vitrina Store et Seller Helper.</p><h4 id="figure-4-1-diagramme-de-deploiement">Figure 4.1. Diagramme de déploiement</h4><div class="media-spacer is-diagram" aria-hidden="true"></div><p class="figure-caption"><em>Le navigateur du visiteur et du marchand communique en HTTPS avec l'application Next.js hébergée sur Vercel. Les routes API et la couche serveur s'appuient sur Neon (PostgreSQL). Les services externes (Google OAuth, Gemini ou OpenRouter, Brevo, Chargily) sont appelés selon le besoin.</em></p><h4 id="figure-4-2-diagramme-de-classes">Figure 4.2. Diagramme de classes</h4><div class="media-spacer is-diagram" aria-hidden="true"></div><p class="figure-caption"><em>Trois couches applicatives (présentation, API Next.js, domaine serveur) s'appuient sur les tables PostgreSQL (événements, séquences, alertes, recommandations, actions Seller Helper) et sur les services externes.</em></p><h4 id="figure-4-3-diagramme-de-sequence">Figure 4.3. Diagramme de séquence</h4><div class="media-spacer is-diagram" aria-hidden="true"></div><p class="figure-caption"><em>Le parcours visiteur alimente la collecte ; le marchand déclenche l'analyse (règles + LLM), consulte les onglets Seller Helper et peut envoyer des e-mails, appliquer des correctifs ou gérer l'Inbox.</em></p><h4 id="figure-4-4-diagramme-de-cas-d-utilisation">Figure 4.4. Diagramme de cas d'utilisation</h4><div class="media-spacer is-diagram" aria-hidden="true"></div><p class="figure-caption"><em>Les cas d'utilisation couvrent la boutique, la collecte comportementale, le Seller Helper (analyse, recommandations, Inbox, sécurité) et les services système (règles métier, LLM, Brevo).</em></p><h4 id="figure-4-5-diagramme-d-activite">Figure 4.5. Diagramme d'activité</h4><div class="media-spacer is-diagram" aria-hidden="true"></div><p class="figure-caption"><em>Deux couloirs d'activité (visiteur et marchand admin) se rejoignent sur la persistance Neon ; la boucle marchand relie consultation, analyse, action et mesure sur la Timeline.</em></p><h3 class="section-title" id="5-workflow-et-parcours-utilisateur">5 Workflow et parcours utilisateur</h3><h4 id="5-1-le-cycle-observer-analyser-agir-mesurer">5.1 Le cycle observer – analyser – agir – mesurer</h4><p>En pratique, le marchand commence par consulter le Dashboard, Consulter le Dashboard et, si besoin, les onglets Comportement ou Tunnel pour identifier un signal (baisse de conversion, zone peu cliquée sur une fiche produit).</p><p>Il lance ensuite Lancer <strong>Analyze now</strong> pour générer alertes et recommandations à jour. Les nouvelles cartes apparaissent dans Recommandations IA et les alertes dans l'onglet Alertes.</p><p>Pour la mise en œuvre, Choisir une recommandation, lire le détail, puis <strong>Send email</strong> pour l'adresser au rôle concerné (marketing ou support). La carte migre vers l'<strong>Inbox</strong>. Pour le catalogue, appliquer un correctif rapide Vitrina ou modifier la fiche produit.</p><p>Enfin, il Sur la Timeline, comparer l'évolution des ventes ou du taux de conversion avant et après l'action ; les repères d'actions appliquées marquent la date des interventions. L'en-tête propose <em>Live data</em>, sessions sur quinze minutes, <strong>Refresh</strong> et <strong>Analyze now</strong>.</p><h4 id="5-2-recommandations-et-boite-de-reception">5.2 Recommandations et boîte de réception</h4><p>Les recommandations IA restent dans l'onglet AI Recommendations tant qu'elles n'ont pas été envoyées. <strong>Send email</strong> :</p><ol><li>transmet le contenu par e-mail au destinataire du rôle assigné ;</li><li>enregistre la date d'envoi ;</li><li>déplace la carte vers l'<strong>Inbox</strong> pour suivi.</li></ol><p>L'analyse automatique n'envoie jamais d'e-mail sans validation humaine. Dans l'Inbox, le marchand peut marquer une action comme implémentée ou la classer sans suite.</p><h4 id="5-3-repartition-par-roles">5.3 Répartition par rôles</h4><p>Deux rôles par défaut structurent la collaboration :</p><ul><li><strong>Agent marketing</strong>, Merchandising, conversion, catalogue, comportement acheteur.</li><li><strong>Support technique</strong>, Performance, erreurs, sécurité, incidents de paiement.</li></ul><p>Le routage s'effectue selon le thème de chaque recommandation. Des filtres par rôle dans l'Inbox permettent à chaque membre de l'équipe de suivre ses tâches.</p><h4 id="5-4-classement-et-priorisation">5.4 Classement et priorisation</h4><p>Alertes et recommandations sont triées par niveau d'importance (critique, élevée, moyenne, faible) afin que le marchand traite en premier les leviers à fort impact commercial estimé.</p><h4 id="complement-boucle-fermee-et-journalisation-des-actions">Complément  -  boucle fermée et journalisation des actions</h4><p>Chaque action marchand significative peut être persistée dans seller_helper_applied_action via logAppliedAction() (écriture best-effort). Types (AppliedActionKind) : vitrina_quick_fix, security_block, security_unblock, alert_resolved, ai_recommendation. Les checkpoints alimentent les graphiques Timeline (timeline-series.ts, listAppliedActionsInRange) et le panneau <strong>Activity log</strong>.</p><h3 class="section-title" id="6-description-des-modules-de-l-interface">6 Description des modules de l'interface</h3><p>Ce chapitre détaille chaque écran dans l'ordre de la barre de navigation Seller Helper, son rôle, ses éléments principaux et son apport pour la boutique.</p><h4 id="6-1-dashboard-vue-d-ensemble">6.1 Dashboard, vue d'ensemble</h4><p><strong>Rôle.</strong> Point d'entrée de Seller Helper : répondre à « Que se passe-t-il sur ma boutique maintenant et cette semaine ? »</p><p><strong>Éléments principaux.</strong></p><ul><li>Bandeau d'état (données en direct ou en attente, sessions sur quinze minutes).</li><li>Cartes d'indicateurs : sessions sept jours, volume d'événements, visiteurs actifs, taux de conversion et évolution.</li><li>Graphique de trafic sur vingt-quatre heures.</li><li>Classement des pages les plus consultées.</li><li>Répartition mobile, ordinateur, tablette.</li><li>Renvoi vers les fiches produit les plus actives.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Lecture immédiate sans export complexe ; détection rapide d'un trafic anormal ou d'une chute de conversion.</p><h4 id="6-2-tunnel-de-conversion">6.2 Tunnel de conversion</h4><p><strong>Rôle.</strong> Visualiser les pertes entre consultation produit, panier, passage au paiement et achat final.</p><p><strong>Éléments principaux.</strong></p><ul><li>Graphique en entonnoir avec volumes par étape.</li><li>Taux de passage entre étapes.</li><li>Cartes de friction lorsque le système détecte un goulet (explication et piste d'action).</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Diagnostic lisible des abandons ; ciblage des corrections (frais de port visibles, paiement invité, formulaire mobile simplifié).</p><h4 id="6-3-comportement-utilisateur">6.3 Comportement utilisateur</h4><p><strong>Rôle.</strong> Montrer où les visiteurs regardent et cliquent sur les fiches produit, et comment ils avancent dans la session.</p><p><strong>Éléments principaux.</strong></p><ul><li>Aperçu de la page produit avec superposition colorée (vues, survols ou clics).</li><li>Liste des pages pour choisir le produit à analyser.</li><li>Synthèse : types de parcours, profondeur de défilement, indicateurs de session.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Repositionner boutons et contenus ; augmenter les clics vers le panier sans refonte complète du site.</p><h4 id="6-4-recommandation-vitrina">6.4 Recommandation Vitrina</h4><p><strong>Rôle.</strong> Proposer des améliorations concrètes par produit : titre, description, images, prix, stock.</p><p><strong>Éléments principaux.</strong></p><ul><li>Liste de suggestions par produit avec priorité et impact.</li><li>Actions de correctif rapide ou marquage « appliqué ».</li><li>Mise à jour après chaque analyse.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Actions opérationnelles au niveau de chaque article ; meilleure présentation catalogue et gestion des ruptures.</p><h4 id="6-5-recommandations-ia">6.5 Recommandations IA</h4><p><strong>Rôle.</strong> Afficher les actions intelligentes encore non envoyées par e-mail.</p><p><strong>Éléments principaux.</strong></p><ul><li>Cartes avec priorité, recommandation actionnable, impact estimé, confiance, délai suggéré.</li><li>Rôle destinataire (marketing ou support).</li><li>Bouton <strong>Send email</strong> et panneau <strong>Details</strong> pour l'analyse complète.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Plan d'action stratégique validé humainement avant communication à l'équipe.</p><h4 id="6-6-inbox">6.6 Inbox</h4><p><strong>Rôle.</strong> Gérer les recommandations déjà communiquées : suivi d'exécution et clôture.</p><p><strong>Éléments principaux.</strong></p><ul><li>Filtres par rôle avec compteurs.</li><li>Actions <strong>Mark implemented</strong> et <strong>Dismiss</strong>.</li><li>Historique des dates d'envoi et de clôture.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Outil de suivi d'équipe léger ; réduction du délai entre recommandation et mise en ligne.</p><h4 id="6-7-timeline-suivi-temporel-et-journal-d-activite">6.7 Timeline, suivi temporel et journal d'activité</h4><p><strong>Rôle.</strong> Suivre l'évolution des métriques dans le temps, pour toute la boutique ou un produit choisi, visualiser les actions déjà menées sur les courbes et consulter le journal des opérations Seller Helper.</p><p><strong>Éléments principaux.</strong></p><ul><li>Choix de période : 24 heures, 7 jours, 30 jours.</li><li>Métriques sélectionnables : vues, sessions, ajouts panier, ventes, taux de conversion.</li><li>Filtre boutique entière ou produit ciblé.</li><li>Courbes lissées avec infobulles au survol ; cartes de synthèse (moyenne, pic, fenêtre).</li><li>Repères d'actions sur la chronologie avec fenêtre de détail (titre, date, objectif).</li><li>Panneau <strong>Activity log</strong> sous les graphiques : liste chronologique des actions enregistrées dans la fenêtre temporelle (correctifs Vitrina, résolution d'alertes, recommandations IA appliquées, blocages ou déblocages sécurité).</li><li>Pour chaque entrée du journal : type coloré, produit concerné ou portée boutique, résumé, horodatage, badge <strong>conversion</strong> (évolution du taux vue→achat sur une fenêtre minimale de quinze minutes après l'action).</li><li>Actions sur une entrée : <strong>Details</strong> (modal de détail), <strong>Revert to chokepoint</strong> (retour à l'état sauvegardé avant la mutation), <strong>Reset to default</strong> (réinitialisation merchandising Vitrina du produit), <strong>Email revert request</strong> (demande de retour arrière par e-mail au rôle assigné, lorsque applicable).</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Relier cause et effet entre une modification de vitrine et l'évolution des ventes ; auditer et, si besoin, annuler une action tout en mesurant son effet sur la conversion.</p><h4 id="6-8-securite">6.8 Sécurité</h4><p><strong>Rôle.</strong> Surveiller les sessions suspectes ou automatisées et documenter la fiabilité du suivi.</p><p><strong>Éléments principaux.</strong></p><ul><li>Synthèse des sessions à risque et motifs.</li><li>Liste détaillée et action de remise à zéro des signaux affichés.</li><li>Recommandations pour un suivi fiable.</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Confiance dans les métriques ; évitement de dépenses publicitaires sur trafic non qualifié.</p><h4 id="6-9-alertes">6.9 Alertes</h4><p><strong>Rôle.</strong> Signaler les anomalies récentes nécessitant une attention immédiate.</p><p><strong>Éléments principaux.</strong></p><ul><li>Liste par sévérité.</li><li>Paramétrage des seuils (conversion, trafic, panier, erreurs, performance).</li><li>Historique des alertes résolues avec détail (volumes, sessions concernées).</li></ul><div class="media-spacer is-capture" aria-hidden="true"></div><p><strong>Impact.</strong> Réactivité pendant les campagnes ; limitation des pertes liées aux incidents techniques.</p><h4 id="complement-activity-log-sur-l-onglet-timeline-mai-2026">Complément  -  Activity log sur l'onglet Timeline (mai 2026)</h4><p>Le composant TimelineLogsSection.tsx liste les actions de la fenêtre temporelle : titre, type coloré (APPLIED_ACTION_KIND_META), produit, horodatage, résumé. Badge <strong>conversion</strong> (computeAppliedActionConversionImpact) : delta view→purchase (fenêtre min. 15 min). Actions : <strong>Details</strong> (AppliedActionDetailsModal), <strong>Revert to chokepoint</strong>, <strong>Reset to default</strong>, <strong>Email revert request</strong> (Brevo).</p><h4 id="complement-correctifs-vitrina-et-reinitialisation-catalogue">Complément  -  correctifs Vitrina et réinitialisation catalogue</h4><p>apply-vitrina-quick-fixes.ts : default_color, default_size, promo_price, availability_note, quality_highlight, trending_countdown, promo_catalog_boost. Chaque application sauvegarde un chokepoint (jomlaPrice, description) puis logAppliedAction({ kind: &quot;vitrina_quick_fix&quot; }).</p><p><strong>Quality &amp; reviews</strong> : quality_highlight écrit Quality + Merch: Hero review depuis le meilleur avis vérifié ; bannière vitrine <strong>uniquement</strong> après ce correctif (finalizeDescriptionAfterVitrinaCatalogReset, suppressLiveHeroReviewOverlay).</p><p><strong>Reset catalogue</strong> : resetAllVitrinaCatalogToDefaultSilent(), bouton <em>Reset all Vitrina changes</em> (vitrina-recommendations.tsx). <strong>Réglage</strong> : VitrinaFixesPerItemSetting (1–6 correctifs par produit).</p><h3 class="section-title" id="7-confidentialite-securite-et-politiques-d-usage">7 Confidentialité, sécurité et politiques d'usage</h3><h4 id="7-1-acces-reserve-aux-administrateurs">7.1 Accès réservé aux administrateurs</h4><p>Le Seller Helper vérifie le rôle de l'utilisateur avant d'exposer toute donnée analytique. Un visiteur non administrateur n'accède pas aux métriques ni aux recommandations, seuls les comptes autorisés de la boutique consultent et déclenchent les actions.</p><h4 id="7-2-minimisation-des-donnees-personnelles">7.2 Minimisation des données personnelles</h4><p>Les micro-événements comportementaux s'appuient sur des identifiants de <strong>session opaques</strong>, générés aléatoirement. Aucune adresse IP, aucun nom ni e-mail n'est stocké dans ces événements. Les cartes de chaleur et les agrégats n'affichent que des <strong>totaux par zone</strong>, jamais une personne identifiable.</p><h4 id="7-3-reversibilite-et-tracabilite">7.3 Réversibilité et traçabilité</h4><p>Les actions du Seller Helper sont conçues pour rester <strong>réversibles</strong> lorsque c'est pertinent, correctifs Vitrina annulables, blocages de sessions levables, historique des alertes et recommandations conservé. Chaque mutation significative peut être reliée à un repère sur la Timeline pour audit et mesure d'impact.</p><h4 id="7-4-mutations-limitees-et-controlees">7.4 Mutations limitées et contrôlées</h4><p>L'interface ne permet pas de supprimer arbitrairement produits, commandes ou historique. Les correctifs rapides Vitrina ne modifient qu'un ensemble restreint d'attributs merchandising ; les actions sécurité se limitent au blocage ou déblocage de sessions signalées. Cette conception limite les risques d'erreur humaine tout en laissant au marchand une marge d'action opérationnelle.</p><h4 id="7-5-lien-avec-l-onglet-securite">7.5 Lien avec l'onglet Sécurité</h4><p>L'onglet <strong>Security</strong> de l'application matérialise ces principes, synthèse des sessions suspectes, motifs d'alerte, recommandations pour préserver la <strong>fiabilité des métriques</strong> utilisées dans tout le reste du système (chapitre 11, section 11.8).</p><h4 id="complement-capacites-de-reversion-par-type-d-action">Complément  -  capacités de réversion par type d'action</h4><p>applied-actions.ts expose canRevertToChokepoint, canResetToDefault, canRequestRevertEmail selon le kind et le mode (chokepoint / reset_default). Les correctifs Vitrina conservent un snapshot JSON avant mutation ; la sécurité reste réversible via chokepoint.</p><h3 class="section-title" id="8-impacts-et-benefices-pour-le-marchand">8 Impacts et bénéfices pour le marchand</h3><h4 id="8-1-experience-utilisateur">8.1 Expérience utilisateur</h4><table class="data"><thead><tr><th>Dimension</th><th>Apport</th></tr></thead><tbody><tr><td>Simplicité</td><td>Une seule application, libellés orientés action.</td></tr><tr><td>Rapidité</td><td>Données en direct, analyse et e-mail en quelques clics.</td></tr><tr><td>Collaboration</td><td>Rôles, Inbox et e-mails pour petites équipes.</td></tr><tr><td>Pédagogie</td><td>Chaque module répond à une question métier précise.</td></tr></tbody></table><h4 id="8-2-performance-commerciale">8.2 Performance commerciale</h4><ul><li><strong>Conversion</strong> : Tunnel et recommandations sur les étapes faibles.</li><li><strong>Ventes</strong> : Merchandising Vitrina et optimisation des zones cliquables.</li><li><strong>Marketing</strong> : Alertes trafic et sécurité pour un budget publicitaire mieux ciblé.</li><li><strong>Réactivité</strong> : Correctifs catalogue sans intervention développeur systématique.</li></ul><h4 id="8-3-indicateurs-de-succes-observables">8.3 Indicateurs de succès observables</h4><ul><li>Amélioration des taux entre étapes du tunnel (visible sur la Timeline).</li><li>Diminution des alertes performance et erreurs techniques.</li><li>Taux de clôture des tâches dans l'Inbox.</li><li>Volume de suivi stable, signe d'une boutique correctement instrumentée.</li></ul><div class="page-break" style="page-break-after: always;"></div></section><section class="chapter" id="chapter-3"><h2 class="chapter-title">Chapitre 3  -  Développement et déploiement</h2><h3 class="section-title" id="1-technologies-langages-et-outils-utilises">1 Technologies, langages et outils utilisés</h3><p>Seller Helper et Vitrina Store reposent sur une application TypeScript hébergée dans le cloud, reliée à des services managés pour la base de données, l'authentification, l'e-mailing et l'analyse par modèle de langage. Nous passons ici en revue les choix technologiques et leur rôle dans le projet.</p><h4 id="1-1-principes-de-choix">1.1 Principes de choix</h4><p>Nous avons privilégié la maintenabilité (un seul langage côté client et serveur), un coût maîtrisé pour une boutique pilote (offres Neon et Vercel adaptées), la sécurité (authentification déléguée, secrets en variables d'environnement) et l'évolutivité (API Next.js, schéma SQL versionné, modèle de langage interchangeable).</p><h4 id="1-2-stack-technique-synthese">1.2 Stack technique (synthèse)</h4><table class="data"><thead><tr><th>Domaine</th><th>Technologies</th><th>Rôle dans le projet</th></tr></thead><tbody><tr><td>Application</td><td><strong>TypeScript</strong>, <strong>Next.js 15</strong>, <strong>React 19</strong>, <strong>Tailwind CSS</strong>, Redux Toolkit</td><td>Monorepo boutique + admin ; routes API et modules serveur (conception, e-mail, auth).</td></tr><tr><td>Formulaires &amp; contrats</td><td><strong>React Hook Form</strong>, <strong>Zod</strong></td><td>Entrées admin et validation stricte des sorties LLM.</td></tr><tr><td>Données</td><td><strong>PostgreSQL</strong> (Neon), <strong>Drizzle ORM</strong>, <strong>pg</strong></td><td>Micro-événements, alertes, recommandations, catalogue ; migrations SQL au build.</td></tr><tr><td>Auth &amp; e-mail</td><td><strong>Better Auth</strong> (Google OAuth), <strong>Brevo</strong></td><td>Accès administrateur ; envoi manuel des recommandations par rôle.</td></tr><tr><td>IA</td><td><strong>Gemini</strong>, <strong>OpenRouter</strong></td><td>Analyse LLM ; second fournisseur en secours.</td></tr><tr><td>Déploiement</td><td><strong>Vercel</strong></td><td>HTTPS, serverless, secrets par environnement.</td></tr><tr><td>UI Seller Helper</td><td><strong>heatmap.js</strong>, graphiques <strong>SVG</strong>, Lucide, Swiper</td><td>Heatmaps, Dashboard, Timeline, Funnel.</td></tr></tbody></table><h4 id="1-3-outils-de-developpement">1.3 Outils de développement</h4><p><strong>ESLint</strong>, <strong>Drizzle Kit</strong> et <strong>tsx</strong> (seed catalogue, simulation de trafic, tests métier). L'application reste un monorepo : front, API et logique métier partagent le même dépôt TypeScript.</p><h4 id="1-4-synthese-de-l-architecture-technique">1.4 Synthèse de l'architecture technique</h4><p>Côté visiteur, la navigation sur la boutique Next.js alimente des micro-événements envoyés aux routes API puis stockés dans Neon (PostgreSQL). Côté marchand, la connexion passe par Better Auth (Google ou e-mail) pour accéder au Seller Helper. L'action Analyze now déclenche agrégation SQL, règles métier et appel Gemini ou OpenRouter, puis enregistre alertes et recommandations. Enfin, l'envoi par Brevo, le suivi dans l'Inbox et la Timeline permettent de mesurer les effets.</p><p>Le chapitre 2 détaille la collecte, l'analyse et l'expérience marchand dans l'interface. Les figures UML (déploiement, classes, séquences, cas d'utilisation, activité) figurent dans la section architecture de restitution du chapitre 2.</p><div class="page-break" style="page-break-after: always;"></div></section><h2 id="conclusion-generale">Conclusion générale</h2><p>Ce projet a abouti à un système d'analyse et de recommandation pour les boutiques en ligne, déployé via Seller Helper sur Vitrina Store. L'essentiel ne se limite pas à l'interface, la chaîne complète, problèmes marchands, collecte ciblée, analyse par règles et par modèle de langage, restitution dans l'application et règles de confidentialité, constitue la valeur du travail.</p><p>En combinant Dashboard, Funnel, Comportement, optimisation produit (Vitrina et correctifs rapides), recommandations IA, Inbox, Timeline (courbes et journal Activity log), sécurité et alertes, Seller Helper va au-delà de la simple visualisation de métriques pour aider le marchand à prioriser ses décisions.</p><p>Retenons notamment, une réponse coordonnée aux six freins majeurs des e-commerçants ; six groupes de signaux, chacun lié à une question commerciale ; des seuils explicables complétés par le modèle de langage ; des actions possibles depuis l'interface (correctifs Vitrina, e-mails par rôle, Inbox) ; un suivi dans le temps via la Timeline ; des politiques de confidentialité et un module Sécurité pour des métriques fiables ; enfin une chaîne technique cohérente (TypeScript, Next.js, Neon, Vercel, Better Auth, Google, Brevo).</p><p>Le travail a permis de formaliser un modèle d'événements, des règles d'alerte, un pipeline de recommandations et une interface pensée pour les micro-marchands, sur une infrastructure cloud éprouvée. Le prototype reste évolutif (montée en charge, modèles plus avancés, validation sur davantage de boutiques), mais constitue déjà une base solide pour accompagner les vendeurs en ligne.</p><p>En bref, langages, frameworks, base Neon, déploiement Vercel, authentification Google, e-mails Brevo, analyse de données et interface ont été mobilisés de façon cohérente afin d'aider le marchand à prioriser ce qu'il change sur sa boutique.</p>
+    <p class="colophon">Généré le 2026-05-23T00:37:14Z · Seller Helper — documentation fonctionnelle.</p>
+  </main>
+</body>
+</html>

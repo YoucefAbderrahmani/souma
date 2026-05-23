@@ -40,6 +40,7 @@
     "report:seller-helper-security-fr:html": "node scripts/build-seller-helper-security-tab-report-fr.mjs --html-only",
     "report:seller-helper-security-fr:pdf": "node scripts/build-seller-helper-security-tab-report-fr.mjs --pdf",
     "report:seller-helper-pitch:docx": "node scripts/build-seller-helper-pitch-docx.mjs",
+    "report:seller-helper-3chapters:docx": "node scripts/build-seller-helper-application-3chapters-docx.mjs",
     "uml:render": "node scripts/render-uml.mjs",
     "uml:render:svg": "node scripts/render-uml.mjs --svg"
   },
