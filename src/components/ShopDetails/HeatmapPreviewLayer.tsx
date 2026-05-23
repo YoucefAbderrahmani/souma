@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   getProductHeatmapSurfacePaintSize,
@@ -10,7 +10,10 @@ import {
   isHeatmapPreviewMessage,
   postHeatmapPreviewReadyFromIframe,
 } from "@/lib/product-heatmap-preview-bridge";
-import { paintHeatmapCanvas2d } from "@/lib/product-heatmap-visual";
+import {
+  createGaussianHeatmapRenderer,
+  type GaussianHeatmapRenderer,
+} from "@/lib/product-heatmap-visual";
 import type { ConceptionHeatmapDetailDto } from "@/types/conception-heatmap";
 
 function scheduleDebounced(fn: () => void, ms: number, slot: { id: number | null }) {
@@ -22,17 +25,16 @@ function scheduleDebounced(fn: () => void, ms: number, slot: { id: number | null
 }
 
 /**
- * Heat layer inside the preview iframe. Keeps the last good heatmap visible during
- * resize/refresh so the overlay does not blink off between postMessage updates.
+ * heatmap.js inside the preview iframe — industry-standard Gaussian heat + stable sticky data.
  */
 export function HeatmapPreviewLayer() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<GaussianHeatmapRenderer | null>(null);
+  const rendererInitRef = useRef<Promise<GaussianHeatmapRenderer | null> | null>(null);
   const lastHeatmapRef = useRef<ConceptionHeatmapDetailDto | null>(null);
   const [heatmap, setHeatmap] = useState<ConceptionHeatmapDetailDto | null>(null);
   const [surface, setSurface] = useState<HTMLElement | null>(null);
   const readySentRef = useRef(false);
-  const paintSizeRef = useRef({ width: 0, height: 0, dpr: 1 });
-  const repaintRafRef = useRef<number | null>(null);
   const resizeDebounceRef = useRef<{ id: number | null }>({ id: null });
 
   const displayHeatmap = heatmap ?? lastHeatmapRef.current;
@@ -47,45 +49,50 @@ export function HeatmapPreviewLayer() {
     return false;
   }, []);
 
-  const repaint = useCallback(() => {
-    const canvas = canvasRef.current;
-    const data = displayHeatmap;
-    if (!canvas || !data?.cells.length) return;
+  const teardownRenderer = useCallback(() => {
+    rendererRef.current?.destroy();
+    rendererRef.current = null;
+    rendererInitRef.current = null;
+  }, []);
 
-    const host =
+  const syncHeatmapRender = useCallback(() => {
+    const host = hostRef.current;
+    const data = displayHeatmap;
+    const targetSurface =
       surface ??
       (document.querySelector(`[${PRODUCT_HEATMAP_SURFACE_ATTR}]`) as HTMLElement | null);
-    if (!host || !host.isConnected) return;
 
-    const { width, height } = getProductHeatmapSurfacePaintSize(host);
+    if (!host || !data?.cells.length || !targetSurface?.isConnected) return;
+
+    const { width, height } = getProductHeatmapSurfacePaintSize(targetSurface);
     if (width <= 0 || height <= 0) return;
 
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const pixelWidth = Math.round(width * dpr);
-    const pixelHeight = Math.round(height * dpr);
-    const prev = paintSizeRef.current;
+    const paint = () => {
+      rendererRef.current?.repaint(data, width, height);
+    };
 
-    if (prev.width !== pixelWidth || prev.height !== pixelHeight || prev.dpr !== dpr) {
-      canvas.width = pixelWidth;
-      canvas.height = pixelHeight;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      paintSizeRef.current = { width: pixelWidth, height: pixelHeight, dpr };
+    if (rendererRef.current) {
+      paint();
+      return;
     }
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    paintHeatmapCanvas2d(ctx, data, width, height);
+    if (!rendererInitRef.current) {
+      rendererInitRef.current = createGaussianHeatmapRenderer(host)
+        .then((instance) => {
+          rendererRef.current = instance;
+          return instance;
+        })
+        .catch(() => null);
+    }
+
+    void rendererInitRef.current.then((instance) => {
+      if (instance) paint();
+    });
   }, [displayHeatmap, surface]);
 
-  const scheduleRepaint = useCallback(() => {
-    if (repaintRafRef.current != null) return;
-    repaintRafRef.current = window.requestAnimationFrame(() => {
-      repaintRafRef.current = null;
-      repaint();
-    });
-  }, [repaint]);
+  const scheduleSync = useCallback(() => {
+    scheduleDebounced(syncHeatmapRender, 80, resizeDebounceRef.current);
+  }, [syncHeatmapRender]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -98,16 +105,17 @@ export function HeatmapPreviewLayer() {
       if (next.cells.length > 0) {
         lastHeatmapRef.current = next;
         setHeatmap(next);
-        scheduleRepaint();
+        scheduleSync();
         return;
       }
 
       lastHeatmapRef.current = null;
       setHeatmap(next);
+      teardownRenderer();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [scheduleRepaint]);
+  }, [scheduleSync, teardownRenderer]);
 
   useEffect(() => {
     findSurface();
@@ -116,22 +124,24 @@ export function HeatmapPreviewLayer() {
     return () => observer.disconnect();
   }, [findSurface]);
 
-  useLayoutEffect(() => {
-    scheduleRepaint();
-  }, [scheduleRepaint, displayHeatmap, surface]);
+  useEffect(() => {
+    scheduleSync();
+  }, [scheduleSync, displayHeatmap, surface]);
 
   useEffect(() => {
     if (!surface) return;
-    const observer = new ResizeObserver(() => {
-      scheduleDebounced(scheduleRepaint, 120, resizeDebounceRef.current);
-    });
+    const observer = new ResizeObserver(() => scheduleSync());
     observer.observe(surface);
     return () => {
       observer.disconnect();
       const debounce = resizeDebounceRef.current;
       if (debounce.id != null) window.clearTimeout(debounce.id);
     };
-  }, [scheduleRepaint, surface]);
+  }, [scheduleSync, surface]);
+
+  useEffect(() => {
+    return () => teardownRenderer();
+  }, [surface, teardownRenderer]);
 
   useEffect(() => {
     if (readySentRef.current) return;
@@ -147,15 +157,16 @@ export function HeatmapPreviewLayer() {
   if (!displayHeatmap?.cells.length || !surface) return null;
 
   return createPortal(
-    <canvas
-      ref={canvasRef}
-      data-heatmap-preview-canvas=""
+    <div
+      ref={hostRef}
+      data-heatmap-preview-host=""
       aria-hidden
-      className="pointer-events-none absolute left-0 top-0 z-[2147483646]"
+      className="pointer-events-none absolute left-0 top-0 z-[2147483646] overflow-hidden"
       style={{
-        mixBlendMode: "normal",
-        opacity: 0.9,
-        filter: "saturate(1.12) contrast(1.03)",
+        width: "100%",
+        height: "100%",
+        mixBlendMode: "multiply",
+        opacity: 0.88,
       }}
     />,
     surface
