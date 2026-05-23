@@ -9,10 +9,7 @@ import type {
 } from "@/types/conception-heatmap";
 import { productDetailsHref, productHeatmapPreviewHref } from "@/lib/product-page-link";
 import { HeatmapPreviewFrame } from "./HeatmapPreviewFrame";
-import { RrwebSessionReplay } from "./RrwebSessionReplay";
 import { sellerGhostButton, sellerPlaceholder, sellerToggleButton } from "./layout";
-
-type HeatmapViewMode = "density" | "rrweb";
 
 const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
   { id: "view", label: "Views" },
@@ -46,7 +43,6 @@ export function ProductPageHeatmap() {
   const [pages, setPages] = useState<ConceptionHeatmapPageOption[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [metric, setMetric] = useState<ConceptionHeatmapMetric>("hover");
-  const [viewMode, setViewMode] = useState<HeatmapViewMode>("density");
   const [heatmap, setHeatmap] = useState<ConceptionHeatmapDetailDto | null>(null);
   const [loadingPages, setLoadingPages] = useState(true);
   const [loadingHeatmap, setLoadingHeatmap] = useState(false);
@@ -206,37 +202,18 @@ export function ProductPageHeatmap() {
           ))}
         </select>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setViewMode("density")}
-            className={sellerToggleButton(viewMode === "density")}
-          >
-            Density heatmap
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("rrweb")}
-            className={sellerToggleButton(viewMode === "rrweb")}
-          >
-            rrweb replay
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {METRICS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setMetric(item.id)}
+              className={sellerToggleButton(metric === item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
-
-        {viewMode === "density" ?
-          <div className="flex flex-wrap gap-2">
-            {METRICS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setMetric(item.id)}
-                className={sellerToggleButton(metric === item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        : null}
       </div>
 
       {error ?
@@ -248,16 +225,12 @@ export function ProductPageHeatmap() {
       <div className="overflow-hidden rounded-xl border border-gray-3 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-3 px-4 py-3 text-xs text-dark-4">
           <div className="flex flex-wrap items-center gap-3">
-            {viewMode === "density" ?
-              <>
-                <span>
-                  {loadingHeatmap ?
-                    "Loading heatmap…"
-                  : `${heatmap?.cells.length ?? 0} density points · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
-                </span>
-                {!loadingHeatmap && heatmap ? <HeatmapIntensityLegend metric={metric} /> : null}
-              </>
-            : <span>Session replay from live product page visits (rrweb)</span>}
+            <span>
+              {loadingHeatmap ?
+                "Loading heatmap…"
+              : `${heatmap?.cells.length ?? 0} density points · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
+            </span>
+            {!loadingHeatmap && heatmap ? <HeatmapIntensityLegend metric={metric} /> : null}
           </div>
           <span className="tabular-nums">
             Views {new Intl.NumberFormat("en-US").format(heatmap?.totals.views ?? selectedPage?.views ?? 0)} · Hover{" "}
@@ -266,9 +239,7 @@ export function ProductPageHeatmap() {
           </span>
         </div>
 
-        {viewMode === "rrweb" && selectedPage ?
-          <RrwebSessionReplay productId={selectedPage.productId} />
-        : previewSrc ?
+        {previewSrc ?
           <div className="relative">
             <HeatmapPreviewFrame
               previewSrc={previewSrc}

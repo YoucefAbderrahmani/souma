@@ -8,7 +8,6 @@ import {
   uuid,
   primaryKey,
   uniqueIndex,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 import { relations } from "drizzle-orm";
@@ -266,13 +265,6 @@ export const salesMicroEventTable = pgTable("sales_micro_event", {
   clientEventAt: timestamp("client_event_at", { mode: "date" }),
   sequenceIndex: integer("sequence_index").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-});
-
-/** Latest rrweb session events per product page (Seller Helper replay). */
-export const productPageRrwebTable = pgTable("product_page_rrweb", {
-  productLocalId: integer("product_local_id").primaryKey(),
-  events: jsonb("events").$type<unknown[]>().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
 
 /** Conception intelligence: automated KPI alerts (conversion, traffic, fraud heuristics, etc.) */

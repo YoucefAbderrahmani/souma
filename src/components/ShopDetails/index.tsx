@@ -22,7 +22,6 @@ import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import ProductPageAssistant from "./ProductPageAssistant";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
-import { useRrwebProductPageRecording } from "@/hooks/useRrwebProductPageRecording";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
 import type { Product } from "@/types/product";
@@ -438,11 +437,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     surfaceReady: canRenderProduct,
     embed,
     disablePointerTracking: embed || isHeatmapPreview,
-  });
-
-  useRrwebProductPageRecording({
-    productId: canRenderProduct ? trackingProductId : null,
-    enabled: canRenderProduct && !embed && !isHeatmapPreview,
   });
 
   // pass the product here when you get the real data.
