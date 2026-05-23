@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import { exitBuildScriptOnError } from "./lib/build-script-exit.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -69,8 +70,7 @@ try {
   }
   console.log("[ensure-storefront-hidden-product] ensured retired headset exclusions.");
 } catch (e) {
-  console.error("[ensure-storefront-hidden-product]", e);
-  process.exit(1);
+  exitBuildScriptOnError(e, "ensure-storefront-hidden-product");
 } finally {
   await client.end();
 }

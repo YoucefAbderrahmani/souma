@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import { exitBuildScriptOnError } from "./lib/build-script-exit.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -54,8 +55,7 @@ try {
   await client.query(sql);
   console.log("[ensure-sales-micro-event] created table from drizzle/0003_sales_micro_event.sql");
 } catch (e) {
-  console.error("[ensure-sales-micro-event]", e?.message || e);
-  process.exit(1);
+  exitBuildScriptOnError(e, "ensure-sales-micro-event");
 } finally {
   await client.end().catch(() => {});
 }

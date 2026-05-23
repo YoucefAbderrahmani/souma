@@ -15,6 +15,7 @@ import {
   getVitrinaMerchandisingFromAdditionalInfo,
   readCatalogBoostAt,
 } from "@/lib/vitrina-merchandising";
+import { isNeonDataTransferQuotaError, noteDatabaseOutage } from "@/server/db-degraded";
 import { getProductReviewAggregatesByLocalIds } from "@/server/reviews/reviews-db";
 import { Product } from "@/types/product";
 
@@ -146,15 +147,20 @@ function withVitrinaStorefrontFieldsFromDescription(product: Product): Product {
 
 async function withReviewAggregatesFromDatabase(products: Product[]): Promise<Product[]> {
   if (products.length === 0) return products;
-  const aggMap = await getProductReviewAggregatesByLocalIds(products.map((p) => p.id));
-  return products.map((p) => {
-    const agg = aggMap.get(p.id) ?? { count: 0, averageRating: 0 };
-    return {
-      ...p,
-      reviews: agg.count,
-      averageRating: agg.averageRating,
-    };
-  });
+  try {
+    const aggMap = await getProductReviewAggregatesByLocalIds(products.map((p) => p.id));
+    return products.map((p) => {
+      const agg = aggMap.get(p.id) ?? { count: 0, averageRating: 0 };
+      return {
+        ...p,
+        reviews: agg.count,
+        averageRating: agg.averageRating,
+      };
+    });
+  } catch (error) {
+    if (isNeonDataTransferQuotaError(error)) noteDatabaseOutage();
+    return products;
+  }
 }
 
 export async function getCatalogProducts(): Promise<Product[]> {
@@ -199,7 +205,8 @@ export async function getCatalogProducts(): Promise<Product[]> {
       hiddenTitles
     );
     return await withReviewAggregatesFromDatabase(merged);
-  } catch {
+  } catch (error) {
+    if (isNeonDataTransferQuotaError(error)) noteDatabaseOutage();
     const hiddenTitles = await getHiddenStorefrontTitleKeys().catch(() => new Set<string>());
     const deduped = dedupeProductsByTitle(shopData);
     const merged = filterStorefrontHiddenProducts(

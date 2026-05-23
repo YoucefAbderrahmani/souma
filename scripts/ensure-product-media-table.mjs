@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import { exitBuildScriptOnError } from "./lib/build-script-exit.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -53,8 +54,7 @@ try {
   await client.query(sql);
   console.log("[ensure-product-media] created table from drizzle/0004_product_media.sql");
 } catch (e) {
-  console.error("[ensure-product-media]", e);
-  process.exit(1);
+  exitBuildScriptOnError(e, "ensure-product-media");
 } finally {
   await client.end();
 }

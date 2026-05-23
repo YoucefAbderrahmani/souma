@@ -1,3 +1,5 @@
+"use client";
+
 import type { ConceptionHeatmapDetailDto } from "@/types/conception-heatmap";
 import {
   getProductHeatmapSurfacePaintSize,

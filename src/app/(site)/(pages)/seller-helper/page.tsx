@@ -24,6 +24,7 @@ import {
 } from "@/components/SellerHelper/layout";
 import { auth } from "@/server/lib/auth";
 import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
+import { isNeonDataTransferQuotaError, noteDatabaseOutage } from "@/server/db-degraded";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 
@@ -35,21 +36,31 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SellerHelperPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (error) {
+    if (isNeonDataTransferQuotaError(error)) noteDatabaseOutage();
+    redirect("/signin");
+  }
 
   if (!session?.user) {
     redirect("/signin");
   }
 
-  const currentUser = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  const isAdmin = currentUser[0]?.role === "admin" || isPrivilegedAdminEmail(session.user.email);
+  let isAdmin = isPrivilegedAdminEmail(session.user.email);
+  try {
+    const currentUser = await db
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .limit(1);
+    isAdmin = currentUser[0]?.role === "admin" || isAdmin;
+  } catch (error) {
+    if (isNeonDataTransferQuotaError(error)) noteDatabaseOutage();
+  }
 
   let initialData: ConceptionAdminInitialData | undefined;
   let initialError: string | null = null;
