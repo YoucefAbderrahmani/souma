@@ -12,7 +12,10 @@ import {
   toPreviewFrameGeometry,
   type HeatmapPreviewFrameGeometry,
 } from "@/lib/product-heatmap-preview-frame";
-import { postHeatmapToPreviewIframe } from "@/lib/product-heatmap-preview-bridge";
+import {
+  isHeatmapPreviewReadyMessage,
+  postHeatmapToPreviewIframe,
+} from "@/lib/product-heatmap-preview-bridge";
 
 type HeatmapPreviewFrameProps = {
   previewSrc: string;
@@ -125,6 +128,16 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
     const timer = window.setTimeout(() => pushHeatmapToIframe(), 280);
     return () => window.clearTimeout(timer);
   }, [geometry, heatmap, pushHeatmapToIframe]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (!isHeatmapPreviewReadyMessage(event.data)) return;
+      pushHeatmapToIframe();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [pushHeatmapToIframe]);
 
   const iframeTransform =
     geometry ?
