@@ -18,12 +18,10 @@ const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
 ];
 
 const LEGEND_GRADIENT: Record<ConceptionHeatmapMetric, string> = {
-  hover:
-    "linear-gradient(90deg, #e0f2fe 0%, #60a5fa 35%, #2563eb 68%, #1e3a8a 100%)",
+  hover: "linear-gradient(90deg, rgba(191,219,254,0.5) 0%, rgba(59,130,246,0.85) 45%, rgba(29,78,216,1) 100%)",
   click:
-    "linear-gradient(90deg, #fef3c7 0%, #fb923c 38%, #ea580c 70%, #991b1b 100%)",
-  view:
-    "linear-gradient(90deg, #ccfbf1 0%, #34d399 38%, #0d9488 70%, #064e3b 100%)",
+    "linear-gradient(90deg, rgba(254,215,170,0.5) 0%, rgba(242,122,26,0.85) 50%, rgba(194,65,12,1) 100%)",
+  view: "linear-gradient(90deg, rgba(167,243,208,0.5) 0%, rgba(20,184,166,0.85) 55%, rgba(15,118,110,1) 100%)",
 };
 
 function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric }) {
@@ -36,7 +34,7 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
         aria-hidden
       />
       <span>High</span>
-      <span className="text-dark-3">· above avg. traffic</span>
+      <span className="text-dark-3">· density on product surface</span>
     </div>
   );
 }
@@ -232,16 +230,7 @@ export function ProductPageHeatmap() {
                 "Loading heatmap…"
               : `${heatmap?.cells.length ?? 0} density points · ${heatmap?.gridWidth ?? 48}×${heatmap?.gridHeight ?? 72} grid`}
             </span>
-            {!loadingHeatmap && heatmap ?
-              <>
-                <HeatmapIntensityLegend metric={metric} />
-                {heatmap.baseline ?
-                  <span className="tabular-nums text-dark-4">
-                    avg {heatmap.baseline.meanCount.toFixed(1)} / cell
-                  </span>
-                : null}
-              </>
-            : null}
+            {!loadingHeatmap && heatmap ? <HeatmapIntensityLegend metric={metric} /> : null}
           </div>
           <span className="tabular-nums">
             Views {new Intl.NumberFormat("en-US").format(heatmap?.totals.views ?? selectedPage?.views ?? 0)} · Hover{" "}

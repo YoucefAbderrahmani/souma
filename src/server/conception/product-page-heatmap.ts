@@ -7,7 +7,6 @@ import type {
   ConceptionHeatmapDetailDto,
   ConceptionHeatmapMetric,
   ConceptionHeatmapPageOption,
-  ConceptionHeatmapTrafficBaseline,
 } from "@/types/conception-heatmap";
 
 const MS_DAY = 86_400_000;
@@ -96,41 +95,9 @@ function isHeatmapPreviewPointerEvent(payload: Record<string, unknown> | null) {
   return false;
 }
 
-function computeTrafficBaseline(counts: number[]): ConceptionHeatmapTrafficBaseline {
-  if (counts.length === 0) {
-    return { meanCount: 0, p90Count: 1, maxCount: 1, stdDevCount: 1 };
-  }
-  const sum = counts.reduce((acc, value) => acc + value, 0);
-  const meanCount = sum / counts.length;
-  const sorted = [...counts].sort((left, right) => left - right);
-  const maxCount = sorted[sorted.length - 1] ?? 1;
-  const p90Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9));
-  const p90Count = sorted[p90Index] ?? maxCount;
-  const variance =
-    counts.reduce((acc, value) => acc + (value - meanCount) ** 2, 0) / counts.length;
-  const stdDevCount = Math.max(1, Math.sqrt(variance));
-  return {
-    meanCount: Number(meanCount.toFixed(2)),
-    p90Count,
-    maxCount,
-    stdDevCount: Number(stdDevCount.toFixed(2)),
-  };
-}
-
-function relativeIntensityPct(count: number, baseline: ConceptionHeatmapTrafficBaseline) {
-  const { meanCount, p90Count, stdDevCount } = baseline;
-  if (count < meanCount * 0.92) return 0;
-  const span = Math.max(1, p90Count - meanCount, stdDevCount * 1.35);
-  return Math.round(Math.min(100, ((count - meanCount) / span) * 100));
-}
-
-function bucketsToCells(buckets: BucketCounts): {
-  cells: ConceptionHeatmapCell[];
-  baseline: ConceptionHeatmapTrafficBaseline;
-} {
-  const stats = Array.from(buckets.values());
-  const baseline = computeTrafficBaseline(stats.map((stat) => stat.count));
-  const cells = Array.from(buckets.entries()).map(([key, stat]) => {
+function bucketsToCells(buckets: BucketCounts): ConceptionHeatmapCell[] {
+  const max = Math.max(1, ...Array.from(buckets.values()).map((stat) => stat.count));
+  return Array.from(buckets.entries()).map(([key, stat]) => {
     const [xRaw, yRaw] = key.split(":");
     const x = Number(xRaw);
     const y = Number(yRaw);
@@ -142,10 +109,9 @@ function bucketsToCells(buckets: BucketCounts): {
       xPct: Number(xPct.toFixed(3)),
       yPct: Number(yPct.toFixed(3)),
       count: stat.count,
-      intensity: relativeIntensityPct(stat.count, baseline),
+      intensity: Math.round((100 * stat.count) / max),
     };
   });
-  return { cells, baseline };
 }
 
 function readPayloadProductId(payload: Record<string, unknown> | null): number | null {
@@ -335,8 +301,6 @@ export async function getProductPageHeatmap(options: {
     : options.metric === "click" ? clickBuckets
     : viewBuckets;
 
-  const { cells, baseline } = bucketsToCells(metricBuckets);
-
   return {
     productId,
     productTitle: product.title,
@@ -346,8 +310,7 @@ export async function getProductPageHeatmap(options: {
     gridWidth: HEATMAP_GRID_WIDTH,
     gridHeight: HEATMAP_GRID_HEIGHT,
     metric: options.metric,
-    cells,
-    baseline,
+    cells: bucketsToCells(metricBuckets),
     totals,
   };
 }

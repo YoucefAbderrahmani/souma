@@ -21,16 +21,6 @@ export type ConceptionHeatmapCell = {
   intensity: number;
 };
 
-export type ConceptionHeatmapTrafficBaseline = {
-  /** Mean event count per occupied grid cell. */
-  meanCount: number;
-  /** 90th percentile — hot zones scale toward this level. */
-  p90Count: number;
-  maxCount: number;
-  /** Spread around the mean (avoids full-page color when traffic is uniform). */
-  stdDevCount: number;
-};
-
 export type ConceptionHeatmapDetailDto = {
   productId: number;
   productTitle: string;
@@ -41,7 +31,6 @@ export type ConceptionHeatmapDetailDto = {
   gridHeight: number;
   metric: ConceptionHeatmapMetric;
   cells: ConceptionHeatmapCell[];
-  baseline: ConceptionHeatmapTrafficBaseline;
   totals: {
     views: number;
     hovers: number;
