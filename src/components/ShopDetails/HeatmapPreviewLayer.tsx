@@ -72,6 +72,7 @@ export function HeatmapPreviewLayer() {
       ref={canvasRef}
       aria-hidden
       className="pointer-events-none absolute left-0 top-0 z-[2147483646]"
+      style={{ mixBlendMode: "multiply", opacity: 0.82 }}
     />
   );
 }
