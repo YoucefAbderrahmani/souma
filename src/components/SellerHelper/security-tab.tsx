@@ -132,16 +132,6 @@ export function SecurityTabContent({
           ))}
         </div>
 
-        {security ?
-          <Panel>
-            <SectionHeading title="Formule du score de sécurité" icon={Shield} />
-            <p className="mt-3 text-custom-sm text-dark-3">{security.scoreFormula}</p>
-            <p className="mt-2 text-xs text-dark-4">
-              Dernier calcul : {new Date(security.computedAt).toLocaleString("fr-FR")}
-            </p>
-          </Panel>
-        : null}
-
         <div className={sellerHelperGrid.two}>
           <Panel>
             <SectionHeading title="Activité des menaces (24h)" icon={AlertTriangle} />

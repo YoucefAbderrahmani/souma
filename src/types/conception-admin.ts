@@ -98,7 +98,6 @@ export type ConceptionSecurityBrief = {
   notes: string[];
   score: number;
   scoreMax: number;
-  scoreFormula: string;
   scoreDeltaVsPreviousPeriod: number;
   kpis: ConceptionSecurityKpi[];
   threatActivity24h: number[];

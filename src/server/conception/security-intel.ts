@@ -106,28 +106,31 @@ function riskScore(row: SessionRiskRow) {
     if (row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360) score += 40;
     if (row.product_views >= 25 && row.duration_s > 0 && row.duration_s <= 600) score += 25;
   }
-  if (row.js_errors >= 3) score += 35;
+  if (row.js_errors >= 3) {
+    score += Math.min(35, 25 + (row.js_errors - 3) * 2);
+  }
   return clamp(score, 0, 100);
 }
+
+const SCORE_BOT_CAP = 55;
+const SCORE_JS_CAP = 45;
+const SCORE_BLOCK_CAP = 10;
+const SCORE_SESSION_FLOOR = 10;
 
 function computeSecurityScore(input: {
   totalSessions: number;
   bots: number;
-  blocked: number;
   jsErrors: number;
-  hourlyPeak: number;
+  blocked?: number;
 }) {
-  const sessionBase = Math.max(10, input.totalSessions);
-  const botPressure = Math.min(30, (input.bots / sessionBase) * 100 * 0.35);
-  const blockPressure = Math.min(18, (input.blocked / sessionBase) * 100 * 0.2);
-  const jsPressure = Math.min(24, (input.jsErrors / sessionBase) * 100 * 0.35);
-  const peakPressure = Math.min(16, (input.hourlyPeak / 80) * 16);
-  const score = 100 - botPressure - blockPressure - jsPressure - peakPressure;
-  return Math.round(clamp(score, 0, 100));
+  const sessionBase = Math.max(SCORE_SESSION_FLOOR, input.totalSessions);
+  const botRate = input.bots / sessionBase;
+  const jsRate = input.jsErrors / sessionBase;
+  const botPenalty = Math.min(SCORE_BOT_CAP, botRate * SCORE_BOT_CAP);
+  const jsPenalty = Math.min(SCORE_JS_CAP, jsRate * SCORE_JS_CAP);
+  const blockPenalty = Math.min(SCORE_BLOCK_CAP, (input.blocked ?? 0) * 2);
+  return Math.round(clamp(100 - botPenalty - jsPenalty - blockPenalty, 0, 100));
 }
-
-const SCORE_FORMULA =
-  "Score = 100 − min(30, bots/sessions×35) − min(18, blocages/sessions×20) − min(24, erreurs JS/sessions×35) − min(16, pic horaire/80×16), borné entre 0 et 100.";
 
 function buildQuickFixes(isBlocked: boolean): ConceptionSecurityQuickFixOption[] {
   if (isBlocked) {
@@ -325,25 +328,21 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
     since24h,
     riskyRows.map((item) => item.row.session_key)
   );
-  const hourlyPeak = Math.max(0, ...threatActivity24h);
 
   const score = computeSecurityScore({
     totalSessions: Math.max(1, currentRows.length),
     bots: botsDetected,
-    blocked: blockedIdentitiesCount,
     jsErrors: jsErrorSessions,
-    hourlyPeak,
+    blocked: blockedIdentitiesCount,
   });
 
   const previousBots = previousRows.filter(isBotScrapingSession).length;
   const previousJsErrors = countJsErrorSessions(previousRows);
-  const previousBlocked = previousRows.filter((row) => riskScore(row) >= 90).length;
+  const previousBlocked = previousRows.filter((row) => riskScore(row) >= 70).length;
   const previousScore = computeSecurityScore({
     totalSessions: Math.max(1, previousRows.length),
     bots: previousBots,
-    blocked: previousBlocked,
     jsErrors: previousJsErrors,
-    hourlyPeak: Math.max(0, ...threatActivity24h) * 0.6,
   });
 
   const threatTotals: ThreatCounts = { botScraping: 0, jsErrors: 0 };
@@ -464,7 +463,6 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
     notes,
     score,
     scoreMax: 100,
-    scoreFormula: SCORE_FORMULA,
     scoreDeltaVsPreviousPeriod: scoreDelta,
     kpis,
     threatActivity24h,
