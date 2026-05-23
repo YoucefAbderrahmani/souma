@@ -81,6 +81,43 @@ export function cellsToHeatmapPoints(
   return { points, max };
 }
 
+const METRIC_RGB: Record<ConceptionHeatmapMetric, { r: number; g: number; b: number }> = {
+  hover: { r: 37, g: 99, b: 235 },
+  click: { r: 234, g: 88, b: 12 },
+  view: { r: 13, g: 148, b: 136 },
+};
+
+/** Synchronous canvas heat — used in preview iframe (no heatmap.js timing issues). */
+export function paintHeatmapCanvas2d(
+  ctx: CanvasRenderingContext2D,
+  heatmap: ConceptionHeatmapDetailDto,
+  width: number,
+  height: number
+) {
+  const paintWidth = Math.max(1, Math.round(width));
+  const paintHeight = Math.max(1, Math.round(height));
+  ctx.clearRect(0, 0, paintWidth, paintHeight);
+
+  const { points, max } = cellsToHeatmapPoints(heatmap, paintWidth, paintHeight);
+  if (points.length === 0) return;
+
+  const { r, g, b } = METRIC_RGB[heatmap.metric];
+  const radius = heatmapRadiusForSize(paintWidth, paintHeight);
+
+  for (const point of points) {
+    const t = Math.min(1, point.value / max);
+    const alpha = 0.12 + t * 0.78;
+    const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+    gradient.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+    gradient.addColorStop(0.45, `rgba(${r},${g},${b},${alpha * 0.45})`);
+    gradient.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 export type GaussianHeatmapRenderer = {
   repaint: (heatmap: ConceptionHeatmapDetailDto, width: number, height: number) => void;
   destroy: () => void;
