@@ -152,7 +152,11 @@ export function HeatmapPreviewLayer() {
       data-heatmap-preview-canvas=""
       aria-hidden
       className="pointer-events-none absolute left-0 top-0 z-[2147483646]"
-      style={{ mixBlendMode: "multiply", opacity: 0.85 }}
+      style={{
+        mixBlendMode: "normal",
+        opacity: 0.9,
+        filter: "saturate(1.12) contrast(1.03)",
+      }}
     />,
     surface
   );
