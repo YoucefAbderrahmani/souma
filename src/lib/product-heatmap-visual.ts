@@ -1,5 +1,10 @@
 import { heatmapPctToPixel } from "@/lib/product-heatmap-surface";
-import type { ConceptionHeatmapCell, ConceptionHeatmapDetailDto, ConceptionHeatmapMetric } from "@/types/conception-heatmap";
+import type {
+  ConceptionHeatmapCell,
+  ConceptionHeatmapDetailDto,
+  ConceptionHeatmapMetric,
+  ConceptionHeatmapTrafficBaseline,
+} from "@/types/conception-heatmap";
 
 function cellPointerPct(cell: ConceptionHeatmapCell, heatmap: ConceptionHeatmapDetailDto) {
   if (Number.isFinite(cell.xPct) && Number.isFinite(cell.yPct)) {
@@ -43,7 +48,115 @@ const METRIC_GRADIENTS: Record<ConceptionHeatmapMetric, Record<string, string>> 
 
 export function heatmapRadiusForSize(width: number, height: number) {
   const base = Math.min(width, height);
-  return Math.round(Math.max(22, Math.min(72, base * 0.055)));
+  return Math.round(Math.max(28, Math.min(96, base * 0.072)));
+}
+
+/** Multi-stop palette: cold → warm → hot (intensity 0–1). */
+type Rgb = [number, number, number];
+
+const METRIC_PALETTES: Record<
+  ConceptionHeatmapMetric,
+  { stops: Array<{ t: number; rgb: Rgb }> }
+> = {
+  hover: {
+    stops: [
+      { t: 0, rgb: [224, 242, 254] },
+      { t: 0.35, rgb: [96, 165, 250] },
+      { t: 0.65, rgb: [37, 99, 235] },
+      { t: 1, rgb: [30, 58, 138] },
+    ],
+  },
+  click: {
+    stops: [
+      { t: 0, rgb: [254, 243, 199] },
+      { t: 0.35, rgb: [251, 146, 60] },
+      { t: 0.65, rgb: [234, 88, 12] },
+      { t: 1, rgb: [153, 27, 27] },
+    ],
+  },
+  view: {
+    stops: [
+      { t: 0, rgb: [204, 251, 241] },
+      { t: 0.35, rgb: [52, 211, 153] },
+      { t: 0.65, rgb: [13, 148, 136] },
+      { t: 1, rgb: [6, 78, 59] },
+    ],
+  },
+};
+
+function samplePalette(metric: ConceptionHeatmapMetric, intensity: number): Rgb {
+  const palette = METRIC_PALETTES[metric].stops;
+  const t = Math.min(1, Math.max(0, intensity));
+  for (let i = 1; i < palette.length; i += 1) {
+    const right = palette[i];
+    if (t <= right.t) {
+      const left = palette[i - 1];
+      const span = right.t - left.t || 1;
+      const u = (t - left.t) / span;
+      return [
+        Math.round(left.rgb[0] + (right.rgb[0] - left.rgb[0]) * u),
+        Math.round(left.rgb[1] + (right.rgb[1] - left.rgb[1]) * u),
+        Math.round(left.rgb[2] + (right.rgb[2] - left.rgb[2]) * u),
+      ];
+    }
+  }
+  return palette[palette.length - 1].rgb;
+}
+
+function appendDensityBlob(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  strength: number
+) {
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  const peak = Math.min(1, 0.08 + strength * 0.92);
+  gradient.addColorStop(0, `rgba(255,255,255,${peak})`);
+  gradient.addColorStop(0.18, `rgba(255,255,255,${peak * 0.72})`);
+  gradient.addColorStop(0.45, `rgba(255,255,255,${peak * 0.32})`);
+  gradient.addColorStop(0.72, `rgba(255,255,255,${peak * 0.1})`);
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+export function computeHeatmapTrafficBaseline(
+  cells: ConceptionHeatmapCell[]
+): ConceptionHeatmapTrafficBaseline {
+  if (cells.length === 0) {
+    return { meanCount: 0, p90Count: 1, maxCount: 1, stdDevCount: 1 };
+  }
+  const counts = cells.map((cell) => cell.count);
+  const sum = counts.reduce((acc, value) => acc + value, 0);
+  const meanCount = sum / counts.length;
+  const sorted = [...counts].sort((left, right) => left - right);
+  const maxCount = sorted[sorted.length - 1] ?? 1;
+  const p90Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9));
+  const p90Count = sorted[p90Index] ?? maxCount;
+  const variance =
+    counts.reduce((acc, value) => acc + (value - meanCount) ** 2, 0) / counts.length;
+  const stdDevCount = Math.max(1, Math.sqrt(variance));
+  return {
+    meanCount: Number(meanCount.toFixed(2)),
+    p90Count,
+    maxCount,
+    stdDevCount: Number(stdDevCount.toFixed(2)),
+  };
+}
+
+/** 0 = at or below average traffic; 1 = top ~10% hot zones (vs mean). */
+export function relativeStrengthFromBaseline(
+  count: number,
+  baseline: ConceptionHeatmapTrafficBaseline
+) {
+  const { meanCount, p90Count, stdDevCount } = baseline;
+  if (meanCount <= 0) return Math.min(1, count / Math.max(1, p90Count));
+  if (count < meanCount * 0.92) return 0;
+  const span = Math.max(1, p90Count - meanCount, stdDevCount * 1.35);
+  return Math.min(1, (count - meanCount) / span);
 }
 
 export function cellsToHeatmapPoints(
@@ -52,42 +165,88 @@ export function cellsToHeatmapPoints(
   height: number
 ): { points: Array<{ x: number; y: number; value: number }>; max: number } {
   const points: Array<{ x: number; y: number; value: number }> = [];
-  let max = 1;
+  const baseline = heatmap.baseline ?? computeHeatmapTrafficBaseline(heatmap.cells);
+  let max = 0.001;
 
   for (const cell of heatmap.cells) {
-    const value = Math.max(1, cell.count);
+    const strength = relativeStrengthFromBaseline(cell.count, baseline);
+    if (strength <= 0.02) continue;
+
+    const value = Math.max(0.05, strength);
     max = Math.max(max, value);
 
     const { xPct, yPct } = cellPointerPct(cell, heatmap);
     const { x: xi, y: yi } = heatmapPctToPixel(xPct, yPct, width, height);
     points.push({ x: xi, y: yi, value });
 
-    if (cell.intensity >= 25) {
-      const w = value * 0.45;
-      const spreadPct = Math.min(2.5, (45 / Math.max(width, height)) * 100);
-      const offsets = [
-        [-spreadPct, -spreadPct],
-        [spreadPct, -spreadPct],
-        [-spreadPct, spreadPct],
-        [spreadPct, spreadPct],
-      ] as const;
-      for (const [dx, dy] of offsets) {
+    const spreadSteps =
+      strength >= 0.75 ? 6
+      : strength >= 0.45 ? 4
+      : 0;
+    if (spreadSteps > 0) {
+      const w = value * (strength >= 0.75 ? 0.5 : 0.32);
+      const spreadPct = Math.min(2.8, (48 / Math.max(width, height)) * 100);
+      for (let i = 0; i < spreadSteps; i += 1) {
+        const angle = (Math.PI * 2 * i) / spreadSteps;
+        const dx = Math.cos(angle) * spreadPct;
+        const dy = Math.sin(angle) * spreadPct;
         const neighbor = heatmapPctToPixel(xPct + dx, yPct + dy, width, height);
         points.push({ x: neighbor.x, y: neighbor.y, value: w });
       }
     }
   }
 
-  return { points, max };
+  return { points, max: Math.max(max, 0.001) };
 }
 
-const METRIC_RGB: Record<ConceptionHeatmapMetric, { r: number; g: number; b: number }> = {
-  hover: { r: 37, g: 99, b: 235 },
-  click: { r: 234, g: 88, b: 12 },
-  view: { r: 13, g: 148, b: 136 },
-};
+function colorizeDensityField(
+  target: CanvasRenderingContext2D,
+  density: CanvasRenderingContext2D,
+  metric: ConceptionHeatmapMetric,
+  width: number,
+  height: number
+) {
+  const image = density.getImageData(0, 0, width, height);
+  const out = target.createImageData(width, height);
+  const src = image.data;
+  const dst = out.data;
 
-/** Synchronous canvas heat — used in preview iframe (no heatmap.js timing issues). */
+  let densitySum = 0;
+  let densitySamples = 0;
+  const intensities: number[] = [];
+  for (let i = 0; i < src.length; i += 4) {
+    const intensity = Math.max(src[i], src[i + 1], src[i + 2]) / 255;
+    if (intensity < 0.02) continue;
+    intensities.push(intensity);
+    densitySum += intensity;
+    densitySamples += 1;
+  }
+
+  const densityMean = densitySamples > 0 ? densitySum / densitySamples : 0;
+  const sorted = [...intensities].sort((left, right) => left - right);
+  const p75Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.75));
+  const densityP75 = sorted[p75Index] ?? densityMean;
+  const threshold = Math.max(0.06, densityMean * 1.05);
+  const hotSpan = Math.max(0.12, densityP75 - threshold);
+
+  for (let i = 0; i < src.length; i += 4) {
+    const intensity = Math.max(src[i], src[i + 1], src[i + 2]) / 255;
+    if (intensity < threshold) continue;
+
+    const relative = Math.min(1, (intensity - threshold) / hotSpan);
+    const curved = Math.pow(relative, 0.82);
+    const [r, g, b] = samplePalette(metric, curved);
+    const alpha = Math.min(255, Math.round(28 + curved * 200));
+    dst[i] = r;
+    dst[i + 1] = g;
+    dst[i + 2] = b;
+    dst[i + 3] = alpha;
+  }
+
+  target.putImageData(out, 0, 0);
+}
+
+/** Synchronous canvas heat — density field + palette colorization (preview iframe). */
 export function paintHeatmapCanvas2d(
   ctx: CanvasRenderingContext2D,
   heatmap: ConceptionHeatmapDetailDto,
@@ -101,21 +260,37 @@ export function paintHeatmapCanvas2d(
   const { points, max } = cellsToHeatmapPoints(heatmap, paintWidth, paintHeight);
   if (points.length === 0) return;
 
-  const { r, g, b } = METRIC_RGB[heatmap.metric];
-  const radius = heatmapRadiusForSize(paintWidth, paintHeight);
+  const baseRadius = heatmapRadiusForSize(paintWidth, paintHeight);
+  const densityCanvas = document.createElement("canvas");
+  densityCanvas.width = paintWidth;
+  densityCanvas.height = paintHeight;
+  const densityCtx = densityCanvas.getContext("2d");
+  if (!densityCtx) return;
+
+  densityCtx.clearRect(0, 0, paintWidth, paintHeight);
+  densityCtx.globalCompositeOperation = "lighter";
 
   for (const point of points) {
     const t = Math.min(1, point.value / max);
-    const alpha = 0.12 + t * 0.78;
-    const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
-    gradient.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
-    gradient.addColorStop(0.45, `rgba(${r},${g},${b},${alpha * 0.45})`);
-    gradient.addColorStop(1, `rgba(${r},${g},${b},0)`);
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
+    const radius = baseRadius * (0.75 + t * 0.65);
+    appendDensityBlob(densityCtx, point.x, point.y, radius, t);
   }
+
+  if (typeof densityCtx.filter === "string") {
+    const blurred = document.createElement("canvas");
+    blurred.width = paintWidth;
+    blurred.height = paintHeight;
+    const blurredCtx = blurred.getContext("2d");
+    if (blurredCtx) {
+      blurredCtx.filter = heatmap.metric === "click" ? "blur(10px)" : "blur(14px)";
+      blurredCtx.drawImage(densityCanvas, 0, 0);
+      blurredCtx.filter = "none";
+      colorizeDensityField(ctx, blurredCtx, heatmap.metric, paintWidth, paintHeight);
+      return;
+    }
+  }
+
+  colorizeDensityField(ctx, densityCtx, heatmap.metric, paintWidth, paintHeight);
 }
 
 export type GaussianHeatmapRenderer = {
