@@ -29,18 +29,11 @@ type SessionRiskRow = {
 
 type ThreatCounts = {
   botScraping: number;
-  clickFraud: number;
-  fakeCheckout: number;
   jsErrors: number;
 };
 
 function fmtInt(n: number): string {
   return new Intl.NumberFormat("fr-FR").format(Math.round(n));
-}
-
-function fmtPct(p: number, digits = 0): string {
-  if (!Number.isFinite(p)) return "0%";
-  return `${p.toFixed(digits)}%`;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -82,34 +75,24 @@ function formatTimeAgoFr(value: Date | string, base = new Date()) {
   return new Intl.RelativeTimeFormat("fr", { numeric: "auto" }).format(days, "day");
 }
 
+function isBotScrapingSession(row: SessionRiskRow) {
+  const highVelocity = row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360;
+  const scraping = row.product_views >= 25 && row.duration_s > 0 && row.duration_s <= 600;
+  return highVelocity || scraping;
+}
+
 function classifySession(row: SessionRiskRow): ThreatCounts & { categories: string[] } {
   const categories: string[] = [];
   const counts: ThreatCounts = {
     botScraping: 0,
-    clickFraud: 0,
-    fakeCheckout: 0,
     jsErrors: 0,
   };
 
-  const highVelocity = row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360;
-  const scraping = row.product_views >= 25 && row.duration_s > 0 && row.duration_s <= 600;
-  const clickFraud = row.clicks >= 35 && row.duration_s > 0 && row.duration_s <= 300;
-  const fakeCheckout = row.checkouts > 0 && !row.has_product_view;
-  const jsErrors = row.js_errors >= 3;
-
-  if (highVelocity || scraping) {
+  if (isBotScrapingSession(row)) {
     categories.push("Bot scraping");
     counts.botScraping = 1;
   }
-  if (clickFraud) {
-    categories.push("Click fraud");
-    counts.clickFraud = 1;
-  }
-  if (fakeCheckout) {
-    categories.push("Fausses commandes");
-    counts.fakeCheckout = 1;
-  }
-  if (jsErrors) {
+  if (row.js_errors >= 3) {
     categories.push("Erreurs JS");
     counts.jsErrors = 1;
   }
@@ -118,14 +101,12 @@ function classifySession(row: SessionRiskRow): ThreatCounts & { categories: stri
 }
 
 function riskScore(row: SessionRiskRow) {
-  const classified = classifySession(row);
   let score = 0;
-  if (row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360) score += 40;
-  if (row.product_views >= 25 && row.duration_s > 0 && row.duration_s <= 600) score += 25;
-  if (row.clicks >= 35 && row.duration_s > 0 && row.duration_s <= 300) score += 20;
-  if (classified.fakeCheckout > 0) score += 15;
-  if (row.js_errors >= 3) score += 10;
-  if (row.hovers <= 1 && row.clicks >= 10) score += 8;
+  if (isBotScrapingSession(row)) {
+    if (row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360) score += 40;
+    if (row.product_views >= 25 && row.duration_s > 0 && row.duration_s <= 600) score += 25;
+  }
+  if (row.js_errors >= 3) score += 35;
   return clamp(score, 0, 100);
 }
 
@@ -133,20 +114,20 @@ function computeSecurityScore(input: {
   totalSessions: number;
   bots: number;
   blocked: number;
-  fraud: number;
+  jsErrors: number;
   hourlyPeak: number;
 }) {
   const sessionBase = Math.max(10, input.totalSessions);
   const botPressure = Math.min(30, (input.bots / sessionBase) * 100 * 0.35);
   const blockPressure = Math.min(18, (input.blocked / sessionBase) * 100 * 0.2);
-  const fraudPressure = Math.min(24, input.fraud * 4);
+  const jsPressure = Math.min(24, (input.jsErrors / sessionBase) * 100 * 0.35);
   const peakPressure = Math.min(16, (input.hourlyPeak / 80) * 16);
-  const score = 100 - botPressure - blockPressure - fraudPressure - peakPressure;
+  const score = 100 - botPressure - blockPressure - jsPressure - peakPressure;
   return Math.round(clamp(score, 0, 100));
 }
 
 const SCORE_FORMULA =
-  "Score = 100 − min(30, bots/sessions×35) − min(18, blocages/sessions×20) − min(24, fraudes×4) − min(16, pic horaire/80×16), borné entre 0 et 100.";
+  "Score = 100 − min(30, bots/sessions×35) − min(18, blocages/sessions×20) − min(24, erreurs JS/sessions×35) − min(16, pic horaire/80×16), borné entre 0 et 100.";
 
 function buildQuickFixes(isBlocked: boolean): ConceptionSecurityQuickFixOption[] {
   if (isBlocked) {
@@ -185,12 +166,6 @@ function incidentTitle(row: SessionRiskRow, categories: string[]) {
   if (categories.includes("Bot scraping")) {
     return `Visite de ${fmtInt(row.product_views)} pages produits en ${Math.max(1, Math.round(row.duration_s / 60))} minute(s)`;
   }
-  if (categories.includes("Click fraud")) {
-    return `Clics massifs détectés sur la session (${fmtInt(row.clicks)} clics)`;
-  }
-  if (categories.includes("Fausses commandes")) {
-    return "Checkout sans parcours produit détecté";
-  }
   if (categories.includes("Erreurs JS")) {
     return `Erreurs JavaScript répétées (${fmtInt(row.js_errors)} signaux)`;
   }
@@ -202,14 +177,8 @@ function incidentDetail(row: SessionRiskRow, categories: string[]) {
     const dwell = row.product_views > 0 ? (row.duration_s / row.product_views).toFixed(1) : "0.0";
     return `Temps moyen de ${dwell}s par page produit, ${row.hovers} survol(s) enregistré(s).`;
   }
-  if (categories.includes("Click fraud")) {
-    return `${fmtInt(row.clicks)} clics en ${Math.max(1, Math.round(row.duration_s / 60))} minute(s), pattern répétitif détecté.`;
-  }
-  if (categories.includes("Fausses commandes")) {
-    return "Checkout déclenché sans vue produit dans la même session.";
-  }
   if (categories.includes("Erreurs JS")) {
-    return "Erreurs client répétées sur les pages sensibles.";
+    return "Erreurs client répétées sur les pages sensibles (pa_js_error).";
   }
   return `${fmtInt(row.events)} événements en ${Math.max(1, Math.round(row.duration_s))} seconde(s).`;
 }
@@ -317,6 +286,10 @@ async function countBlockedRequests(sessionKey: string, since: Date) {
   return Number(row?.count ?? 0);
 }
 
+function countJsErrorSessions(rows: SessionRiskRow[]) {
+  return rows.filter((row) => row.js_errors >= 3).length;
+}
+
 export async function buildConceptionSecurityBrief(windowDays = 7): Promise<ConceptionSecurityBrief> {
   const now = Date.now();
   const since = new Date(now - windowDays * MS_DAY);
@@ -338,19 +311,14 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
   }));
 
   const riskyRows = currentThreats.filter(
-    (item) => item.score >= 50 || item.classified.categories.length > 0 || blockedKeys.has(item.row.session_key)
+    (item) =>
+      item.classified.botScraping > 0 ||
+      item.classified.jsErrors > 0 ||
+      blockedKeys.has(item.row.session_key)
   );
 
-  const botsDetected = currentThreats.filter(
-    (item) =>
-      (item.row.events >= 50 && item.row.duration_s > 0 && item.row.duration_s <= 360) ||
-      item.classified.botScraping > 0
-  ).length;
-
-  const fraudAttempts = currentThreats.filter(
-    (item) => item.classified.fakeCheckout > 0 || item.classified.clickFraud > 0
-  ).length;
-
+  const botsDetected = currentThreats.filter((item) => item.classified.botScraping > 0).length;
+  const jsErrorSessions = countJsErrorSessions(currentRows);
   const blockedIdentitiesCount = activeBlocks.length;
 
   const threatActivity24h = await loadThreatActivity24h(
@@ -363,41 +331,29 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
     totalSessions: Math.max(1, currentRows.length),
     bots: botsDetected,
     blocked: blockedIdentitiesCount,
-    fraud: fraudAttempts,
+    jsErrors: jsErrorSessions,
     hourlyPeak,
   });
 
-  const previousBots = previousRows.filter(
-    (row) => (row.events >= 50 && row.duration_s > 0 && row.duration_s <= 360) || row.product_views >= 25
-  ).length;
-  const previousFraud = previousRows.filter(
-    (row) => row.checkouts > 0 && !row.has_product_view
-  ).length;
+  const previousBots = previousRows.filter(isBotScrapingSession).length;
+  const previousJsErrors = countJsErrorSessions(previousRows);
   const previousBlocked = previousRows.filter((row) => riskScore(row) >= 90).length;
   const previousScore = computeSecurityScore({
     totalSessions: Math.max(1, previousRows.length),
     bots: previousBots,
     blocked: previousBlocked,
-    fraud: previousFraud,
+    jsErrors: previousJsErrors,
     hourlyPeak: Math.max(0, ...threatActivity24h) * 0.6,
   });
 
-  const threatTotals: ThreatCounts = { botScraping: 0, clickFraud: 0, fakeCheckout: 0, jsErrors: 0 };
+  const threatTotals: ThreatCounts = { botScraping: 0, jsErrors: 0 };
   for (const item of currentThreats) {
     threatTotals.botScraping += item.classified.botScraping;
-    threatTotals.clickFraud += item.classified.clickFraud;
-    threatTotals.fakeCheckout += item.classified.fakeCheckout;
     threatTotals.jsErrors += item.classified.jsErrors;
   }
-  const threatSum =
-    threatTotals.botScraping +
-    threatTotals.clickFraud +
-    threatTotals.fakeCheckout +
-    threatTotals.jsErrors;
+  const threatSum = threatTotals.botScraping + threatTotals.jsErrors;
   const threatTypes7d: ConceptionSecurityThreatSlice[] = [
     { label: "Bot scraping", count: threatTotals.botScraping, pct: 0 },
-    { label: "Click fraud", count: threatTotals.clickFraud, pct: 0 },
-    { label: "Fausses commandes", count: threatTotals.fakeCheckout, pct: 0 },
     { label: "Erreurs JS", count: threatTotals.jsErrors, pct: 0 },
   ].map((slice) => ({
     ...slice,
@@ -406,7 +362,7 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
 
   const botsDelta = formatDelta(botsDetected, previousBots);
   const blockedDelta = formatDelta(blockedIdentitiesCount, previousBlocked);
-  const fraudDelta = formatDelta(fraudAttempts, previousFraud);
+  const jsDelta = formatDelta(jsErrorSessions, previousJsErrors);
   const scoreDelta = score - previousScore;
 
   const kpis: ConceptionSecurityKpi[] = [
@@ -423,10 +379,10 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
       deltaPositive: blockedDelta.positive,
     },
     {
-      label: "Tentatives de fraude",
-      value: fmtInt(fraudAttempts),
-      delta: fraudDelta.label,
-      deltaPositive: fraudDelta.positive,
+      label: "Erreurs JS",
+      value: fmtInt(jsErrorSessions),
+      delta: jsDelta.label,
+      deltaPositive: jsDelta.positive,
     },
     {
       label: "Score de sécurité",
@@ -487,14 +443,14 @@ export async function buildConceptionSecurityBrief(windowDays = 7): Promise<Conc
   const notes: string[] = [];
   if (botsDetected > 0) {
     notes.push(
-      `${fmtInt(botsDetected)} session(s) présentent une densité d'événements compatible avec un bot ou un scraping.`
+      `${fmtInt(botsDetected)} session(s) présentent un profil compatible avec un bot scraping (vélocité ou parcours catalogue anormal).`
     );
   } else {
-    notes.push("Aucune session à haute vélocité détectée sur la fenêtre courante.");
+    notes.push("Aucun profil de bot scraping détecté sur la fenêtre courante.");
   }
-  if (fraudAttempts > 0) {
+  if (jsErrorSessions > 0) {
     notes.push(
-      `${fmtInt(fraudAttempts)} session(s) montrent des signaux de fraude (clics massifs ou checkout anormal).`
+      `${fmtInt(jsErrorSessions)} session(s) avec au moins trois signaux pa_js_error (fautes JavaScript côté client).`
     );
   }
   if (blockedIdentitiesCount > 0) {
