@@ -23,11 +23,42 @@ type HeatmapPreviewFrameProps = {
   productTitle: string;
 };
 
+function geometryNearlyEqual(
+  left: HeatmapPreviewFrameGeometry | null,
+  right: HeatmapPreviewFrameGeometry | null
+) {
+  if (!left || !right) return left === right;
+  return (
+    Math.abs(left.offsetLeft - right.offsetLeft) < 2 &&
+    Math.abs(left.offsetTop - right.offsetTop) < 2 &&
+    Math.abs(left.documentWidth - right.documentWidth) < 2 &&
+    Math.abs(left.documentHeight - right.documentHeight) < 2
+  );
+}
+
+function scheduleDebounced(fn: () => void, ms: number, slot: { id: number | null }) {
+  if (slot.id != null) window.clearTimeout(slot.id);
+  slot.id = window.setTimeout(() => {
+    slot.id = null;
+    fn();
+  }, ms);
+}
+
 export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: HeatmapPreviewFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const lastHeatmapRef = useRef<ConceptionHeatmapDetailDto | null>(null);
+  const geometryRef = useRef<HeatmapPreviewFrameGeometry | null>(null);
+  const pushDebounceRef = useRef<{ id: number | null }>({ id: null });
+  const measureDebounceRef = useRef<{ id: number | null }>({ id: null });
   const [geometry, setGeometry] = useState<HeatmapPreviewFrameGeometry | null>(null);
   const [fit, setFit] = useState({ scale: 1, viewportWidth: 320, viewportHeight: 240 });
+
+  if (heatmap?.cells.length) {
+    lastHeatmapRef.current = heatmap;
+  }
+
+  const heatmapForIframe = heatmap?.cells.length ? heatmap : lastHeatmapRef.current;
 
   const updateFit = useCallback(() => {
     const container = containerRef.current;
@@ -36,6 +67,16 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
     const availableHeight = Math.max(1, container.clientHeight - 16);
     setFit(computeHeatmapPreviewFit(availableWidth, availableHeight, geometry));
   }, [geometry]);
+
+  const pushHeatmapToIframe = useCallback(() => {
+    const payload = heatmapForIframe;
+    if (!payload?.cells.length) return;
+    postHeatmapToPreviewIframe(iframeRef.current, payload);
+  }, [heatmapForIframe]);
+
+  const schedulePushHeatmap = useCallback(() => {
+    scheduleDebounced(pushHeatmapToIframe, 60, pushDebounceRef.current);
+  }, [pushHeatmapToIframe]);
 
   const measureIframe = useCallback(() => {
     const iframe = iframeRef.current;
@@ -46,16 +87,24 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
     if (!measured) return false;
 
     applyProductHeatmapPreviewFrame(doc, measured);
-    setGeometry(toPreviewFrameGeometry(measured));
+    const next = toPreviewFrameGeometry(measured);
+    if (!geometryNearlyEqual(geometryRef.current, next)) {
+      geometryRef.current = next;
+      setGeometry(next);
+    }
     return true;
   }, []);
 
-  const pushHeatmapToIframe = useCallback(() => {
-    postHeatmapToPreviewIframe(iframeRef.current, heatmap);
-  }, [heatmap]);
+  const scheduleMeasureAndPush = useCallback(() => {
+    scheduleDebounced(() => {
+      if (measureIframe()) schedulePushHeatmap();
+    }, 150, measureDebounceRef.current);
+  }, [measureIframe, schedulePushHeatmap]);
 
   useEffect(() => {
+    geometryRef.current = null;
     setGeometry(null);
+    lastHeatmapRef.current = null;
   }, [previewSrc]);
 
   useEffect(() => {
@@ -71,6 +120,10 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
   }, [updateFit]);
 
   useEffect(() => {
+    schedulePushHeatmap();
+  }, [heatmapForIframe, schedulePushHeatmap]);
+
+  useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
@@ -81,7 +134,7 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
     const tryMeasure = () => {
       if (measureIframe()) {
         if (pollId != null) window.clearInterval(pollId);
-        pushHeatmapToIframe();
+        schedulePushHeatmap();
         return true;
       }
       return false;
@@ -93,9 +146,7 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
       if (!surface) return false;
 
       surfaceObserver?.disconnect();
-      surfaceObserver = new ResizeObserver(() => {
-        if (measureIframe()) pushHeatmapToIframe();
-      });
+      surfaceObserver = new ResizeObserver(() => scheduleMeasureAndPush());
       surfaceObserver.observe(surface);
       return tryMeasure();
     };
@@ -121,23 +172,22 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
       surfaceObserver?.disconnect();
       if (pollId != null) window.clearInterval(pollId);
     };
-  }, [measureIframe, previewSrc, pushHeatmapToIframe]);
+  }, [measureIframe, previewSrc, scheduleMeasureAndPush, schedulePushHeatmap]);
 
   useEffect(() => {
     if (!geometry) return;
-    const timer = window.setTimeout(() => pushHeatmapToIframe(), 280);
-    return () => window.clearTimeout(timer);
-  }, [geometry, heatmap, pushHeatmapToIframe]);
+    schedulePushHeatmap();
+  }, [geometry, schedulePushHeatmap]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (!isHeatmapPreviewReadyMessage(event.data)) return;
-      pushHeatmapToIframe();
+      schedulePushHeatmap();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [pushHeatmapToIframe]);
+  }, [schedulePushHeatmap]);
 
   const iframeTransform =
     geometry ?

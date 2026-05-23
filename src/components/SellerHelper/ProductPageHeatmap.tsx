@@ -40,6 +40,7 @@ export function ProductPageHeatmap() {
   const [loadingPages, setLoadingPages] = useState(true);
   const [loadingHeatmap, setLoadingHeatmap] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const stableHeatmapRef = useRef<ConceptionHeatmapDetailDto | null>(null);
 
   const selectedPage = pages[selectedIndex] ?? null;
   const selectedProductIdRef = useRef<number | null>(null);
@@ -104,7 +105,13 @@ export function ProductPageHeatmap() {
         if (!response.ok) {
           throw new Error(body.message || body.error || "Unable to load heatmap.");
         }
-        setHeatmap(body.heatmap as ConceptionHeatmapDetailDto);
+        const nextHeatmap = body.heatmap as ConceptionHeatmapDetailDto;
+        if (nextHeatmap.cells.length > 0) {
+          stableHeatmapRef.current = nextHeatmap;
+        } else if (!background) {
+          stableHeatmapRef.current = nextHeatmap;
+        }
+        setHeatmap(nextHeatmap);
       } catch (fetchError) {
         if (!background) {
           setError(fetchError instanceof Error ? fetchError.message : String(fetchError));
@@ -122,11 +129,18 @@ export function ProductPageHeatmap() {
 
   useEffect(() => {
     if (!selectedPage) {
+      stableHeatmapRef.current = null;
       setHeatmap(null);
       return;
     }
     void loadHeatmap();
   }, [loadHeatmap, selectedPage]);
+
+  const heatmapForPreview =
+    heatmap?.cells.length ? heatmap
+    : loadingHeatmap && stableHeatmapRef.current?.productId === selectedPage?.productId ?
+      stableHeatmapRef.current
+    : heatmap;
 
   const refreshLive = useCallback(async () => {
     await Promise.all([loadPages({ background: true }), loadHeatmap({ background: true })]);
@@ -236,7 +250,7 @@ export function ProductPageHeatmap() {
           <div className="relative">
             <HeatmapPreviewFrame
               previewSrc={previewSrc}
-              heatmap={heatmap}
+              heatmap={heatmapForPreview}
               productTitle={selectedPage?.title ?? "product"}
             />
             {!loadingHeatmap && heatmap && heatmap.cells.length === 0 ?
