@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LIVE_DATA_REFRESH_MS, useLiveDataRefresh } from "@/hooks/useLiveDataRefresh";
+import { useLiveDataRefresh } from "@/hooks/useLiveDataRefresh";
 import type {
   ConceptionHeatmapDetailDto,
   ConceptionHeatmapMetric,
@@ -18,9 +18,10 @@ const METRICS: { id: ConceptionHeatmapMetric; label: string }[] = [
 ];
 
 const LEGEND_GRADIENT: Record<ConceptionHeatmapMetric, string> = {
-  hover: "linear-gradient(90deg, #dbeafe 0%, #60a5fa 38%, #2563eb 72%, #1e3a8a 100%)",
-  click: "linear-gradient(90deg, #fef3c7 0%, #fb923c 40%, #ea580c 72%, #991b1b 100%)",
-  view: "linear-gradient(90deg, #ccfbf1 0%, #2dd4bf 40%, #0d9488 72%, #064e3b 100%)",
+  hover: "linear-gradient(90deg, rgba(191,219,254,0.5) 0%, rgba(59,130,246,0.85) 45%, rgba(29,78,216,1) 100%)",
+  click:
+    "linear-gradient(90deg, rgba(254,215,170,0.5) 0%, rgba(242,122,26,0.85) 50%, rgba(194,65,12,1) 100%)",
+  view: "linear-gradient(90deg, rgba(167,243,208,0.5) 0%, rgba(20,184,166,0.85) 55%, rgba(15,118,110,1) 100%)",
 };
 
 function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric }) {
@@ -33,7 +34,7 @@ function HeatmapIntensityLegend({ metric }: { metric: ConceptionHeatmapMetric })
         aria-hidden
       />
       <span>High</span>
-      <span className="text-dark-3">· smooth density</span>
+      <span className="text-dark-3">· density on product surface</span>
     </div>
   );
 }
@@ -138,7 +139,7 @@ export function ProductPageHeatmap() {
     await Promise.all([loadPages({ background: true }), loadHeatmap({ background: true })]);
   }, [loadHeatmap, loadPages]);
 
-  useLiveDataRefresh(refreshLive, true, LIVE_DATA_REFRESH_MS);
+  useLiveDataRefresh(refreshLive);
 
   const previewSrc = useMemo(() => {
     if (!selectedPage) return null;
@@ -234,7 +235,7 @@ export function ProductPageHeatmap() {
           <span className="tabular-nums">
             Views {new Intl.NumberFormat("en-US").format(heatmap?.totals.views ?? selectedPage?.views ?? 0)} · Hover{" "}
             {new Intl.NumberFormat("en-US").format(heatmap?.totals.hovers ?? selectedPage?.hovers ?? 0)} · Clicks{" "}
-            {new Intl.NumberFormat("en-US").format(heatmap?.totals.clicks ?? selectedPage?.clicks ?? 0)} · refresh 5s
+            {new Intl.NumberFormat("en-US").format(heatmap?.totals.clicks ?? selectedPage?.clicks ?? 0)}
           </span>
         </div>
 

@@ -122,8 +122,7 @@ export function HeatmapPreviewFrame({ previewSrc, heatmap, productTitle }: Heatm
 
   useEffect(() => {
     if (!geometry) return;
-    const timer = window.setTimeout(() => pushHeatmapToIframe(), 280);
-    return () => window.clearTimeout(timer);
+    pushHeatmapToIframe();
   }, [geometry, heatmap, pushHeatmapToIframe]);
 
   const iframeTransform =
