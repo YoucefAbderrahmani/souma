@@ -502,8 +502,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
         />
       : null}
 
-      {isHeatmapPreview ? <HeatmapPreviewLayer /> : null}
-
       {!canRenderProduct ?
         requestedProductId ?
           <div className="px-4 py-16 text-center text-dark-4">Loading product…</div>
@@ -511,6 +509,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       : (
         <>
           <div ref={pa.surfaceRef} data-product-heatmap-surface="" className="relative">
+            {isHeatmapPreview ? <HeatmapPreviewLayer /> : null}
             <section
               className={
                 compactEmbed ?
