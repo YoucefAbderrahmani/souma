@@ -1,11 +1,15 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import shopData from "@/components/Shop/shopData";
 import path from "path";
 import { transliterate } from "transliteration";
 import { resolveSequenceKeyMaybe } from "@/app/api/sequence/_cookie";
 import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 import { isProductDiscoveryQuery } from "@/lib/product-assistant-context";
+import type { Product } from "@/types/product";
+import {
+  getAssistantCatalogProducts,
+  plainProductDescriptionForAssistant,
+} from "@/server/assistant/assistant-catalog";
 import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
 
 export type AssistantContextProduct = {
@@ -268,15 +272,20 @@ function getSimilarCachedResult(query: string, mode: "detail" | "jomla", product
   return best?.result ?? null;
 }
 
-function buildCatalog(mode: "detail" | "jomla") {
-  return shopData.map((p) => ({
+function compactAlphanumeric(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function buildCatalog(mode: "detail" | "jomla", products: Product[]) {
+  return products.map((p) => ({
     id: p.id,
     title: p.title,
-    description: p.description ?? "",
+    description: plainProductDescriptionForAssistant(p),
     category: p.category,
-    price: mode === "detail" ? p.detailPrice : p.jomlaPrice,
+    price: mode === "detail" ? p.detailPrice : (p.jomlaPrice ?? p.detailPrice),
     detailPrice: p.detailPrice,
-    jomlaPrice: p.jomlaPrice,
+    jomlaPrice: p.jomlaPrice ?? null,
+    instock: p.instock ?? null,
     image: p.imgs?.previews?.[0] ?? p.imgs?.thumbnails?.[0] ?? "",
     images: Array.from(new Set([...(p.imgs?.previews ?? []), ...(p.imgs?.thumbnails ?? [])])).slice(0, 3),
     visualHints: extractVisualHintsForProduct(p),
@@ -307,7 +316,7 @@ function extractImageNameTokens(imagePath: string) {
     .filter((t) => t.length > 1 && !GENERIC_IMAGE_TOKENS.has(t));
 }
 
-function extractVisualHintsForProduct(product: (typeof shopData)[number]) {
+function extractVisualHintsForProduct(product: Product) {
   const imagePaths = [...(product.imgs?.previews ?? []), ...(product.imgs?.thumbnails ?? [])];
   const imageTokens = imagePaths.flatMap(extractImageNameTokens);
   const titleTokens = normalizedTokens(product.title);
@@ -328,7 +337,8 @@ function extractVisualHintsForProduct(product: (typeof shopData)[number]) {
 
 function retrieveFromCatalog(
   query: string,
-  mode: "detail" | "jomla"
+  mode: "detail" | "jomla",
+  products: Product[]
 ): { id: number; score: number; reason: string }[] {
   const queryTokens = normalizedTokens(query);
   if (!queryTokens.length) return [];
@@ -358,7 +368,9 @@ function retrieveFromCatalog(
     query
   );
 
-  const scored = buildCatalog(mode)
+  const queryCompact = compactAlphanumeric(query);
+
+  const scored = buildCatalog(mode, products)
     .map((p) => {
       const tokens = new Set(
         normalizedTokens(
@@ -369,9 +381,15 @@ function retrieveFromCatalog(
       for (const t of importantTokens) {
         if (tokens.has(t)) overlap += 1;
       }
-      if (overlap === 0) return null;
 
-      const base = Math.min(100, overlap * 40);
+      const titleCompact = compactAlphanumeric(p.title);
+      const compactMatch =
+        queryCompact.length >= 5 &&
+        (titleCompact.includes(queryCompact) || queryCompact.includes(titleCompact));
+
+      if (overlap === 0 && !compactMatch) return null;
+
+      const base = compactMatch ? 72 : Math.min(100, overlap * 40);
       let score = base;
       if (cheapIntent) score += Math.max(0, 20 - p.price / 100);
       if (expensiveIntent) score += Math.min(20, p.price / 100);
@@ -419,11 +437,12 @@ function serializeContextProductForPrompt(contextProduct: AssistantContextProduc
 function buildPrompt(
   query: string,
   mode: "detail" | "jomla",
+  catalogProducts: Product[],
   retrievalMode: "strict" | "relaxed" = "strict",
   contextProduct?: AssistantRequest["contextProduct"],
   detectedLanguage?: string
 ) {
-  const catalog = buildCatalog(mode);
+  const catalog = buildCatalog(mode, catalogProducts);
   const productFocus = Boolean(contextProduct?.productId?.trim());
   const discoveryIntent = productFocus && isProductDiscoveryQuery(query);
   const extra =
@@ -543,6 +562,7 @@ async function queryGemini(
   apiKey: string,
   query: string,
   mode: "detail" | "jomla",
+  catalogProducts: Product[],
   modelName: string,
   retrievalMode: "strict" | "relaxed" = "strict",
   contextProduct?: AssistantRequest["contextProduct"],
@@ -557,7 +577,18 @@ async function queryGemini(
         contents: [
           {
             role: "user",
-            parts: [{ text: buildPrompt(query, mode, retrievalMode, contextProduct, detectedLanguage) }],
+            parts: [
+              {
+                text: buildPrompt(
+                  query,
+                  mode,
+                  catalogProducts,
+                  retrievalMode,
+                  contextProduct,
+                  detectedLanguage
+                ),
+              },
+            ],
           },
         ],
         generationConfig: {
@@ -587,6 +618,7 @@ async function queryOpenRouter(
   apiKey: string,
   query: string,
   mode: "detail" | "jomla",
+  catalogProducts: Product[],
   modelName: string,
   retrievalMode: "strict" | "relaxed" = "strict",
   contextProduct?: AssistantRequest["contextProduct"],
@@ -605,7 +637,14 @@ async function queryOpenRouter(
       messages: [
         {
           role: "user",
-          content: buildPrompt(query, mode, retrievalMode, contextProduct, detectedLanguage),
+          content: buildPrompt(
+            query,
+            mode,
+            catalogProducts,
+            retrievalMode,
+            contextProduct,
+            detectedLanguage
+          ),
         },
       ],
     }),
@@ -631,6 +670,7 @@ async function queryWithRetriesAndFallback(
   openRouterApiKey: string | undefined,
   query: string,
   mode: "detail" | "jomla",
+  catalogProducts: Product[],
   retrievalMode: "strict" | "relaxed" = "strict",
   contextProduct?: AssistantRequest["contextProduct"],
   detectedLanguage?: string
@@ -650,6 +690,7 @@ async function queryWithRetriesAndFallback(
           openRouterApiKey,
           query,
           mode,
+          catalogProducts,
           model,
           retrievalMode,
           contextProduct,
@@ -679,6 +720,7 @@ async function queryWithRetriesAndFallback(
           googleApiKey,
           query,
           mode,
+          catalogProducts,
           model,
           retrievalMode,
           contextProduct,
@@ -868,7 +910,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const productById = new Map(shopData.map((p) => [p.id, p]));
+    const catalogProducts = await getAssistantCatalogProducts();
+    const productById = new Map(catalogProducts.map((p) => [p.id, p]));
     const normalized = await normalizeQueryWithLlm(googleApiKey, openRouterApiKey, query);
     const effectiveQuery = normalized.normalizedQuery || localNormalizedQuery || query;
     const detectedLanguage = normalized.detectedLanguage ?? "unknown";
@@ -886,7 +929,7 @@ export async function POST(req: NextRequest) {
       }
       const products = cacheMatches
         .map((m) => productById.get(m.id))
-        .filter((p): p is (typeof shopData)[number] => Boolean(p));
+        .filter((p): p is Product => Boolean(p));
       const matchedIds = cacheMatches.map((m) => m.id);
 
       await logSearchTelemetrySafely({
@@ -921,6 +964,7 @@ export async function POST(req: NextRequest) {
           model: "cached",
           matchedIds,
           finalCount: products.length,
+          catalogSize: catalogProducts.length,
           cache: "hit",
           detectedLanguage,
           requestId,
@@ -933,6 +977,7 @@ export async function POST(req: NextRequest) {
       openRouterApiKey,
       effectiveQuery,
       mode,
+      catalogProducts,
       "strict",
       contextProduct,
       detectedLanguage
@@ -950,7 +995,7 @@ export async function POST(req: NextRequest) {
         }
         const products = similarMatches
           .map((m) => productById.get(m.id))
-          .filter((p): p is (typeof shopData)[number] => Boolean(p));
+          .filter((p): p is Product => Boolean(p));
         const matchedIds = similarMatches.map((m) => m.id);
 
         await logSearchTelemetrySafely({
@@ -1036,6 +1081,7 @@ export async function POST(req: NextRequest) {
         openRouterApiKey,
         effectiveQuery,
         mode,
+        catalogProducts,
         "relaxed",
         contextProduct,
         detectedLanguage
@@ -1046,7 +1092,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (llm.result.matches.length === 0 && !(productFocus && !discoveryIntent)) {
-      const fallbackMatches = retrieveFromCatalog(effectiveQuery, mode);
+      const fallbackMatches = retrieveFromCatalog(effectiveQuery, mode, catalogProducts);
       if (fallbackMatches.length > 0) {
         llm = {
           result: {
@@ -1069,7 +1115,7 @@ export async function POST(req: NextRequest) {
 
     const products = finalMatches
       .map((m) => productById.get(m.id))
-      .filter((p): p is (typeof shopData)[number] => Boolean(p));
+      .filter((p): p is Product => Boolean(p));
     const matchedIds = finalMatches.map((m) => m.id);
     setCachedResult(effectiveQuery, mode, { ...llm.result, matches: finalMatches }, contextProductId);
 
@@ -1105,6 +1151,8 @@ export async function POST(req: NextRequest) {
         model: llm.model ?? FREEFLOW_MODEL,
         matchedIds,
         finalCount: products.length,
+        catalogSize: catalogProducts.length,
+        catalogSource: "products_table",
         cache: "miss",
         detectedLanguage,
         requestId,

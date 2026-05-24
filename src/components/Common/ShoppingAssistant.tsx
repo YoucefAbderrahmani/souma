@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
-import shopData from "@/components/Shop/shopData";
+import type { Product } from "@/types/product";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useAppSelector } from "@/redux/store";
 import { usePriceMode } from "@/app/context/PriceModeContext";
@@ -25,7 +25,6 @@ import {
   productAvailableQuantity,
 } from "@/components/Common/ProductAvailableQuantity";
 import { useLiveProductInventory } from "@/hooks/useLiveProductInventory";
-import type { Product } from "@/types/product";
 
 const ASSISTANT_BROWSER_SESSION_KEY = "sq_browser_session";
 
@@ -47,8 +46,8 @@ const ShoppingAssistant = () => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState("");
-  const [recommendations, setRecommendations] = useState<typeof shopData>([]);
-  const [bundle, setBundle] = useState<typeof shopData>([]);
+  const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [bundle, setBundle] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastRequestId, setLastRequestId] = useState("");
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
@@ -123,7 +122,7 @@ const ShoppingAssistant = () => {
   }, [productFocus, product?.id]);
 
   const openDetails = useCallback(
-    (item: (typeof shopData)[number], position: number) => {
+    (item: Product, position: number) => {
       if (lastRequestId) {
         fetch("/api/assistant/telemetry", {
           method: "POST",
@@ -194,7 +193,7 @@ const ShoppingAssistant = () => {
 
         const data = (await res.json()) as {
           message?: string;
-          products?: typeof shopData;
+          products?: Product[];
           requestId?: string;
           normalizedQuery?: string;
         };
@@ -209,12 +208,10 @@ const ShoppingAssistant = () => {
         setLastRequestId(data.requestId ?? "");
         setLastNormalizedQuery(data.normalizedQuery ?? trimmed);
 
-        if (!productFocus && data.products?.[0]) {
-          const byCategory = shopData
-            .filter((item) => item.category === data.products![0].category)
-            .sort((a, b) => b.reviews - a.reviews)
-            .slice(0, 2);
-          setBundle(byCategory);
+        if (!productFocus && data.products && data.products.length >= 2) {
+          setBundle(data.products.slice(0, 2));
+        } else if (!productFocus && data.products?.[0]) {
+          setBundle([data.products[0]]);
         } else {
           setBundle([]);
         }
