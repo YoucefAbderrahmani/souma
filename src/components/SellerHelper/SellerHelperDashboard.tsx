@@ -347,6 +347,7 @@ function SellerHelperDashboardInner({
     clearAllSecurity,
     dismissVitrinaAfterQuickFix,
     clearAllVitrinaRecommendations,
+    clearVitrinaProductData,
     resetAllVitrinaCatalogToDefault,
     vitrinaFixesPerItem,
     vitrinaReloadBusy,
@@ -506,6 +507,7 @@ function SellerHelperDashboardInner({
             fixesPerItemBusy={vitrinaReloadBusy}
             onVitrinaQuickFixApplied={dismissVitrinaAfterQuickFix}
             onClearAllRecommendations={clearAllVitrinaRecommendations}
+            onDeleteProductData={clearVitrinaProductData}
             onResetAllCatalogToDefault={resetAllVitrinaCatalogToDefault}
           />
         )}

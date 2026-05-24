@@ -643,6 +643,42 @@ export function useConceptionAdminData(
     [fetchVitrinaRecommendations]
   );
 
+  const clearVitrinaProductData = useCallback(
+    async (productId: string) => {
+      setState((s) => ({ ...s, actionMessage: null }));
+      try {
+        const res = await fetch("/api/admin/conception/vitrina-recommendations/clear-product-data", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId }),
+        });
+        const body = await readJsonResponse<{
+          ok?: boolean;
+          message?: string;
+          error?: string;
+          deletedCount?: number;
+        }>(res, "Clear Vitrina product data API");
+        if (!res.ok || body.ok === false) {
+          throw new Error(body.message || body.error || "Delete data failed");
+        }
+        await fetchVitrinaRecommendations(state.vitrinaFixesPerItem, { silent: true });
+        setState((s) => ({
+          ...s,
+          actionMessage: body.message ?? "Product analytics cleared.",
+        }));
+        return true;
+      } catch (e) {
+        setState((s) => ({
+          ...s,
+          actionMessage: e instanceof Error ? e.message : String(e),
+        }));
+        return false;
+      }
+    },
+    [fetchVitrinaRecommendations, state.vitrinaFixesPerItem]
+  );
+
   return {
     ...state,
     refresh: load,
@@ -657,6 +693,7 @@ export function useConceptionAdminData(
     clearAllSecurity,
     dismissVitrinaAfterQuickFix,
     clearAllVitrinaRecommendations,
+    clearVitrinaProductData,
     resetAllVitrinaCatalogToDefault,
     vitrinaFixesPerItem: state.vitrinaFixesPerItem,
     vitrinaReloadBusy: state.vitrinaReloadBusy,

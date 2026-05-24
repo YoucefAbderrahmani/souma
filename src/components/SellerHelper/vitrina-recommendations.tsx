@@ -165,10 +165,14 @@ function VitrinaProductCard({
   item,
   onEdit,
   onApplyQuickFixes,
+  onDeleteData,
+  deleteDataBusy,
 }: {
   item: VitrinaProductMarketingRecommendation;
   onEdit: (item: VitrinaProductMarketingRecommendation) => void;
   onApplyQuickFixes: (item: VitrinaProductMarketingRecommendation) => void;
+  onDeleteData?: (item: VitrinaProductMarketingRecommendation) => void;
+  deleteDataBusy?: boolean;
 }) {
   const visibleTips = item.tips;
   const hasQuickFixes = (item.quickFixes?.length ?? 0) > 0;
@@ -280,6 +284,20 @@ function VitrinaProductCard({
         <button type="button" onClick={() => onEdit(item)} className={sellerPrimaryButton}>
           Edit
         </button>
+        {onDeleteData ?
+          <button
+            type="button"
+            onClick={() => onDeleteData(item)}
+            disabled={deleteDataBusy}
+            className={cn(
+              sellerGhostButton,
+              "border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+            )}
+          >
+            <Trash2 className={cn("h-4 w-4", deleteDataBusy && "animate-pulse")} aria-hidden />
+            {deleteDataBusy ? "Deleting…" : "Delete data"}
+          </button>
+        : null}
       </div>
     </article>
   );
@@ -292,6 +310,7 @@ export function VitrinaRecommendationsContent({
   fixesPerItemBusy,
   onVitrinaQuickFixApplied,
   onClearAllRecommendations,
+  onDeleteProductData,
   onResetAllCatalogToDefault,
 }: {
   recommendations: VitrinaProductMarketingRecommendation[];
@@ -300,10 +319,12 @@ export function VitrinaRecommendationsContent({
   fixesPerItemBusy?: boolean;
   onVitrinaQuickFixApplied?: (productId: string) => void | Promise<void>;
   onClearAllRecommendations?: () => Promise<boolean>;
+  onDeleteProductData?: (productId: string) => Promise<boolean>;
   onResetAllCatalogToDefault?: () => Promise<boolean>;
 }) {
   const [clearBusy, setClearBusy] = useState(false);
   const [resetCatalogBusy, setResetCatalogBusy] = useState(false);
+  const [deleteDataProductId, setDeleteDataProductId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [quickFixProduct, setQuickFixProduct] = useState<VitrinaProductMarketingRecommendation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -387,6 +408,18 @@ export function VitrinaRecommendationsContent({
     }
     setClearBusy(true);
     void onClearAllRecommendations?.().finally(() => setClearBusy(false));
+  };
+
+  const handleDeleteProductData = (item: VitrinaProductMarketingRecommendation) => {
+    if (
+      !window.confirm(
+        `Delete all aggregated analytics for “${item.title}”?\n\nThis removes micro-events used for Vitrina signals (views, color clicks, cart, etc.). Merchandising fields in the catalog are not changed.`
+      )
+    ) {
+      return;
+    }
+    setDeleteDataProductId(item.productId);
+    void onDeleteProductData?.(item.productId).finally(() => setDeleteDataProductId(null));
   };
 
   const handleResetCatalog = () => {
@@ -493,6 +526,8 @@ export function VitrinaRecommendationsContent({
                         item={item}
                         onEdit={setEditingProduct}
                         onApplyQuickFixes={setQuickFixProduct}
+                        onDeleteData={onDeleteProductData ? handleDeleteProductData : undefined}
+                        deleteDataBusy={deleteDataProductId === item.productId}
                       />
                     </SwiperSlide>
                   ))}
@@ -595,6 +630,8 @@ export function VitrinaRecommendationsContent({
                       item={item}
                       onEdit={setEditingProduct}
                       onApplyQuickFixes={setQuickFixProduct}
+                      onDeleteData={onDeleteProductData ? handleDeleteProductData : undefined}
+                      deleteDataBusy={deleteDataProductId === item.productId}
                     />
                   ))}
                 </div>
