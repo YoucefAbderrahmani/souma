@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartSidebarModal from "@/components/Common/CartSidebarModal";
 import PreviewSliderModal from "@/components/Common/PreviewSlider";
-import SmartShoppingAssistant from "@/components/Common/SmartShoppingAssistant";
+import ShoppingAssistant from "@/components/Common/ShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
 import StorefrontAnalyticsLanding from "@/components/Common/StorefrontAnalyticsLanding";
 import ScrollToTop from "@/components/Common/ScrollToTop";
@@ -29,7 +29,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <div className="min-w-0">{children}</div>
       <CartSidebarModal />
       <PreviewSliderModal />
-      <SmartShoppingAssistant />
+      <ShoppingAssistant />
       <SequenceRouteWatcher />
       <StorefrontAnalyticsLanding />
       <ScrollToTop />

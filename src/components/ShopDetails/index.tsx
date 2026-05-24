@@ -20,7 +20,6 @@ import {
 import { formatCartVariantTitle, resolveProductUnitDetailPrice } from "@/lib/product-unit-price";
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
-import ProductPageAssistant from "./ProductPageAssistant";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
@@ -1110,9 +1109,6 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
               <RecentlyViewdItems />
               <Newsletter />
             </>
-          : null}
-          {!embed ?
-            <ProductPageAssistant product={product} availabilityLabel={availabilityLabel} />
           : null}
         </>
       )}

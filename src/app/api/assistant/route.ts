@@ -5,16 +5,28 @@ import path from "path";
 import { transliterate } from "transliteration";
 import { resolveSequenceKeyMaybe } from "@/app/api/sequence/_cookie";
 import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
+import { isProductDiscoveryQuery } from "@/lib/product-assistant-context";
 import { logAssistantSearchTelemetry } from "@/server/assistant/telemetry-db";
+
+export type AssistantContextProduct = {
+  productId?: string;
+  title?: string;
+  availability?: string;
+  category?: string;
+  priceMode?: "detail" | "jomla";
+  detailPrice?: number;
+  jomlaPrice?: number | null;
+  descriptionText?: string;
+  colors?: Array<{ name: string; inStock?: boolean }>;
+  sizes?: Array<{ label: string; inStock?: boolean }>;
+  specifications?: Array<{ name: string; options: string[] }>;
+  additionalInfo?: Array<{ key: string; value: string }>;
+};
 
 type AssistantRequest = {
   query: string;
   mode: "detail" | "jomla";
-  contextProduct?: {
-    title?: string;
-    availability?: string;
-    category?: string;
-  };
+  contextProduct?: AssistantContextProduct;
 };
 
 type LlmMatch = {
@@ -154,12 +166,13 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function cacheKey(query: string, mode: "detail" | "jomla") {
-  return `${mode}::${query.trim().toLowerCase()}`;
+function cacheKey(query: string, mode: "detail" | "jomla", productId?: string) {
+  const productScope = productId?.trim() ? `product:${productId.trim()}::` : "";
+  return `${productScope}${mode}::${query.trim().toLowerCase()}`;
 }
 
-function getCachedResult(query: string, mode: "detail" | "jomla") {
-  const key = cacheKey(query, mode);
+function getCachedResult(query: string, mode: "detail" | "jomla", productId?: string) {
+  const key = cacheKey(query, mode, productId);
   const entry = responseCache.get(key);
   if (!entry) return null;
   if (entry.expiresAt < Date.now()) {
@@ -169,8 +182,13 @@ function getCachedResult(query: string, mode: "detail" | "jomla") {
   return entry.result;
 }
 
-function setCachedResult(query: string, mode: "detail" | "jomla", result: LlmResult) {
-  responseCache.set(cacheKey(query, mode), {
+function setCachedResult(
+  query: string,
+  mode: "detail" | "jomla",
+  result: LlmResult,
+  productId?: string
+) {
+  responseCache.set(cacheKey(query, mode, productId), {
     result,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
@@ -229,15 +247,18 @@ function jaccard(a: Set<string>, b: Set<string>) {
   return union === 0 ? 0 : intersection / union;
 }
 
-function getSimilarCachedResult(query: string, mode: "detail" | "jomla") {
+function getSimilarCachedResult(query: string, mode: "detail" | "jomla", productId?: string) {
   const queryTokens = tokenize(query);
   let best: { score: number; result: LlmResult } | null = null;
+  const prefix = productId?.trim()
+    ? `product:${productId.trim()}::${mode}::`
+    : `${mode}::`;
 
   for (const [key, entry] of Array.from(responseCache.entries())) {
-    if (!key.startsWith(`${mode}::`)) continue;
+    if (!key.startsWith(prefix)) continue;
     if (entry.expiresAt < Date.now()) continue;
 
-    const cachedQuery = key.split("::")[1] ?? "";
+    const cachedQuery = key.slice(prefix.length);
     const score = jaccard(queryTokens, tokenize(cachedQuery));
     if (score >= 0.6 && (!best || score > best.score)) {
       best = { score, result: entry.result };
@@ -374,6 +395,27 @@ function retrieveFromCatalog(
   }));
 }
 
+function serializeContextProductForPrompt(contextProduct: AssistantContextProduct) {
+  return {
+    productId: sanitizeText(contextProduct.productId, 40),
+    title: sanitizeText(contextProduct.title, 160),
+    availability: sanitizeText(contextProduct.availability, 80),
+    category: sanitizeText(contextProduct.category, 120),
+    priceMode: contextProduct.priceMode === "jomla" ? "jomla" : "detail",
+    detailPrice: contextProduct.detailPrice,
+    jomlaPrice: contextProduct.jomlaPrice ?? null,
+    activePrice:
+      contextProduct.priceMode === "jomla" && contextProduct.jomlaPrice != null
+        ? contextProduct.jomlaPrice
+        : contextProduct.detailPrice,
+    descriptionText: sanitizeText(contextProduct.descriptionText, 1200),
+    colors: (contextProduct.colors ?? []).slice(0, 24),
+    sizes: (contextProduct.sizes ?? []).slice(0, 24),
+    specifications: (contextProduct.specifications ?? []).slice(0, 16),
+    additionalInfo: (contextProduct.additionalInfo ?? []).slice(0, 20),
+  };
+}
+
 function buildPrompt(
   query: string,
   mode: "detail" | "jomla",
@@ -382,16 +424,24 @@ function buildPrompt(
   detectedLanguage?: string
 ) {
   const catalog = buildCatalog(mode);
+  const productFocus = Boolean(contextProduct?.productId?.trim());
+  const discoveryIntent = productFocus && isProductDiscoveryQuery(query);
   const extra =
     retrievalMode === "relaxed"
       ? `\nRelaxed retrieval mode:\n- If strict exact-name match is not found, return the closest semantically relevant products.\n- Understand slug-like categories (example: "laptop-pc" means laptops/computers).\n- For requests like "cheapest X", prioritize lower price among relevant items.\n`
       : "";
   const productContext = contextProduct
-    ? `\nCURRENT_PRODUCT_CONTEXT:\n${JSON.stringify({
-        title: sanitizeText(contextProduct.title, 160),
-        availability: sanitizeText(contextProduct.availability, 60),
-        category: sanitizeText(contextProduct.category, 120),
-      })}`
+    ? `\nPRODUCT_FACTS (ground truth for the page the shopper is viewing — prefer over catalog guesses):\n${JSON.stringify(serializeContextProductForPrompt(contextProduct))}`
+    : "";
+  const productFocusRules = productFocus
+    ? `\nProduct-page mode:
+- The shopper is viewing THIS product. If USER_QUERY is a direct question (price, stock, color, size, spec, warranty, delivery, promo, "is it good", etc.) and does not name another product, answer about THIS item using PRODUCT_FACTS only.
+- Do not ask which product they mean when PRODUCT_FACTS is present — assume they mean the current page item.
+- For availability, colors, sizes, specs, price, warranty, shipping, promo: use PRODUCT_FACTS; return empty matches unless the shopper asks for alternatives.
+- Only suggest other catalog items (non-empty matches) when the shopper wants similar items, cheaper options, comparisons with other products, or recommendations — or clearly searches the wider store (e.g. "show me laptops").
+- Do not recommend the same productId as a "match" unless comparing variants is impossible from facts alone.
+- Discovery intent detected: ${discoveryIntent ? "yes — you may return catalog matches" : "no — prefer empty matches and a factual summary"}.
+`
     : "";
 
   return `You are an ecommerce shopping assistant.
@@ -401,15 +451,15 @@ Rules:
 - Use semantic understanding (type, intent, use-case, style, budget, exclusions, colors, brands).
 - Use visualHints and image filenames as extra visual cues (shape/style/device form), not only title.
 - Handle typos naturally.
-- If USER_QUERY is a direct question (e.g. availability, fit, compatibility), answer it clearly in summary even when matches are empty.
-- If CURRENT_PRODUCT_CONTEXT is provided and the question is about current item availability, use it directly in summary.
+- If USER_QUERY is a direct question (e.g. availability, fit, compatibility, price, warranty, delivery), answer it clearly in summary even when matches are empty.
+- If PRODUCT_FACTS is provided, treat it as authoritative for the current item.
 - Only return products that truly match.
 - If nothing matches, return empty matches.
 - score must be 0..100.
 - max 8 matches, sorted by score desc.
 - Write summary, clarification, and reason in the same language as USER_QUERY.
 - detectedLanguage hint: ${detectedLanguage ?? "unknown"}.
-${extra}
+${productFocusRules}${extra}
 
 JSON schema:
 {
@@ -672,6 +722,12 @@ Return strict JSON only:
   "detectedLanguage": string
 }
 
+Examples:
+- "شحال الثمن" / "c'est combien" → normalizedQuery: "price of product"
+- "واش كاين بالاحمر" → "red color availability"
+- "b7al hada wla a9al" → "similar or cheaper alternative products"
+- "delivery to Algiers" → "shipping delivery Algiers"
+
 USER_QUERY:
 ${preNormalized}
 
@@ -764,6 +820,8 @@ export async function POST(req: NextRequest) {
     const query = body.query?.trim();
     const mode = body.mode === "jomla" ? "jomla" : "detail";
     const contextProduct = body.contextProduct;
+    const contextProductId = contextProduct?.productId?.trim() || undefined;
+    const productFocus = Boolean(contextProductId);
     const preDetectedLocale = detectResponseLocale(query ?? "");
 
     if (!query) {
@@ -816,12 +874,20 @@ export async function POST(req: NextRequest) {
     const detectedLanguage = normalized.detectedLanguage ?? "unknown";
     const responseLocale = detectResponseLocale(query, detectedLanguage);
 
-    const cached = getCachedResult(effectiveQuery, mode);
+    const discoveryIntent = productFocus && isProductDiscoveryQuery(effectiveQuery);
+    const cached = getCachedResult(effectiveQuery, mode, contextProductId);
     if (cached) {
-      const products = cached.matches
+      let cacheMatches = cached.matches;
+      if (productFocus && !discoveryIntent) {
+        cacheMatches = [];
+      } else if (productFocus) {
+        const pid = Number.parseInt(contextProductId!, 10);
+        if (Number.isFinite(pid)) cacheMatches = cacheMatches.filter((m) => m.id !== pid);
+      }
+      const products = cacheMatches
         .map((m) => productById.get(m.id))
         .filter((p): p is (typeof shopData)[number] => Boolean(p));
-      const matchedIds = cached.matches.map((m) => m.id);
+      const matchedIds = cacheMatches.map((m) => m.id);
 
       await logSearchTelemetrySafely({
         requestId,
@@ -873,12 +939,19 @@ export async function POST(req: NextRequest) {
     );
 
     if (!llm.result) {
-      const similarCached = getSimilarCachedResult(effectiveQuery, mode);
+      const similarCached = getSimilarCachedResult(effectiveQuery, mode, contextProductId);
       if (similarCached) {
-        const products = similarCached.matches
+        let similarMatches = similarCached.matches;
+        if (productFocus && !discoveryIntent) {
+          similarMatches = [];
+        } else if (productFocus) {
+          const pid = Number.parseInt(contextProductId!, 10);
+          if (Number.isFinite(pid)) similarMatches = similarMatches.filter((m) => m.id !== pid);
+        }
+        const products = similarMatches
           .map((m) => productById.get(m.id))
           .filter((p): p is (typeof shopData)[number] => Boolean(p));
-        const matchedIds = similarCached.matches.map((m) => m.id);
+        const matchedIds = similarMatches.map((m) => m.id);
 
         await logSearchTelemetrySafely({
           requestId,
@@ -957,7 +1030,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (llm.result.matches.length === 0) {
+    if (llm.result.matches.length === 0 && !(productFocus && !discoveryIntent)) {
       const relaxed = await queryWithRetriesAndFallback(
         googleApiKey,
         openRouterApiKey,
@@ -972,7 +1045,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (llm.result.matches.length === 0) {
+    if (llm.result.matches.length === 0 && !(productFocus && !discoveryIntent)) {
       const fallbackMatches = retrieveFromCatalog(effectiveQuery, mode);
       if (fallbackMatches.length > 0) {
         llm = {
@@ -986,11 +1059,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const products = llm.result.matches
+    let finalMatches = llm.result.matches;
+    if (productFocus && !discoveryIntent) {
+      finalMatches = [];
+    } else if (productFocus) {
+      const pid = Number.parseInt(contextProductId!, 10);
+      if (Number.isFinite(pid)) finalMatches = finalMatches.filter((m) => m.id !== pid);
+    }
+
+    const products = finalMatches
       .map((m) => productById.get(m.id))
       .filter((p): p is (typeof shopData)[number] => Boolean(p));
-    const matchedIds = llm.result.matches.map((m) => m.id);
-    setCachedResult(effectiveQuery, mode, llm.result);
+    const matchedIds = finalMatches.map((m) => m.id);
+    setCachedResult(effectiveQuery, mode, { ...llm.result, matches: finalMatches }, contextProductId);
 
     await logSearchTelemetrySafely({
       requestId,
