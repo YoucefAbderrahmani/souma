@@ -570,7 +570,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                     {displayGalleryUrls.map((item, key) => (
                       <button
                         onClick={() => {
-                          pa.onThumbnailSelect(key);
+                          pa.onThumbnailSelect(key, gallerySlots?.[key]?.colorName);
                           setPreviewImg(key);
                           if (gallerySlots?.[key]) {
                             setActiveColor(gallerySlots[key].colorName);
@@ -739,6 +739,12 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                               <label
                                 key={key}
                                 htmlFor={`color-${color.name}-${key}`}
+                                onClick={() => {
+                                  if (outOfStock) return;
+                                  if (selected) {
+                                    pa.trackColorSelection(color.name, "color");
+                                  }
+                                }}
                                 className={cn(
                                   "cursor-pointer select-none rounded-md border px-3 py-1.5 text-custom-sm font-medium transition",
                                   selected ?
@@ -756,11 +762,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
                                   disabled={outOfStock}
                                   onChange={() => {
                                     if (outOfStock) {
-                                      trackProductAnalytics("pa_select_option", {
-                                        blocked: true,
-                                        axis: "color",
-                                        color: color.name,
-                                      });
+                                      pa.trackColorSelection(color.name, "color", { blocked: true });
                                       return;
                                     }
                                     setActiveColor(color.name);

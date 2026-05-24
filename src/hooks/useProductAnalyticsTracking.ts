@@ -56,6 +56,7 @@ export function useProductAnalyticsTracking({
   const surfaceElementRef = useRef<HTMLElement | null>(null);
   const [trackingSurface, setTrackingSurface] = useState<HTMLElement | null>(null);
   const optionsPrimed = useRef(false);
+  const suppressNextColorOptionTrack = useRef(false);
 
   const surfaceRef = useCallback((node: HTMLElement | null) => {
     surfaceElementRef.current = node;
@@ -84,6 +85,7 @@ export function useProductAnalyticsTracking({
     imgSince.current = Date.now();
     prevImg.current = 0;
     optionsPrimed.current = false;
+    suppressNextColorOptionTrack.current = false;
     flushSpecsViewTime("unmount");
   }, [productId, flushSpecsViewTime]);
 
@@ -286,6 +288,13 @@ export function useProductAnalyticsTracking({
     }
     if (lastSpecsJson.current === j && lastColor.current === activeColor && lastSize.current === selectedSize)
       return;
+    if (suppressNextColorOptionTrack.current) {
+      suppressNextColorOptionTrack.current = false;
+      lastSpecsJson.current = j;
+      lastColor.current = activeColor;
+      lastSize.current = selectedSize;
+      return;
+    }
     lastSpecsJson.current = j;
     lastColor.current = activeColor;
     lastSize.current = selectedSize;
@@ -293,6 +302,7 @@ export function useProductAnalyticsTracking({
       color: activeColor,
       size: selectedSize || undefined,
       specs: selectedSpecs,
+      axis: "color",
     });
   }, [activeColor, selectedSize, selectedSpecs]);
 
@@ -388,14 +398,38 @@ export function useProductAnalyticsTracking({
     });
   }, [previewImg]);
 
+  const trackColorSelection = useCallback(
+    (
+      color: string | undefined,
+      axis: "color" | "gallery",
+      extra?: { blocked?: boolean }
+    ) => {
+      const name = color?.trim();
+      if (!name) return;
+      trackProductAnalytics("pa_select_option", {
+        color: name,
+        size: selectedSize || undefined,
+        specs: selectedSpecs,
+        axis,
+        ...(extra?.blocked ? { blocked: true } : {}),
+      });
+    },
+    [selectedSize, selectedSpecs]
+  );
+
   const onThumbnailSelect = useCallback(
-    (index: number) => {
+    (index: number, colorName?: string) => {
       trackProductAnalytics("pa_image_interaction", {
         kind: "click",
         image_index: index,
       });
+      const linkedColor = colorName?.trim();
+      if (linkedColor) {
+        trackColorSelection(linkedColor, "gallery");
+        suppressNextColorOptionTrack.current = true;
+      }
     },
-    []
+    [trackColorSelection]
   );
 
   return {
@@ -404,5 +438,6 @@ export function useProductAnalyticsTracking({
     surfaceRef,
     onGalleryZoom,
     onThumbnailSelect,
+    trackColorSelection,
   };
 }
