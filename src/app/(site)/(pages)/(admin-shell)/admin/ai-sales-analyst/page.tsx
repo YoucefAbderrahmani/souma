@@ -1,18 +1,9 @@
 import React from "react";
-import { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireStaffPageAccess } from "@/server/lib/staff-page-access";
-import AiSalesAnalystEventsTable from "@/components/Admin/AiSalesAnalystEventsTable";
-import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
-import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-events-admin";
-import type { SalesMicroSessionAdmin } from "@/types/sales-micro-analytics";
 
-export const metadata: Metadata = {
-  title: "AI Sales Analyst data | Vitrina Store Admin",
-  description: "Per-session micro-interactions with timing for model training",
-};
-
-const AiSalesAnalystAdminPage = async () => {
+export default async function AiSalesAnalystAdminPage() {
   const access = await requireStaffPageAccess();
   if (!access) {
     return (
@@ -26,13 +17,7 @@ const AiSalesAnalystAdminPage = async () => {
                 href="/my-account"
                 className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
               >
-                Go to My Account
-              </Link>
-              <Link
-                href="/admin"
-                className="rounded-md border border-gray-3 px-4 py-2 text-sm font-medium text-dark hover:border-[#FB923C] hover:text-[#FB923C]"
-              >
-                Admin home
+                My account
               </Link>
             </div>
           </div>
@@ -41,35 +26,5 @@ const AiSalesAnalystAdminPage = async () => {
     );
   }
 
-  let initialSessions: SalesMicroSessionAdmin[] = [];
-  let serverError: string | null = null;
-  try {
-    initialSessions = await listSalesMicroSessionsForAdmin({ maxSessions: 200 });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    serverError = migrationHintFromDbMessage(message) ?? message;
-  }
-
-  return (
-    <main className="overflow-hidden bg-[#fcfcfd] pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
-      <section className="mx-auto w-full max-w-[1360px] px-4 sm:px-8 xl:px-10">
-        <div className="mb-8 rounded-xl border border-gray-3 bg-white p-5 shadow-sm sm:p-6">
-          <p className="text-sm text-dark-4">Admin · AI Sales Analyst</p>
-          <h1 className="mt-1 text-2xl font-semibold text-dark">Micro-interaction feed</h1>
-          <p className="mt-2 max-w-3xl text-sm text-dark-4">
-            Filter and export a model-ready dataset (JSONL / JSON / CSV) with stable field names, then scroll the grouped
-            table for timing, context, flattened payload, and raw JSON per event.
-          </p>
-        </div>
-
-        {serverError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{serverError}</div>
-        ) : (
-          <AiSalesAnalystEventsTable initialSessions={initialSessions} />
-        )}
-      </section>
-    </main>
-  );
-};
-
-export default AiSalesAnalystAdminPage;
+  redirect("/admin");
+}

@@ -1,7 +1,7 @@
 import React from "react";
 import AdminSideNav from "./admin/AdminSideNav";
 
-/** Shared chrome for /admin, /sequence, and other admin data-tracking pages. */
+/** Shared chrome for /admin (catalog & users). */
 export default function AdminShellLayout({ children }: { children: React.ReactNode }) {
   return (
     <>

@@ -12,12 +12,9 @@ import { createProductAction, type CreateProductState } from "./actions";
 import websiteCategories from "@/components/Home/Categories/categoryData";
 import AdminDeleteProductButton from "@/components/Admin/AdminDeleteProductButton";
 import EditProductModal from "./EditProductModal";
-import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
 import AdminRoleManagementPanel from "@/components/Admin/AdminRoleManagementPanel";
 import { normalizeUserRole } from "@/lib/user-roles";
-import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
-import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
 import AdminColorVariantsPanel, {
   newAdminColorFormRow,
 } from "@/components/Admin/AdminColorVariantsPanel";
@@ -57,8 +54,6 @@ type AdminProduct = {
 type Props = {
   users: AdminUser[];
   products: AdminProduct[];
-  conceptionInitialData?: ConceptionAdminInitialData;
-  conceptionInitialError?: string | null;
   /** Only true for `admin` (not `seller`). */
   canManageRoles?: boolean;
   actorEmail?: string | null;
@@ -69,8 +64,6 @@ const initialState: CreateProductState = {};
 export default function AdminPanels({
   users,
   products,
-  conceptionInitialData,
-  conceptionInitialError = null,
   canManageRoles = false,
   actorEmail = null,
 }: Props) {
@@ -149,14 +142,6 @@ export default function AdminPanels({
     return Math.round(Math.round(n) * 1.2);
   }, [addVitrinaMode, addPriceInput]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab === "conception") {
-      window.history.replaceState(null, "", "/admin?tab=seller-helper");
-    }
-  }, []);
-
   const applyTab = useCallback((tab: AdminMainTab) => {
     setActiveTab(tab);
     setVisitedTabs((current) => {
@@ -209,17 +194,6 @@ export default function AdminPanels({
       />
 
       <div className="relative mt-6 min-h-[240px]">
-        {renderTab(
-          "seller-helper",
-          <section>
-            <SellerHelperDashboard
-              variant="admin"
-              initialData={conceptionInitialData}
-              initialError={conceptionInitialError}
-            />
-          </section>
-        )}
-
         {canManageRoles
           ? renderTab(
               "role-management",
@@ -848,13 +822,6 @@ export default function AdminPanels({
               onClose={() => setEditingProduct(null)}
             />
           ) : null}
-          </section>
-        )}
-
-        {renderTab(
-          "tracking",
-          <section className="mt-2">
-            <ProductAnalyticsTrackingPanel />
           </section>
         )}
 

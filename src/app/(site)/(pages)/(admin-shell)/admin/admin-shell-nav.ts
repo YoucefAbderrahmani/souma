@@ -4,25 +4,14 @@ import { ADMIN_TAB_SELECT_EVENT, readAdminTabFromUrl } from "./admin-tab-client-
 
 export const ADMIN_HOME_PATH = "/admin";
 
-/** Data tracking routes shown in the left admin sidebar. */
-export const ADMIN_DATA_TRACKING_ROUTES = [
-  { href: "/sequence", label: "Sequences", match: (path: string) => path === "/sequence" },
-  {
-    href: "/admin/item-assistant",
-    label: "Item Assistant Tracking",
-    match: (path: string) => path === "/admin/item-assistant",
-  },
-  {
-    href: "/admin/sales-analytics",
-    label: "Session Timeline",
-    match: (path: string) => path === "/admin/sales-analytics",
-  },
-  {
-    href: "/admin/ai-sales-analyst",
-    label: "AI Sales Analyst",
-    match: (path: string) => path === "/admin/ai-sales-analyst",
-  },
-] as const;
+/** Tabs on /admin (catalog + users; Seller Helper is only on /seller-helper). */
+export const ADMIN_HOME_TAB_IDS = [
+  "users",
+  "role-management",
+  "add-product",
+  "products",
+  "role-emails",
+] as const satisfies readonly AdminMainTab[];
 
 export function adminHomeTabUrl(tab: AdminMainTab): string {
   return `${ADMIN_HOME_PATH}?tab=${tab}`;
@@ -48,20 +37,14 @@ export function navigateToAdminHomeTab(tab: AdminMainTab, router: AppRouterInsta
   router.push(url);
 }
 
-/** Data tracking and cross-section routes always use the Next.js router. */
+/** Legacy data-tracking URLs redirect to admin home. */
 export function navigateToAdminRoute(href: string, router: AppRouterInstance): void {
   if (typeof window === "undefined") return;
-  const targetPath = href.split("?")[0] ?? href;
-  if (window.location.pathname === targetPath) return;
-  router.push(href);
+  router.push(ADMIN_HOME_PATH);
 }
 
-export function prefetchAdminRoute(href: string, router: AppRouterInstance): void {
-  try {
-    router.prefetch(href);
-  } catch {
-    /* prefetch optional */
-  }
+export function prefetchAdminRoute(_href: string, _router: AppRouterInstance): void {
+  /* no-op — data-tracking routes removed from admin shell */
 }
 
 export { readAdminTabFromUrl, ADMIN_TAB_SELECT_EVENT };

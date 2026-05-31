@@ -10,26 +10,16 @@ export type AdminMainTab =
   | "role-management"
   | "add-product"
   | "products"
-  | "tracking"
-  | "role-emails"
-  | "seller-helper";
+  | "role-emails";
 
 const BASE_TABS: { id: AdminMainTab; label: string }[] = [
   { id: "users", label: "Users" },
   { id: "add-product", label: "Add Items" },
   { id: "products", label: "Stock & Edit Items" },
-  { id: "tracking", label: "Analytics tracking" },
   { id: "role-emails", label: "Assign role emails" },
-  { id: "seller-helper", label: "Seller Helper" },
 ];
 
 const ROLE_MANAGEMENT_TAB = { id: "role-management" as const, label: "Role management" };
-
-const TAB_PREFETCH: Partial<Record<AdminMainTab, () => void>> = {
-  "seller-helper": () => {
-    void import("@/components/SellerHelper/SellerHelperDashboard");
-  },
-};
 
 function AdminTabBarInner({
   activeTab,
@@ -51,8 +41,6 @@ function AdminTabBarInner({
         <button
           key={id}
           type="button"
-          onMouseEnter={() => TAB_PREFETCH[id]?.()}
-          onFocus={() => TAB_PREFETCH[id]?.()}
           onClick={() => selectTab(id, onSelect)}
           className={sellerNavButton(indicatorTab === id)}
         >

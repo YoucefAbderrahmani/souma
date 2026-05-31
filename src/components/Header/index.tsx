@@ -20,7 +20,6 @@ import { getVisibleProductsForMode } from "@/lib/price-mode";
 import { sequenceStartProduct, sequenceStartSearch } from "@/lib/sequence-client";
 import { productDetailsHref } from "@/lib/product-page-link";
 import { trackProductAnalytics } from "@/lib/product-analytics-client";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,7 +28,7 @@ const Header = () => {
   const [stickyMenu, setStickyMenu] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const { openCartModal } = useCartModalContext();
-  const { mode, toggleMode } = usePriceMode();
+  const { mode } = usePriceMode();
   const dispatch = useDispatch();
   const router = useRouter();
   const visibleProducts = useMemo(() => getVisibleProductsForMode(shopData, mode), [mode]);
@@ -530,25 +529,6 @@ const Header = () => {
             {/* // <!--=== Nav Right Start ===--> */}
             <div className="hidden xl:block">
               <ul className="flex items-center gap-5.5">
-                {/* Price mode switch */}
-                <li className="py-4">
-                  <ThemeToggle />
-                </li>
-                <li className="py-4">
-                  <button
-                    type="button"
-                    onClick={toggleMode}
-                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-custom-sm font-medium bg-white transition-all ${
-                      mode === "jomla"
-                        ? "border-[#FB923C] text-[#FB923C]"
-                        : "border-gray-3 text-dark-4 bg-gray-1"
-                    }`}
-                  >
-                    <span className="text-2xs uppercase tracking-wide">
-                      Vitrina Mode
-                    </span>
-                  </button>
-                </li>
                 <li className="py-4">
                   <Link
                     href="/recently-viewed"

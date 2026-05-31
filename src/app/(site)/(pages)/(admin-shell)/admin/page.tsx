@@ -11,14 +11,6 @@ import { db } from "@/server/db";
 import { categoryTable, productsTable, user } from "@/server/db/schema";
 import { ensureAllShopDataProductsInDatabase } from "@/server/data-access/product-catalog";
 import AdminPanels from "./AdminPanels";
-import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
-import { buildConceptionOverview } from "@/server/conception/metrics";
-import {
-  listConceptionAlertsForAdmin,
-  listDismissedConceptionAlertsForAdmin,
-  listConceptionRecommendationsForAdmin,
-  listConceptionInboxForAdmin,
-} from "@/server/conception/conception-db";
 
 export const metadata: Metadata = {
   title: "Admin Panel | Vitrina Store",
@@ -68,21 +60,6 @@ const AdminPage = async () => {
     await ensureAllShopDataProductsInDatabase();
   } catch (error) {
     console.error("[admin] ensureAllShopDataProductsInDatabase", error);
-  }
-
-  let conceptionInitialData: ConceptionAdminInitialData | undefined;
-  let conceptionInitialError: string | null = null;
-  try {
-    const [overview, alerts, resolvedAlerts, recommendations, inbox] = await Promise.all([
-      buildConceptionOverview(),
-      listConceptionAlertsForAdmin({ limit: 50 }),
-      listDismissedConceptionAlertsForAdmin({ limit: 12 }),
-      listConceptionRecommendationsForAdmin({ limit: 40 }),
-      listConceptionInboxForAdmin({ limit: 40 }),
-    ]);
-    conceptionInitialData = { overview, alerts, resolvedAlerts, recommendations, inbox };
-  } catch (error) {
-    conceptionInitialError = error instanceof Error ? error.message : String(error);
   }
 
   const [usersData, productsData, basicStats] = await Promise.all([
@@ -165,8 +142,6 @@ const AdminPage = async () => {
             createdAt: u.createdAt.toISOString(),
           }))}
           products={productsData}
-          conceptionInitialData={conceptionInitialData}
-          conceptionInitialError={conceptionInitialError}
           canManageRoles={access.isRoleAdmin}
           actorEmail={access.email}
         />

@@ -5,10 +5,9 @@ import { memo, useCallback, useEffect, useState, useTransition } from "react";
 import type { AdminMainTab } from "./AdminTabBar";
 import { ADMIN_TAB_SELECT_EVENT, readAdminTabFromUrl } from "./admin-tab-client-nav";
 import {
-  ADMIN_DATA_TRACKING_ROUTES,
   ADMIN_HOME_PATH,
+  ADMIN_HOME_TAB_IDS,
   navigateToAdminHomeTab,
-  navigateToAdminRoute,
   prefetchAdminRoute,
 } from "./admin-shell-nav";
 
@@ -18,22 +17,15 @@ function linkClass(isActive: boolean): string {
     : "block w-full rounded-lg border border-gray-3 bg-white px-3 py-2 text-sm font-medium text-dark outline-none hover:border-[#FB923C] hover:text-[#FB923C] focus:outline-none focus-visible:outline-none focus-visible:ring-0";
 }
 
-const ADMIN_HOME_TABS: { id: AdminMainTab; label: string }[] = [
-  { id: "users", label: "Users" },
-  { id: "add-product", label: "Add Items" },
-  { id: "products", label: "Stock & Edit Items" },
-  { id: "tracking", label: "Analytics tracking" },
-  { id: "role-emails", label: "Assign role emails" },
-  { id: "seller-helper", label: "Seller Helper" },
-];
-
-const TAB_PREFETCH: Partial<Record<AdminMainTab, () => void>> = {
-  "seller-helper": () => {
-    void import("@/components/SellerHelper/SellerHelperDashboard");
-  },
+const TAB_LABELS: Record<AdminMainTab, string> = {
+  users: "Users",
+  "role-management": "Role management",
+  "add-product": "Add Items",
+  products: "Stock & Edit Items",
+  "role-emails": "Assign role emails",
 };
 
-function AdminSideNavInner() {
+function AdminSideNavInner({ showRoleManagement = false }: { showRoleManagement?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -43,13 +35,10 @@ function AdminSideNavInner() {
       ? readAdminTabFromUrl()
       : "users"
   );
-  const [pendingPath, setPendingPath] = useState<string | null>(null);
 
-  const displayPath = pendingPath ?? pathname;
-
-  useEffect(() => {
-    setPendingPath(null);
-  }, [pathname]);
+  const visibleTabs = ADMIN_HOME_TAB_IDS.filter(
+    (id) => id !== "role-management" || showRoleManagement
+  );
 
   useEffect(() => {
     if (onAdminHome) setActiveTab(readAdminTabFromUrl());
@@ -72,21 +61,9 @@ function AdminSideNavInner() {
     };
   }, []);
 
-  const goToRoute = useCallback(
-    (href: string) => {
-      const targetPath = href.split("?")[0] ?? href;
-      setPendingPath(targetPath);
-      startTransition(() => {
-        navigateToAdminRoute(href, router);
-      });
-    },
-    [router]
-  );
-
   const selectAdminTab = useCallback(
     (tab: AdminMainTab) => {
       setActiveTab(tab);
-      setPendingPath(ADMIN_HOME_PATH);
       startTransition(() => {
         navigateToAdminHomeTab(tab, router);
       });
@@ -99,41 +76,16 @@ function AdminSideNavInner() {
       <p className="text-xs font-medium uppercase tracking-wide text-dark-4">Admin navigation</p>
 
       <div className="mt-4 space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">Seller</p>
-        {ADMIN_HOME_TABS.map(({ id, label }) => (
+        {visibleTabs.map((id) => (
           <button
             key={id}
             type="button"
-            onMouseEnter={() => {
-              TAB_PREFETCH[id]?.();
-              prefetchAdminRoute(`${ADMIN_HOME_PATH}?tab=${id}`, router);
-            }}
-            onFocus={() => {
-              TAB_PREFETCH[id]?.();
-              prefetchAdminRoute(`${ADMIN_HOME_PATH}?tab=${id}`, router);
-            }}
+            onMouseEnter={() => prefetchAdminRoute(`${ADMIN_HOME_PATH}?tab=${id}`, router)}
+            onFocus={() => prefetchAdminRoute(`${ADMIN_HOME_PATH}?tab=${id}`, router)}
             onClick={() => selectAdminTab(id)}
-            className={linkClass(
-              (displayPath === ADMIN_HOME_PATH || onAdminHome) && activeTab === id
-            )}
+            className={linkClass(onAdminHome && activeTab === id)}
           >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5 space-y-2 border-t border-gray-2 pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-dark-4">Data Tracking</p>
-        {ADMIN_DATA_TRACKING_ROUTES.map(({ href, label, match }) => (
-          <button
-            key={href}
-            type="button"
-            onMouseEnter={() => prefetchAdminRoute(href, router)}
-            onFocus={() => prefetchAdminRoute(href, router)}
-            onClick={() => goToRoute(href)}
-            className={linkClass(match(displayPath))}
-          >
-            {label}
+            {TAB_LABELS[id]}
           </button>
         ))}
       </div>
