@@ -1,14 +1,12 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
-import { PA_FUNNEL } from "@/lib/pa-whitelist";
 import { FUNNEL_PAGE_EVENTS } from "@/server/conception/funnel-metrics";
 
 /** Event names that feed the Conversion Funnel tab counts. */
 export const FUNNEL_CLEAR_EVENT_NAMES = [
   FUNNEL_PAGE_EVENTS.productPage,
   FUNNEL_PAGE_EVENTS.addToCartClick,
-  PA_FUNNEL.buyNow,
   FUNNEL_PAGE_EVENTS.checkoutPage,
   FUNNEL_PAGE_EVENTS.orderComplete,
 ] as const;

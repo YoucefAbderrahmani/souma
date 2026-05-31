@@ -269,12 +269,11 @@ function ConversionFunnelContent({
           : null}
         </div>
         <p className="mt-2 text-custom-sm text-dark-4">
-          Distinct sessions in the last {liveHours} hours — a later step also counts earlier steps in
-          the same session (e.g. checkout adds product + cart if missing). % descend from 100% at the
-          top. Purchase now counts as add to cart. Orders only after Chargily payment.
-          payment is finalized (
+          Event counts for the last {liveHours} hours: product and checkout = page visits; Add to
+          cart = button clicks (including Purchase now); Order completed = Chargily payment
+          finalized only. Percentages descend from 100% at the top (
           <code className="rounded bg-gray-1 px-1">Pay with Chargily</code>
-          → complete payment → return with success).
+          → complete payment).
         </p>
         <div className="mt-4 space-y-4">
           {steps.length ?

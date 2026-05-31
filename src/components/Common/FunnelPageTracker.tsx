@@ -15,7 +15,8 @@ function resolveFunnelPageEvent(pathname: string): string | null {
 }
 
 /**
- * Records one funnel step per storefront page landing (every navigation, any entry path).
+ * Records funnel product and checkout page visits (one event per navigation).
+ * Add to cart and orders are tracked on button click / payment success elsewhere.
  */
 export default function FunnelPageTracker() {
   const pathname = usePathname();

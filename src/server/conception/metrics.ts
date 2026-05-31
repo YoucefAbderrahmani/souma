@@ -190,10 +190,19 @@ function buildFunnelSteps(f: {
     { title: "Order completed", n: f.nFinal },
   ];
 
+  let prevOverallPct = 100;
+
   return steps.map((s, i) => {
     const prevN = i === 0 ? s.n : steps[i - 1]!.n;
-    const overallPct = i === 0 ? (entry > 0 ? 100 : 0) : entry > 0 ? (100 * s.n) / entry : 0;
-    const stepThroughPct = i === 0 ? 100 : prevN > 0 ? (100 * s.n) / prevN : 0;
+    const rawOverallPct =
+      i === 0 ? (entry > 0 ? 100 : 0)
+      : entry > 0 ? (100 * s.n) / entry
+      : 0;
+    const overallPct = i === 0 ? rawOverallPct : Math.min(prevOverallPct, rawOverallPct);
+    prevOverallPct = overallPct;
+
+    const stepThroughPct =
+      i === 0 ? 100 : prevN > 0 ? Math.min(100, (100 * s.n) / prevN) : 0;
 
     const fromPrevLabel =
       i === 0 ? "Entry (100%)" : (
@@ -201,7 +210,7 @@ function buildFunnelSteps(f: {
       );
 
     const overallLabel =
-      i === 0 ? "100.0%" : `${fmtPct(overallPct)} of product sessions`;
+      i === 0 ? "100.0%" : `${fmtPct(overallPct)} of product page visits`;
 
     const abandonLabel =
       i > 0 && prevN > 0 && s.n < prevN ?
