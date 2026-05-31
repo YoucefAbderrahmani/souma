@@ -21,6 +21,7 @@ import { formatCartVariantTitle, resolveProductUnitDetailPrice } from "@/lib/pro
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
+import { trackFunnelAddToCartClick } from "@/lib/funnel-add-to-cart";
 import { flushProductAnalyticsNow, trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
 import type { Product } from "@/types/product";
@@ -464,27 +465,23 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       page_type: "product_detail",
       source: "buy_now",
     });
-    trackProductAnalytics("pa_buy_now", {
-      product_id: product.id,
-      from: "product_page",
-      quantity,
-      detail_price: detailPrice,
-    });
-    trackProductAnalytics("pa_add_to_cart", {
-      product_id: product.id,
-      from: "product_page",
-      quantity,
-      detail_price: detailPrice,
-      active_color: activeColor,
-      selected_size: selectedSize || undefined,
-      selected_specs: selectedSpecs,
-      cart_line_items: nextLineItems,
-      cart_total_dzd: nextCartTotal,
-      items_qty_total: nextItemsQtyTotal,
-      currency: "DZD",
-      page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
-    });
-    void flushProductAnalyticsNow();
+    trackFunnelAddToCartClick(
+      {
+        product_id: product.id,
+        from: "product_page",
+        quantity,
+        detail_price: detailPrice,
+        active_color: activeColor,
+        selected_size: selectedSize || undefined,
+        selected_specs: selectedSpecs,
+        cart_line_items: nextLineItems,
+        cart_total_dzd: nextCartTotal,
+        items_qty_total: nextItemsQtyTotal,
+        currency: "DZD",
+        page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
+      },
+      { intent: "purchase_now" }
+    );
     dispatch(
       addItemToCart({
         ...product,
