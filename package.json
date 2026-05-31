@@ -19,6 +19,7 @@
     "db:simulate-traffic": "tsx scripts/simulate-storefront-analytics.ts",
     "db:bulk-7d-activity": "tsx scripts/bulk-simulate-7d-high-activity.ts",
     "db:trigger-security-alerts": "tsx scripts/trigger-security-alerts.ts",
+    "db:clear-funnel": "tsx scripts/clear-funnel-data.ts",
     "start": "next start",
     "lint": "next lint",
     "report:html": "node scripts/build-vitrina-application-report.mjs",

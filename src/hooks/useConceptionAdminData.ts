@@ -495,6 +495,36 @@ export function useConceptionAdminData(
     }
   }, [load]);
 
+  const clearConversionFunnel = useCallback(async () => {
+    setState((s) => ({ ...s, actionMessage: null }));
+    try {
+      const res = await fetch("/api/admin/conception/funnel/clear", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await readJsonResponse<{
+        error?: string;
+        message?: string;
+        deletedCount?: number;
+        ok?: boolean;
+      }>(res, "Clear funnel API");
+      if (!res.ok || body.error) throw new Error(body.message || body.error || "Clear failed");
+      const deleted = Number(body.deletedCount ?? 0);
+      setState((s) => ({
+        ...s,
+        actionMessage: body.message ?? (deleted > 0 ? `Cleared ${deleted} funnel event(s).` : "Funnel cleared."),
+      }));
+      await load({ background: true });
+      return true;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        actionMessage: e instanceof Error ? e.message : String(e),
+      }));
+      return false;
+    }
+  }, [load]);
+
   const runAnalyze = useCallback(async () => {
     loadGenerationRef.current += 1;
     setState((s) => ({ ...s, analyzeBusy: true, analyzeMessage: null }));
@@ -691,6 +721,7 @@ export function useConceptionAdminData(
     clearAllRecommendations,
     clearAllAlerts,
     clearAllSecurity,
+    clearConversionFunnel,
     dismissVitrinaAfterQuickFix,
     clearAllVitrinaRecommendations,
     clearVitrinaProductData,

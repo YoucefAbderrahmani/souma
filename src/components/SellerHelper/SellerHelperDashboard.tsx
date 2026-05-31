@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { AlertTriangle, BarChart2, Settings, Users } from "lucide-react";
+import { AlertTriangle, BarChart2, RotateCcw, Settings, Users } from "lucide-react";
 import { SellerHelperLogo } from "./SellerHelperLogo";
 import {
   useConceptionAdminData,
@@ -35,6 +35,7 @@ import {
   sellerPlaceholder,
   sellerPrimaryButton,
   sellerSecondaryButton,
+  sellerGhostButton,
   sellerHelperStack,
   sellerTable,
   sellerTableHead,
@@ -209,7 +210,27 @@ function DashboardMainContent({
   );
 }
 
-function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+function ConversionFunnelContent({
+  overview,
+  onClearFunnel,
+}: {
+  overview: ConceptionOverviewDto | null;
+  onClearFunnel?: () => Promise<boolean>;
+}) {
+  const [clearBusy, setClearBusy] = React.useState(false);
+
+  const handleClearFunnel = () => {
+    if (!onClearFunnel) return;
+    if (
+      !window.confirm(
+        "Clear all conversion funnel data? Product, cart, checkout, and order counts will return to 0. This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setClearBusy(true);
+    void onClearFunnel().finally(() => setClearBusy(false));
+  };
   const liveHours = overview?.funnelLiveHours ?? 6;
   const steps = (overview?.funnelSteps ?? []).map((step) => ({
     title: step.title,
@@ -230,10 +251,23 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
   return (
     <div className={sellerHelperStack}>
       <Panel>
-        <SectionHeading
-          title="Conversion Funnel"
-          icon={BarChart2}
-        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeading title="Conversion Funnel" icon={BarChart2} />
+          {onClearFunnel ?
+            <button
+              type="button"
+              disabled={clearBusy}
+              onClick={handleClearFunnel}
+              className={cn(
+                sellerGhostButton,
+                "shrink-0 border-red/30 text-red-dark hover:border-red hover:bg-red-light-6"
+              )}
+            >
+              <RotateCcw className={cn("h-4 w-4", clearBusy && "animate-spin")} aria-hidden />
+              {clearBusy ? "Clearing…" : "Reset funnel to 0"}
+            </button>
+          : null}
+        </div>
         <p className="mt-2 text-custom-sm text-dark-4">
           Page-visit counts for the last {liveHours} hours. Percentages are capped at 100% and
           compare to product visits or the prior step (never above 100%). Orders only count after a
@@ -352,6 +386,7 @@ function SellerHelperDashboardInner({
     clearAllRecommendations,
     clearAllAlerts,
     clearAllSecurity,
+    clearConversionFunnel,
     dismissVitrinaAfterQuickFix,
     clearAllVitrinaRecommendations,
     clearVitrinaProductData,
@@ -497,7 +532,10 @@ function SellerHelperDashboardInner({
           "Dashboard",
           <DashboardMainContent overview={overview} loading={loading} trafficSeries={trafficSeries} />
         )}
-        {showPanel("Conversion Funnel", <ConversionFunnelContent overview={overview} />)}
+        {showPanel(
+          "Conversion Funnel",
+          <ConversionFunnelContent overview={overview} onClearFunnel={clearConversionFunnel} />
+        )}
         {showPanel(
           "User Behavior",
           <UserBehaviorContent
