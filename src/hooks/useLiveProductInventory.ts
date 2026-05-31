@@ -10,6 +10,7 @@ const DEFAULT_POLL_MS = 15_000;
 const PENDING_PURCHASE_STORAGE_KEY = "vitrina_pending_inventory_purchase";
 const PENDING_PURCHASE_BACKUP_KEY = "vitrina_pending_inventory_purchase_backup";
 const CHARGILY_PAYMENT_FLOW_ACTIVE_KEY = "vitrina_chargily_payment_flow_active";
+const CHARGILY_PAYMENT_FLOW_ACTIVE_BACKUP_KEY = "vitrina_chargily_payment_flow_active_backup";
 const CHARGILY_PAYMENT_SNAPSHOT_KEY = "vitrina_chargily_payment_snapshot";
 const CHARGILY_PAYMENT_SNAPSHOT_BACKUP_KEY = "vitrina_chargily_payment_snapshot_backup";
 const FUNNEL_ORDER_COMPLETE_RECORDED_KEY = "vitrina_funnel_order_complete_recorded";
@@ -85,6 +86,7 @@ export function savePendingInventoryPurchase(
   try {
     window.localStorage.setItem(PENDING_PURCHASE_BACKUP_KEY, serialized);
     window.sessionStorage.setItem(CHARGILY_PAYMENT_FLOW_ACTIVE_KEY, "1");
+    window.localStorage.setItem(CHARGILY_PAYMENT_FLOW_ACTIVE_BACKUP_KEY, "1");
     window.sessionStorage.removeItem(FUNNEL_ORDER_COMPLETE_RECORDED_KEY);
     clearFunnelChargilyCheckoutSent();
     if (snapshot) saveChargilyPaymentSnapshot(snapshot);
@@ -110,16 +112,26 @@ export function restorePendingPurchaseFromBackup(): boolean {
 export function isChargilyPaymentFlowActive(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.sessionStorage.getItem(CHARGILY_PAYMENT_FLOW_ACTIVE_KEY) === "1";
+    return (
+      window.sessionStorage.getItem(CHARGILY_PAYMENT_FLOW_ACTIVE_KEY) === "1" ||
+      window.localStorage.getItem(CHARGILY_PAYMENT_FLOW_ACTIVE_BACKUP_KEY) === "1"
+    );
   } catch {
     return false;
   }
+}
+
+/** Chargily appends checkout_id on success_url — proof of a completed payment return. */
+export function isChargilyCheckoutSuccessReturn(checkoutId: string | null | undefined): boolean {
+  const id = typeof checkoutId === "string" ? checkoutId.trim() : "";
+  return id.length >= 8;
 }
 
 function clearChargilyPaymentFlowMarkers(): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.removeItem(CHARGILY_PAYMENT_FLOW_ACTIVE_KEY);
+    window.localStorage.removeItem(CHARGILY_PAYMENT_FLOW_ACTIVE_BACKUP_KEY);
     window.sessionStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
     window.localStorage.removeItem(PENDING_PURCHASE_BACKUP_KEY);
     clearChargilyPaymentSnapshot();

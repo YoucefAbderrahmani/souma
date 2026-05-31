@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { store, useAppSelector, type AppDispatch } from "@/redux/store";
+import { clearStorefrontCart } from "@/lib/clear-storefront-cart";
+import { isCartClearedAfterPayment } from "@/lib/storefront-cart-storage";
 import { setCartItems, type CartItem } from "@/redux/features/cart-slice";
 import { useSession } from "@/app/context/SessionProvider";
 import { publicApiUrl } from "@/lib/public-api-url";
@@ -102,6 +104,17 @@ const CartPersistence = () => {
   useEffect(() => {
     if (!sessionResolved) return;
 
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("payment") === "success" || isCartClearedAfterPayment()) {
+        void clearStorefrontCart(dispatch, userId).then(() => {
+          hydratedRef.current = true;
+          activeStorageKeyRef.current = targetStorageKey;
+        });
+        return;
+      }
+    }
+
     const accountChanged = lastUserIdRef.current !== userId;
     lastUserIdRef.current = userId;
 
@@ -114,6 +127,14 @@ const CartPersistence = () => {
     let cancelled = false;
 
     (async () => {
+      if (isCartClearedAfterPayment()) {
+        await clearStorefrontCart(dispatch, userId);
+        if (cancelled) return;
+        hydratedRef.current = true;
+        activeStorageKeyRef.current = targetStorageKey;
+        return;
+      }
+
       const rawUser = window.localStorage.getItem(targetStorageKey);
       const rawGuest = window.localStorage.getItem(GUEST_CART_KEY);
       let userCart = parseStoredCart(rawUser);
@@ -128,7 +149,7 @@ const CartPersistence = () => {
         }
       }
 
-      if (userId && userCart.length === 0 && guestCart.length > 0) {
+      if (userId && userCart.length === 0 && guestCart.length > 0 && !isCartClearedAfterPayment()) {
         dispatch(setCartItems(guestCart));
         window.localStorage.setItem(targetStorageKey, JSON.stringify(guestCart));
         void persistServerCart(guestCart);
@@ -150,6 +171,12 @@ const CartPersistence = () => {
   useEffect(() => {
     if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
+    if (isCartClearedAfterPayment()) {
+      if (cartItems.length > 0) {
+        dispatch(setCartItems([]));
+      }
+      return;
+    }
 
     window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
 

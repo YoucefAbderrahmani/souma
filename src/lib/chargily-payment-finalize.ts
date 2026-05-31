@@ -1,19 +1,16 @@
 "use client";
 
 import { sequenceEndPurchase } from "@/lib/sequence-client";
-import {
-  clearPersistedStorefrontCart,
-  persistEmptyServerCart,
-} from "@/lib/storefront-cart-storage";
+import { clearStorefrontCart } from "@/lib/clear-storefront-cart";
 import {
   flushProductAnalyticsNow,
   trackProductAnalytics,
 } from "@/lib/product-analytics-client";
 import type { AppDispatch } from "@/redux/store";
-import { setCartItems } from "@/redux/features/cart-slice";
 import {
   commitPendingInventoryPurchase,
   hasChargilyPaymentPending,
+  isChargilyCheckoutSuccessReturn,
   isChargilyPaymentFlowActive,
   isFunnelOrderCompleteRecorded,
   markFunnelOrderCompleteRecorded,
@@ -32,6 +29,7 @@ export async function finalizeChargilyPaymentReturn(options: {
   dispatch: AppDispatch;
   userId?: string | null;
   source: "payment_success_return" | "go_back_to_store_click";
+  chargilyCheckoutId?: string | null;
   totalPriceFallback?: number;
   cartLineItemsFallback?: number;
   itemsQtyTotalFallback?: number;
@@ -40,15 +38,18 @@ export async function finalizeChargilyPaymentReturn(options: {
     return { ok: false, committed: false, alreadyRecorded: false };
   }
 
+  const hasChargilyReturnProof =
+    isChargilyCheckoutSuccessReturn(options.chargilyCheckoutId) ||
+    hasChargilyPaymentPending() ||
+    isChargilyPaymentFlowActive();
+
   if (isFunnelOrderCompleteRecorded()) {
-    options.dispatch(setCartItems([]));
-    clearPersistedStorefrontCart(options.userId);
-    void persistEmptyServerCart();
+    await clearStorefrontCart(options.dispatch, options.userId);
     return { ok: true, committed: true, alreadyRecorded: true };
   }
 
   restorePendingPurchaseFromBackup();
-  if (!hasChargilyPaymentPending() && !isChargilyPaymentFlowActive()) {
+  if (!hasChargilyReturnProof) {
     return { ok: false, committed: false, alreadyRecorded: false };
   }
 
@@ -69,7 +70,9 @@ export async function finalizeChargilyPaymentReturn(options: {
     snapshot?.items_qty_total ?? options.itemsQtyTotalFallback ?? lineItems
   );
 
-  const committed = await commitPendingInventoryPurchase();
+  const committed = hasChargilyPaymentPending()
+    ? await commitPendingInventoryPurchase()
+    : false;
 
   markFunnelOrderCompleteRecorded();
   sequenceEndPurchase();
@@ -78,6 +81,7 @@ export async function finalizeChargilyPaymentReturn(options: {
     payment_finalized: true,
     provider: "chargily",
     source: options.source,
+    chargily_checkout_id: options.chargilyCheckoutId?.trim() || undefined,
     inventory_committed: committed,
     total_dzd: totalDzd,
     line_items: lineItems,
@@ -106,9 +110,7 @@ export async function finalizeChargilyPaymentReturn(options: {
   });
   await flushProductAnalyticsNow();
 
-  options.dispatch(setCartItems([]));
-  clearPersistedStorefrontCart(options.userId);
-  await persistEmptyServerCart();
+  await clearStorefrontCart(options.dispatch, options.userId);
 
   return { ok: true, committed, alreadyRecorded: false };
 }

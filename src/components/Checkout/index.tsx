@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
+import { clearStorefrontCart } from "@/lib/clear-storefront-cart";
 import { finalizeChargilyPaymentReturn } from "@/lib/chargily-payment-finalize";
 import { sequenceEndLeave } from "@/lib/sequence-client";
 import {
@@ -24,6 +25,7 @@ import { AppDispatch } from "@/redux/store";
 import { trackFunnelChargilyCheckoutOpened } from "@/lib/funnel-chargily";
 import {
   hasChargilyPaymentPending,
+  isChargilyCheckoutSuccessReturn,
   isChargilyPaymentFlowActive,
   isFunnelOrderCompleteRecorded,
   restorePendingPurchaseFromBackup,
@@ -94,6 +96,7 @@ const Checkout = () => {
   };
 
   const paymentStatus = searchParams.get("payment");
+  const chargilyCheckoutId = searchParams.get("checkout_id");
 
   React.useEffect(() => {
     setIsClient(true);
@@ -103,7 +106,11 @@ const Checkout = () => {
     async (source: "payment_success_return" | "go_back_to_store_click") => {
       if (purchaseCompletedRef.current) return;
       restorePendingPurchaseFromBackup();
-      if (!hasChargilyPaymentPending() && !isChargilyPaymentFlowActive()) {
+      const hasReturnProof =
+        isChargilyCheckoutSuccessReturn(chargilyCheckoutId) ||
+        hasChargilyPaymentPending() ||
+        isChargilyPaymentFlowActive();
+      if (!hasReturnProof) {
         return;
       }
 
@@ -115,6 +122,7 @@ const Checkout = () => {
           dispatch,
           userId,
           source,
+          chargilyCheckoutId,
           totalPriceFallback: totalPrice,
           cartLineItemsFallback: cartItems.length,
           itemsQtyTotalFallback: itemsQtyTotal,
@@ -138,7 +146,15 @@ const Checkout = () => {
         setConfirmingPaymentReturn(false);
       }
     },
-    [cartItems.length, dispatch, itemsQtyTotal, router, totalPrice, userId]
+    [
+      cartItems.length,
+      chargilyCheckoutId,
+      dispatch,
+      itemsQtyTotal,
+      router,
+      totalPrice,
+      userId,
+    ]
   );
 
   React.useEffect(() => {
@@ -147,15 +163,32 @@ const Checkout = () => {
       setShowPaymentSuccessConfirm(false);
       return;
     }
+
     restorePendingPurchaseFromBackup();
-    const canConfirm =
-      !isFunnelOrderCompleteRecorded() &&
-      (hasChargilyPaymentPending() || isChargilyPaymentFlowActive());
-    setShowPaymentSuccessConfirm(canConfirm);
-    if (canConfirm) {
-      void runPaymentSuccessFinalize("payment_success_return");
-    }
-  }, [isClient, paymentStatus, runPaymentSuccessFinalize]);
+
+    const hasReturnProof =
+      isChargilyCheckoutSuccessReturn(chargilyCheckoutId) ||
+      hasChargilyPaymentPending() ||
+      isChargilyPaymentFlowActive();
+    const canFinalize = !isFunnelOrderCompleteRecorded() && hasReturnProof;
+    setShowPaymentSuccessConfirm(hasReturnProof);
+
+    void clearStorefrontCart(dispatch, userId).then(() => {
+      if (canFinalize) {
+        void runPaymentSuccessFinalize("payment_success_return");
+      } else if (hasReturnProof) {
+        router.replace("/checkout", { scroll: false });
+      }
+    });
+  }, [
+    chargilyCheckoutId,
+    dispatch,
+    isClient,
+    paymentStatus,
+    router,
+    runPaymentSuccessFinalize,
+    userId,
+  ]);
 
   const paymentBanner = useMemo(() => {
     if (paymentStatus === "success") {
@@ -353,8 +386,6 @@ const Checkout = () => {
 
     setIsSubmitting(true);
     const perfStart = Date.now();
-    // Open tab synchronously (still inside the submit click) so browsers do not block popups after await.
-    const paymentTab = window.open("about:blank", "_blank", "noopener,noreferrer");
 
     try {
       const response = await fetch("/api/payments/chargily/checkout", {
@@ -428,43 +459,16 @@ const Checkout = () => {
       });
       await flushProductAnalyticsNow();
 
-      const checkoutUrl = data.checkoutUrl;
-      const popupUsable = paymentTab != null && !paymentTab.closed;
-
-      if (popupUsable) {
-        try {
-          paymentTab.location.href = checkoutUrl;
-          setShowPaymentPopup(true);
-          setIsSubmitting(false);
-          toast.success("Chargily opened in a new tab. Complete your payment process.");
-          return;
-        } catch {
-          try {
-            paymentTab.close();
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-
       trackProductAnalytics("pa_checkout_step", {
         step: "payment_redirect",
-        status: "same_tab_fallback",
+        status: "same_tab",
         provider: "chargily",
         payment_method: "chargily",
-        failure_code: popupUsable ? "popup_nav_failed" : "popup_blocked",
       });
       await flushProductAnalyticsNow();
       toast.info("Redirecting to Chargily to complete your payment…");
-      window.location.assign(checkoutUrl);
+      window.location.assign(data.checkoutUrl);
     } catch (error) {
-      if (paymentTab != null && !paymentTab.closed) {
-        try {
-          paymentTab.close();
-        } catch {
-          /* ignore */
-        }
-      }
       const message =
         error instanceof Error
           ? error.message

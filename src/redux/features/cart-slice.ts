@@ -1,3 +1,4 @@
+import { releaseCartClearedAfterPayment } from "@/lib/storefront-cart-storage";
 import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../store";
 
@@ -74,6 +75,7 @@ export const cart = createSlice({
   initialState,
   reducers: {
     addItemToCart: (state, action: PayloadAction<CartItem>) => {
+      releaseCartClearedAfterPayment();
       const normalizedItem = normalizeCartItem(action.payload);
       if (!normalizedItem) return;
 

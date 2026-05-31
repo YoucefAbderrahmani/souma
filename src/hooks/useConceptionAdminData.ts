@@ -507,6 +507,9 @@ export function useConceptionAdminData(
         window.localStorage.removeItem("vitrina_pending_inventory_purchase_backup");
         window.sessionStorage.removeItem("vitrina_chargily_payment_snapshot");
         window.localStorage.removeItem("vitrina_chargily_payment_snapshot_backup");
+        window.localStorage.removeItem("vitrina_chargily_payment_flow_active_backup");
+        window.sessionStorage.removeItem("vitrina_cart_cleared_after_payment");
+        window.localStorage.removeItem("vitrina_cart_cleared_after_payment");
       } catch {
         /* ignore */
       }
