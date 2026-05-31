@@ -20,19 +20,32 @@ export const FUNNEL_PAGE_EVENTS = {
  * Counts page visits / step events in a time window (total occurrences, not distinct sessions).
  */
 export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCounts> {
-  const timeFilter =
+  const rowTimeFilter =
     until ?
-      sql`created_at >= ${since} AND created_at < ${until}`
-    : sql`created_at >= ${since}`;
+      sql`sales_micro_event.created_at >= ${since} AND sales_micro_event.created_at < ${until}`
+    : sql`sales_micro_event.created_at >= ${since}`;
+  const chkTimeFilter =
+    until ?
+      sql`chk.created_at >= ${since} AND chk.created_at < ${until}`
+    : sql`chk.created_at >= ${since}`;
 
   const res = await db.execute(sql`
     SELECT
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.productPage})::int AS n_product,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.cartPage})::int AS n_cart,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage})::int AS n_checkout_path,
-      COUNT(*) FILTER (WHERE event_name = ${STORE_EVENT.purchase})::int AS n_final
+      COUNT(*) FILTER (
+        WHERE event_name = ${STORE_EVENT.purchase}
+          AND EXISTS (
+            SELECT 1
+            FROM sales_micro_event AS chk
+            WHERE chk.session_key = sales_micro_event.session_key
+              AND chk.event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage}
+              AND ${chkTimeFilter}
+          )
+      )::int AS n_final
     FROM sales_micro_event
-    WHERE ${timeFilter}
+    WHERE ${rowTimeFilter}
   `);
 
   const row = res.rows[0] as

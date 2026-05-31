@@ -182,7 +182,7 @@ function buildFunnelSteps(f: {
   nCheckoutPath: number;
   nFinal: number;
 }): ConceptionFunnelStep[] {
-  const base = f.nProduct;
+  const entry = f.nProduct;
   const steps: { title: string; n: number }[] = [
     { title: "Product page", n: f.nProduct },
     { title: "Add to cart", n: f.nCart },
@@ -192,17 +192,38 @@ function buildFunnelSteps(f: {
 
   return steps.map((s, i) => {
     const prevN = i === 0 ? s.n : steps[i - 1]!.n;
-    const fromPrev = prevN > 0 ? (100 * s.n) / prevN : 0;
-    const overall = base > 0 ? (100 * s.n) / base : 0;
-    const abandon = i === 0 ? null : prevN > 0 ? (100 * (prevN - s.n)) / prevN : null;
+    const shareOfProduct = entry > 0 ? Math.min(100, (100 * s.n) / entry) : 0;
+    const barPct = i === 0 ? (entry > 0 ? 100 : 0) : shareOfProduct;
+
+    let fromPrevLabel: string;
+    if (i === 0) {
+      fromPrevLabel = "Baseline";
+    } else if (prevN === 0) {
+      fromPrevLabel = s.n === 0 ? "Prior step: 0 visits" : "Prior step: 0 visits";
+    } else if (s.n > prevN) {
+      fromPrevLabel = "More visits than prior step";
+    } else {
+      fromPrevLabel = `${fmtPct((100 * s.n) / prevN)} continued from prior step`;
+    }
+
+    const overallLabel =
+      i === 0 ? "100.0% baseline" : (
+        entry > 0 ? `${fmtPct(shareOfProduct)} of product visits` : "—"
+      );
+
+    const abandonLabel =
+      i > 0 && prevN > 0 && s.n < prevN ?
+        `${fmtPct((100 * (prevN - s.n)) / prevN)} drop-off from prior step`
+      : null;
+
     return {
       title: s.title,
       count: s.n,
       countLabel: fmtInt(s.n),
-      fromPrevLabel: i === 0 ? "100.0% of previous" : `${fmtPct(fromPrev)} of previous`,
-      overallLabel: `${fmtPct(overall)}`,
-      abandonLabel: abandon === null ? null : `${fmtPct(abandon)} abandonment`,
-      barPct: Math.min(100, overall),
+      fromPrevLabel,
+      overallLabel,
+      abandonLabel,
+      barPct,
     };
   });
 }
@@ -238,7 +259,7 @@ function buildFriction(f: {
       });
     }
   }
-  if (f.nCheckoutPath > 0) {
+  if (f.nCheckoutPath > 0 && f.nFinal <= f.nCheckoutPath) {
     const drop = 100 * (1 - f.nFinal / f.nCheckoutPath);
     if (drop >= 15) {
       items.push({

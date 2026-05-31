@@ -235,9 +235,9 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
           icon={BarChart2}
         />
         <p className="mt-2 text-custom-sm text-dark-4">
-          Page-visit counts for the last {liveHours} hours — each time you land on the product, cart,
-          or checkout page the matching step increases (any navigation path). &quot;Order completed&quot;
-          counts successful payments (
+          Page-visit counts for the last {liveHours} hours. Percentages are capped at 100% and
+          compare to product visits or the prior step (never above 100%). Orders only count after a
+          checkout visit in the same session (
           <code className="rounded bg-gray-1 px-1">?payment=success</code>).
         </p>
         <div className="mt-4 space-y-4">
