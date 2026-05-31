@@ -1,7 +1,5 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
-import { STORE_EVENT } from "@/server/conception/event-contract";
-
 export type FunnelCounts = {
   nProduct: number;
   nCart: number;
@@ -14,6 +12,7 @@ export const FUNNEL_PAGE_EVENTS = {
   productPage: "pa_funnel_product_page",
   cartPage: "pa_funnel_cart_page",
   checkoutPage: "pa_funnel_checkout_page",
+  orderComplete: "pa_funnel_order_complete",
 } as const;
 
 /**
@@ -24,26 +23,12 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
     until ?
       sql`sales_micro_event.created_at >= ${since} AND sales_micro_event.created_at < ${until}`
     : sql`sales_micro_event.created_at >= ${since}`;
-  const chkTimeFilter =
-    until ?
-      sql`chk.created_at >= ${since} AND chk.created_at < ${until}`
-    : sql`chk.created_at >= ${since}`;
-
   const res = await db.execute(sql`
     SELECT
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.productPage})::int AS n_product,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.cartPage})::int AS n_cart,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage})::int AS n_checkout_path,
-      COUNT(*) FILTER (
-        WHERE event_name = ${STORE_EVENT.purchase}
-          AND EXISTS (
-            SELECT 1
-            FROM sales_micro_event AS chk
-            WHERE chk.session_key = sales_micro_event.session_key
-              AND chk.event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage}
-              AND ${chkTimeFilter}
-          )
-      )::int AS n_final
+      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.orderComplete})::int AS n_final
     FROM sales_micro_event
     WHERE ${rowTimeFilter}
   `);

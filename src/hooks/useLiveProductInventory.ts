@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const DEFAULT_POLL_MS = 15_000;
 const PENDING_PURCHASE_STORAGE_KEY = "vitrina_pending_inventory_purchase";
+const FUNNEL_ORDER_COMPLETE_RECORDED_KEY = "vitrina_funnel_order_complete_recorded";
 
 /** Dev only: set localStorage `vitrina:debugForceInventoryZero` to `"1"` so `/api/catalog/inventory` returns 0 (out-of-stock UI). */
 export const DEBUG_FORCE_INVENTORY_ZERO_STORAGE_KEY = "vitrina:debugForceInventoryZero";
@@ -25,6 +26,39 @@ export function savePendingInventoryPurchase(
     }));
   if (payload.length === 0) return;
   window.sessionStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(payload));
+  try {
+    window.sessionStorage.removeItem(FUNNEL_ORDER_COMPLETE_RECORDED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** True after the user clicked Pay and Chargily checkout was started (pending cart snapshot). */
+export function hasChargilyPaymentPending(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(PENDING_PURCHASE_STORAGE_KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
+export function isFunnelOrderCompleteRecorded(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(FUNNEL_ORDER_COMPLETE_RECORDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markFunnelOrderCompleteRecorded(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(FUNNEL_ORDER_COMPLETE_RECORDED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
 export function readPendingPurchaseLineCount(): number {
@@ -39,17 +73,17 @@ export function readPendingPurchaseLineCount(): number {
   }
 }
 
-export async function commitPendingInventoryPurchase(): Promise<void> {
-  if (typeof window === "undefined") return;
+export async function commitPendingInventoryPurchase(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
   const raw = window.sessionStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
-  if (!raw) return;
+  if (!raw) return false;
 
   let items: Array<{ productId: number; quantity: number; title?: string }>;
   try {
     items = JSON.parse(raw) as Array<{ productId: number; quantity: number; title?: string }>;
   } catch {
     window.sessionStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
-    return;
+    return false;
   }
 
   const response = await fetch("/api/catalog/inventory/purchase", {
@@ -61,7 +95,9 @@ export async function commitPendingInventoryPurchase(): Promise<void> {
 
   if (response.ok) {
     window.sessionStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
+    return true;
   }
+  return false;
 }
 
 export function useLiveProductInventory(

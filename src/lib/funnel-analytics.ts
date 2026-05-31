@@ -5,6 +5,7 @@ export const FUNNEL_ANALYTICS_EVENTS = new Set<string>([
   "pa_funnel_product_page",
   "pa_funnel_cart_page",
   "pa_funnel_checkout_page",
+  "pa_funnel_order_complete",
   PA_FUNNEL.productView,
   "pa_product_ident",
   PA_FUNNEL.addToCart,

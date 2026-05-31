@@ -16,13 +16,16 @@ import Billing from "./Billing";
 import { useAppSelector } from "@/redux/store";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useDispatch, useSelector } from "react-redux";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
 import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
 import { AppDispatch } from "@/redux/store";
 import {
   commitPendingInventoryPurchase,
+  hasChargilyPaymentPending,
+  isFunnelOrderCompleteRecorded,
+  markFunnelOrderCompleteRecorded,
   readPendingPurchaseLineCount,
   savePendingInventoryPurchase,
 } from "@/hooks/useLiveProductInventory";
@@ -55,6 +58,7 @@ const Checkout = () => {
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { session, isPending } = useSession();
   const [errorMessage, setErrorMessage] = useState("");
@@ -199,16 +203,32 @@ const Checkout = () => {
 
   React.useEffect(() => {
     if (paymentStatus !== "success" || purchaseCompletedRef.current) return;
+    if (isFunnelOrderCompleteRecorded()) return;
 
     let cancelled = false;
     void (async () => {
+      if (!hasChargilyPaymentPending()) {
+        return;
+      }
+
       const pendingLines = readPendingPurchaseLineCount();
-      await commitPendingInventoryPurchase();
-      if (cancelled) return;
+      const committed = await commitPendingInventoryPurchase();
+      if (cancelled || !committed) return;
 
       purchaseCompletedRef.current = true;
+      markFunnelOrderCompleteRecorded();
       sequenceEndPurchase();
       const lineItems = Math.max(cartItems.length, pendingLines, 1);
+      trackProductAnalytics("pa_funnel_order_complete", {
+        payment_finalized: true,
+        provider: "chargily",
+        source: "chargily_success_return",
+        total_dzd: totalPrice,
+        line_items: lineItems,
+        order_value: totalPrice,
+        currency: "DZD",
+        items_qty_total: itemsQtyTotal > 0 ? itemsQtyTotal : lineItems,
+      });
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
         line_items: lineItems,
@@ -217,30 +237,27 @@ const Checkout = () => {
         items_qty_total: itemsQtyTotal > 0 ? itemsQtyTotal : lineItems,
         provider: "chargily",
         status: "success",
+        payment_finalized: true,
       });
       trackProductAnalytics("pa_checkout_step", {
         step: "payment_return",
         status: "success",
         provider: "chargily",
         payment_method: "chargily",
+        payment_finalized: true,
       });
       void flushProductAnalyticsNow();
       if (cartItems.length > 0) {
         dispatch(removeAllItemsFromCart());
       }
       toast.success("Payment confirmed. Your cart has been cleared.");
+      router.replace("/checkout", { scroll: false });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [cartItems.length, dispatch, itemsQtyTotal, paymentStatus, totalPrice]);
-
-  React.useEffect(() => {
-    if (paymentStatus === "success") {
-      purchaseCompletedRef.current = true;
-    }
-  }, [paymentStatus]);
+  }, [cartItems.length, dispatch, itemsQtyTotal, paymentStatus, router, totalPrice]);
 
   React.useEffect(() => {
     if (isPending) return;

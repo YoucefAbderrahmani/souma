@@ -271,8 +271,9 @@ function ConversionFunnelContent({
         <p className="mt-2 text-custom-sm text-dark-4">
           Page-visit counts for the last {liveHours} hours. Percentages are capped at 100% and
           compare to product visits or the prior step (never above 100%). Orders only count after a
-          checkout visit in the same session (
-          <code className="rounded bg-gray-1 px-1">?payment=success</code>).
+          after Chargily payment is finalized (
+          <code className="rounded bg-gray-1 px-1">Pay with Chargily</code>
+          → complete payment → return with success).
         </p>
         <div className="mt-4 space-y-4">
           {steps.length ?

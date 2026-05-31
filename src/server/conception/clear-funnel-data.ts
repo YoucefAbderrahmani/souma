@@ -1,7 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
-import { STORE_EVENT } from "@/server/conception/event-contract";
 import { FUNNEL_PAGE_EVENTS } from "@/server/conception/funnel-metrics";
 
 /** Event names that feed the Conversion Funnel tab counts. */
@@ -9,7 +8,7 @@ export const FUNNEL_CLEAR_EVENT_NAMES = [
   FUNNEL_PAGE_EVENTS.productPage,
   FUNNEL_PAGE_EVENTS.cartPage,
   FUNNEL_PAGE_EVENTS.checkoutPage,
-  STORE_EVENT.purchase,
+  FUNNEL_PAGE_EVENTS.orderComplete,
 ] as const;
 
 export async function clearConversionFunnelData(): Promise<{

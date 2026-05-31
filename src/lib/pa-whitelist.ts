@@ -21,6 +21,7 @@ export const PA_EVENT_NAMES = [
   "pa_funnel_product_page",
   "pa_funnel_cart_page",
   "pa_funnel_checkout_page",
+  "pa_funnel_order_complete",
   "pa_add_to_cart",
   "pa_buy_now",
   "pa_remove_from_cart",
