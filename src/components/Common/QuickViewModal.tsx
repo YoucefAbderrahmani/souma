@@ -9,7 +9,7 @@ import Image from "next/image";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { resetQuickView } from "@/redux/features/quickView-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
-import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { trackFunnelAddToCartClick } from "@/lib/funnel-add-to-cart";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
 import { ProductPriceAdjacentMeta } from "@/components/Common/ProductPriceAdjacentMeta";
 import { ProductPriceRowWithInlineStock } from "@/components/Common/ProductPriceRowWithInlineStock";
@@ -79,7 +79,7 @@ const QuickViewModal = () => {
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItems.reduce((s, x) => s + x.quantity, 0) + quantity;
     const nextCartTotal = cartTotal + unitPrice * quantity;
-    trackProductAnalytics("pa_add_to_cart", {
+    trackFunnelAddToCartClick({
       product_id: product.id,
       from: "quick_view",
       quantity,

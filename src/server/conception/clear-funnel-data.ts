@@ -6,7 +6,7 @@ import { FUNNEL_PAGE_EVENTS } from "@/server/conception/funnel-metrics";
 /** Event names that feed the Conversion Funnel tab counts. */
 export const FUNNEL_CLEAR_EVENT_NAMES = [
   FUNNEL_PAGE_EVENTS.productPage,
-  FUNNEL_PAGE_EVENTS.cartPage,
+  FUNNEL_PAGE_EVENTS.addToCartClick,
   FUNNEL_PAGE_EVENTS.checkoutPage,
   FUNNEL_PAGE_EVENTS.orderComplete,
 ] as const;

@@ -7,10 +7,10 @@ export type FunnelCounts = {
   nFinal: number;
 };
 
-/** Funnel page-visit events (one row per landing; not deduped by session). */
+/** Funnel telemetry event names. */
 export const FUNNEL_PAGE_EVENTS = {
   productPage: "pa_funnel_product_page",
-  cartPage: "pa_funnel_cart_page",
+  addToCartClick: "pa_funnel_add_to_cart",
   checkoutPage: "pa_funnel_checkout_page",
   orderComplete: "pa_funnel_order_complete",
 } as const;
@@ -26,7 +26,7 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
   const res = await db.execute(sql`
     SELECT
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.productPage})::int AS n_product,
-      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.cartPage})::int AS n_cart,
+      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.addToCartClick})::int AS n_cart,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage})::int AS n_checkout_path,
       COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.orderComplete})::int AS n_final
     FROM sales_micro_event

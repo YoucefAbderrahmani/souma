@@ -3,7 +3,7 @@ import { PA_FUNNEL } from "@/lib/pa-whitelist";
 /** Events that update the Seller Helper conversion funnel — flushed immediately after enqueue. */
 export const FUNNEL_ANALYTICS_EVENTS = new Set<string>([
   "pa_funnel_product_page",
-  "pa_funnel_cart_page",
+  "pa_funnel_add_to_cart",
   "pa_funnel_checkout_page",
   "pa_funnel_order_complete",
   PA_FUNNEL.productView,

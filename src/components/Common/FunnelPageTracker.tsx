@@ -10,7 +10,6 @@ import {
 
 function resolveFunnelPageEvent(pathname: string): string | null {
   if (pathname.includes("shop-details")) return "pa_funnel_product_page";
-  if (pathname === "/cart" || pathname.endsWith("/cart")) return "pa_funnel_cart_page";
   if (pathname.includes("checkout")) return "pa_funnel_checkout_page";
   return null;
 }

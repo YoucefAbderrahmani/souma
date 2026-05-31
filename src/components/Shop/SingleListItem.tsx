@@ -10,7 +10,7 @@ import Link from "next/link";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
-import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { trackFunnelAddToCartClick } from "@/lib/funnel-add-to-cart";
 import { useAppSelector } from "@/redux/store";
 import { productDetailsHref } from "@/lib/product-page-link";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
@@ -51,7 +51,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItems.reduce((s, x) => s + x.quantity, 0) + 1;
     const nextCartTotal = cartTotal + unitPrice;
-    trackProductAnalytics("pa_add_to_cart", {
+    trackFunnelAddToCartClick({
       product_id: item.id,
       from: "shop_list",
       quantity: 1,

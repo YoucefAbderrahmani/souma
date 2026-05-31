@@ -19,7 +19,7 @@ export const PA_EVENT_NAMES = [
   "pa_pointer_hover",
   "pa_pointer_click",
   "pa_funnel_product_page",
-  "pa_funnel_cart_page",
+  "pa_funnel_add_to_cart",
   "pa_funnel_checkout_page",
   "pa_funnel_order_complete",
   "pa_add_to_cart",
