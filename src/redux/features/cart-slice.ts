@@ -53,8 +53,16 @@ function normalizeCartItem(input: Partial<CartItem> | null | undefined): CartIte
   };
 }
 
-function cartVariantKey(item: Pick<CartItem, "selectedColor" | "selectedSize">): string {
+export function cartVariantKey(item: Pick<CartItem, "selectedColor" | "selectedSize">): string {
   return `${item.selectedColor ?? ""}|${item.selectedSize ?? ""}`;
+}
+
+/** Stable unique React key per cart line (product id + variant + position). */
+export function cartLineKey(
+  item: Pick<CartItem, "id" | "selectedColor" | "selectedSize">,
+  index: number
+): string {
+  return `${item.id}-${cartVariantKey(item)}-${index}`;
 }
 
 const initialState: InitialState = {
@@ -113,9 +121,19 @@ export const cart = createSlice({
       state.items = [];
     },
     setCartItems: (state, action: PayloadAction<CartItem[]>) => {
-      state.items = action.payload
-        .map((item) => normalizeCartItem(item))
-        .filter((item): item is CartItem => Boolean(item));
+      const merged = new Map<string, CartItem>();
+      for (const raw of action.payload) {
+        const item = normalizeCartItem(raw);
+        if (!item) continue;
+        const mergeKey = `${item.id}|${cartVariantKey(item)}`;
+        const existing = merged.get(mergeKey);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          merged.set(mergeKey, { ...item });
+        }
+      }
+      state.items = Array.from(merged.values());
     },
   },
 });

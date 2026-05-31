@@ -7,7 +7,7 @@ import SingleItem from "./SingleItem";
 import Breadcrumb from "../Common/Breadcrumb";
 import Link from "next/link";
 import { useDispatch } from "react-redux";
-import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
+import { cartLineKey, removeAllItemsFromCart } from "@/redux/features/cart-slice";
 
 const Cart = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -62,8 +62,8 @@ const Cart = () => {
 
                   {/* <!-- cart item --> */}
                   {cartItems.length > 0 &&
-                    cartItems.map((item) => (
-                      <SingleItem item={item} key={item.id} />
+                    cartItems.map((item, index) => (
+                      <SingleItem item={item} key={cartLineKey(item, index)} />
                     ))}
                 </div>
               </div>

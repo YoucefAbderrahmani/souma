@@ -14,7 +14,7 @@ import PaymentMethod from "./PaymentMethod";
 import Coupon from "./Coupon";
 import Billing from "./Billing";
 import { useAppSelector } from "@/redux/store";
-import { selectTotalPrice } from "@/redux/features/cart-slice";
+import { cartLineKey, selectTotalPrice } from "@/redux/features/cart-slice";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -525,9 +525,9 @@ const Checkout = () => {
 
                     {/* <!-- product item --> */}
                     {cartItems.length > 0 ? (
-                      cartItems.map((item) => (
+                      cartItems.map((item, index) => (
                         <div
-                          key={item.id}
+                          key={cartLineKey(item, index)}
                           className="flex items-center justify-between py-5 border-b border-gray-3"
                         >
                           <div>

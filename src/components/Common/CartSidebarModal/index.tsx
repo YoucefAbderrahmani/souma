@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import {
+  cartLineKey,
   removeItemFromCart,
   selectTotalPrice,
 } from "@/redux/features/cart-slice";
@@ -84,9 +85,9 @@ const CartSidebarModal = () => {
             <div className="flex flex-col gap-6">
               {/* <!-- cart item --> */}
               {cartItems.length > 0 ? (
-                cartItems.map((item) => (
+                cartItems.map((item, index) => (
                   <SingleItem
-                    key={item.id}
+                    key={cartLineKey(item, index)}
                     item={item}
                     removeItemFromCart={removeItemFromCart}
                   />

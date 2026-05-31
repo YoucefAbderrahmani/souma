@@ -1,4 +1,4 @@
-import { selectTotalPrice } from "@/redux/features/cart-slice";
+import { cartLineKey, selectTotalPrice } from "@/redux/features/cart-slice";
 import { useAppSelector } from "@/redux/store";
 import React from "react";
 import { useSelector } from "react-redux";
@@ -28,8 +28,11 @@ const OrderSummary = () => {
           </div>
 
           {/* <!-- product item --> */}
-          {cartItems.map((item, key) => (
-            <div key={key} className="flex items-center justify-between py-5 border-b border-gray-3">
+          {cartItems.map((item, index) => (
+            <div
+              key={cartLineKey(item, index)}
+              className="flex items-center justify-between py-5 border-b border-gray-3"
+            >
               <div>
                 <p className="text-dark">{item.title}</p>
               </div>
