@@ -105,6 +105,7 @@ export function useProductAnalyticsTracking({
 
   useEffect(() => {
     if (typeof window === "undefined" || globalSent.current) return;
+    if (!Number.isFinite(productId) || productId <= 0) return;
     globalSent.current = true;
     const ua = navigator.userAgent || "";
     const { source, utm, fbclid, igshid } = parseTrafficSource();
@@ -135,6 +136,7 @@ export function useProductAnalyticsTracking({
       page_path: window.location.pathname,
       page_type: "product_detail",
     });
+    void flushProductAnalyticsNow();
   }, [productId, detailPrice, jomlaPrice, category]);
 
   useEffect(() => {

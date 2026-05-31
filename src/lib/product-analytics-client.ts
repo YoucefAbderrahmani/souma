@@ -5,6 +5,7 @@ import {
   SEQUENCE_SESSION_HEADER,
 } from "@/lib/browser-sequence-session";
 import { publicApiUrl } from "@/lib/public-api-url";
+import { isFunnelAnalyticsEvent } from "@/lib/funnel-analytics";
 import { isPaEventName, PA_EVENT_NAMES } from "@/lib/pa-whitelist";
 
 const API = () => publicApiUrl("/api/sales-analyst/events");
@@ -26,7 +27,7 @@ let capturedReferrer: string | null = null;
 let unloadHooked = false;
 
 /** Remote-disabled `pa_*` names (from GET /api/product-analytics/tracking-config). Empty = all allowed. */
-let clientDisabledPa: Set<string> | null = null;
+let clientDisabledPa: Set<string> = new Set();
 let clientConfigLoadStarted = false;
 
 let refetchInterval: number | null = null;
@@ -112,11 +113,11 @@ export function trackProductAnalytics(name: string, payload?: Record<string, unk
   const n = typeof name === "string" ? name.trim() : "";
   if (!n.startsWith("pa_") || !isPaEventName(n)) return;
   ensureTrackingConfigLoaded();
-  if (clientDisabledPa?.has(n)) return;
+  if (clientDisabledPa.has(n)) return;
   ensureUnloadHook();
   ensureReferrerCaptured();
   queue.push({ name: n, payload, clientTs: Date.now() });
-  if (queue.length >= MAX_BATCH) {
+  if (isFunnelAnalyticsEvent(n) || queue.length >= MAX_BATCH) {
     void flushProductAnalyticsNow();
     return;
   }
@@ -166,6 +167,40 @@ export async function refreshProductAnalyticsTrackingConfig(): Promise<void> {
   }
 }
 
+async function postAnalyticsBatch(toSend: Queued[]): Promise<boolean> {
+  const sid = getOrCreateBrowserSequenceSessionId();
+  if (!sid || toSend.length === 0) return false;
+  try {
+    const res = await fetch(API(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        [SEQUENCE_SESSION_HEADER]: sid,
+      },
+      body: buildBody(toSend),
+      credentials: "include",
+      keepalive: true,
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      inserted?: number;
+      error?: string;
+    };
+    if (!res.ok) {
+      console.warn("[product-analytics] ingest failed", res.status, body.error ?? body);
+      return false;
+    }
+    if (body.ok === false) {
+      console.warn("[product-analytics] ingest rejected", body.error);
+      return false;
+    }
+    return (body.inserted ?? 0) > 0;
+  } catch (error) {
+    console.warn("[product-analytics] ingest error", error);
+    return false;
+  }
+}
+
 export async function flushProductAnalyticsNow(): Promise<void> {
   if (flushing || queue.length === 0) return;
   if (flushTimer) {
@@ -180,21 +215,17 @@ export async function flushProductAnalyticsNow(): Promise<void> {
     return;
   }
   try {
-    const sid = getOrCreateBrowserSequenceSessionId();
-    if (!sid) return;
-    await fetch(API(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        [SEQUENCE_SESSION_HEADER]: sid,
-      },
-      body: buildBody(toSend),
-      credentials: "include",
-      keepalive: true,
-    }).catch(() => {});
+    const ok = await postAnalyticsBatch(toSend);
+    if (!ok) {
+      queue.unshift(...toSend);
+    }
   } finally {
     flushing = false;
   }
+}
+
+if (typeof window !== "undefined") {
+  ensureTrackingConfigLoaded();
 }
 
 export function flushProductAnalyticsBeacon(): boolean {

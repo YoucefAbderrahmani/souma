@@ -10,9 +10,8 @@ export type FunnelCounts = {
 };
 
 /**
- * Per-session funnel flags (7d window by default).
- * Steps are independent counts (not nested joins) so listing → cart → checkout is tracked
- * even when the user never opened a product detail page.
+ * Per-session funnel flags for a time window.
+ * Steps count distinct sessions per milestone (not nested joins).
  */
 export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCounts> {
   const res =
@@ -21,8 +20,13 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
         WITH flags AS (
           SELECT
             session_key,
-            BOOL_OR(event_name = ${STORE_EVENT.productView}) AS has_product,
-            BOOL_OR(event_name = ${STORE_EVENT.addToCart}) AS has_cart,
+            BOOL_OR(
+              event_name IN (${STORE_EVENT.productView}, 'pa_product_ident')
+              OR lower(page_path) LIKE '%shop-details%'
+            ) AS has_product,
+            BOOL_OR(
+              event_name IN (${STORE_EVENT.addToCart}, 'pa_buy_now')
+            ) AS has_cart,
             BOOL_OR(
               event_name = ${STORE_EVENT.beginCheckout}
               OR event_name = 'pa_checkout_step'
@@ -46,8 +50,13 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
         WITH flags AS (
           SELECT
             session_key,
-            BOOL_OR(event_name = ${STORE_EVENT.productView}) AS has_product,
-            BOOL_OR(event_name = ${STORE_EVENT.addToCart}) AS has_cart,
+            BOOL_OR(
+              event_name IN (${STORE_EVENT.productView}, 'pa_product_ident')
+              OR lower(page_path) LIKE '%shop-details%'
+            ) AS has_product,
+            BOOL_OR(
+              event_name IN (${STORE_EVENT.addToCart}, 'pa_buy_now')
+            ) AS has_cart,
             BOOL_OR(
               event_name = ${STORE_EVENT.beginCheckout}
               OR event_name = 'pa_checkout_step'

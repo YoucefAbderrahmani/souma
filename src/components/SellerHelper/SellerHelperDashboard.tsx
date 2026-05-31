@@ -210,6 +210,7 @@ function DashboardMainContent({
 }
 
 function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto | null }) {
+  const liveHours = overview?.funnelLiveHours ?? 2;
   const steps = (overview?.funnelSteps ?? []).map((step) => ({
     title: step.title,
     countLabel: step.countLabel,
@@ -233,6 +234,11 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
           title="Conversion Funnel"
           icon={BarChart2}
         />
+        <p className="mt-2 text-custom-sm text-dark-4">
+          Live counts from the last {liveHours} hours (distinct sessions). Refresh after testing the
+          storefront; &quot;Order completed&quot; requires a successful Chargily return (
+          <code className="rounded bg-gray-1 px-1">?payment=success</code>), not the Buy now button alone.
+        </p>
         <div className="mt-4 space-y-4">
           {steps.length ?
             steps.map((step, index) => (

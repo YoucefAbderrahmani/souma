@@ -19,6 +19,7 @@ export const PA_EVENT_NAMES = [
   "pa_pointer_hover",
   "pa_pointer_click",
   "pa_add_to_cart",
+  "pa_buy_now",
   "pa_remove_from_cart",
   "pa_begin_checkout",
   "pa_checkout_step",
@@ -44,6 +45,7 @@ export function isPaEventName(name: string): name is PaEventName {
 export const PA_FUNNEL = {
   productView: "pa_product_view",
   addToCart: "pa_add_to_cart",
+  buyNow: "pa_buy_now",
   beginCheckout: "pa_begin_checkout",
   checkoutStep: "pa_checkout_step",
   paymentFailed: "pa_payment_failed",

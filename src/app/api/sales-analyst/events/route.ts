@@ -5,6 +5,7 @@ import {
 } from "@/server/db-degraded";
 import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 import { insertSalesMicroEvents } from "@/server/sales-analyst/micro-events-db";
+import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { isPaEventName } from "@/lib/pa-whitelist";
 import { getDisabledPaEventNames } from "@/server/product-analytics/tracking-config";
 
@@ -120,8 +121,24 @@ export async function POST(req: NextRequest) {
     await insertSalesMicroEvents(rows);
     return NextResponse.json({ ok: true, inserted: rows.length });
   } catch (e) {
-    if (isNeonDataTransferQuotaError(e)) noteDatabaseOutage();
-    return NextResponse.json({ ok: true, inserted: 0 });
+    if (isNeonDataTransferQuotaError(e)) {
+      noteDatabaseOutage();
+      return NextResponse.json(
+        { ok: false, error: "database_quota", inserted: 0 },
+        { status: 503 }
+      );
+    }
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[sales-analyst/events]", e);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "database_error",
+        message: migrationHintFromDbMessage(message) ?? message,
+        inserted: 0,
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -15,6 +15,21 @@ async function countDistinctSessions(eventName: string, since: Date): Promise<nu
   return row?.n ?? 0;
 }
 
+async function countDistinctCartSessions(since: Date): Promise<number> {
+  const [row] = await db
+    .select({
+      n: sql<number>`count(distinct ${salesMicroEventTable.sessionKey})::int`.as("n"),
+    })
+    .from(salesMicroEventTable)
+    .where(
+      and(
+        gte(salesMicroEventTable.createdAt, since),
+        sql`${salesMicroEventTable.eventName} IN (${PA_FUNNEL.addToCart}, ${PA_FUNNEL.buyNow})`
+      )
+    );
+  return row?.n ?? 0;
+}
+
 async function countDistinctCheckoutSessions(since: Date): Promise<number> {
   const [row] = await db
     .select({
@@ -57,7 +72,7 @@ export async function computeProductAnalyticsInsights(
 
   const [v, c, chk, p] = await Promise.all([
     countDistinctSessions(PA_FUNNEL.productView, since),
-    countDistinctSessions(PA_FUNNEL.addToCart, since),
+    countDistinctCartSessions(since),
     countDistinctCheckoutSessions(since),
     countDistinctSessions(PA_FUNNEL.purchase, since),
   ]);

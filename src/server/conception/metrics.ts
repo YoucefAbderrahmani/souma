@@ -485,12 +485,15 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
   const d14 = new Date(now - 14 * MS_DAY);
   const d24h = new Date(now - 24 * MS_DAY);
   const d15m = new Date(now - 15 * 60 * 1000);
+  const d2h = new Date(now - 2 * 60 * 60 * 1000);
+  const funnelLiveHours = 2;
   const mid = new Date(now - 7 * MS_DAY);
 
   const [
     sessions7d,
     events7d,
     funnel,
+    funnelLive,
     sessionsPrev7dWindow,
     active15m,
     traffic,
@@ -502,6 +505,7 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     distinctSessionsSince(d7),
     totalEventsSince(d7),
     funnelCounts(d7),
+    funnelCounts(d2h),
     distinctSessionsBetween(d14, mid),
     distinctSessionsSince(d15m),
     trafficHourlyNormalized(d24h),
@@ -589,9 +593,11 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     hasEventData,
     windowDays: 7,
     kpis,
-    funnelSteps: buildFunnelSteps(funnel),
+    funnelSteps: buildFunnelSteps(funnelLive),
+    funnelStepsLive: buildFunnelSteps(funnelLive),
+    funnelLiveHours,
     funnelSummary,
-    frictionItems: buildFriction(funnel),
+    frictionItems: buildFriction(funnelLive),
     topPages,
     devices,
     trafficHourlyNormalized: traffic,

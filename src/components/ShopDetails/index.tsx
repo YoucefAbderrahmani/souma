@@ -21,7 +21,7 @@ import { formatCartVariantTitle, resolveProductUnitDetailPrice } from "@/lib/pro
 import { sequenceVisitProduct } from "@/lib/sequence-client";
 import ReviewsTab from "./ReviewsTab";
 import { useProductAnalyticsTracking } from "@/hooks/useProductAnalyticsTracking";
-import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import { flushProductAnalyticsNow, trackProductAnalytics } from "@/lib/product-analytics-client";
 import { useSelector } from "react-redux";
 import type { Product } from "@/types/product";
 import { resolveTrackingProductId } from "@/lib/product-page-link";
@@ -458,6 +458,18 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItemsQty + quantity;
     const nextCartTotal = totalPrice + (jomlaPrice ?? detailPrice) * quantity;
+    trackProductAnalytics("pa_product_view", {
+      product_id: product.id,
+      page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
+      page_type: "product_detail",
+      source: "buy_now",
+    });
+    trackProductAnalytics("pa_buy_now", {
+      product_id: product.id,
+      from: "product_page",
+      quantity,
+      detail_price: detailPrice,
+    });
     trackProductAnalytics("pa_add_to_cart", {
       product_id: product.id,
       from: "product_page",
@@ -472,6 +484,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
       currency: "DZD",
       page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
     });
+    void flushProductAnalyticsNow();
     dispatch(
       addItemToCart({
         ...product,

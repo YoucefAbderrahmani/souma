@@ -27,6 +27,12 @@ export const SELLER_HELPER_PARAMETER_SPECS: SellerHelperParameterSpec[] = [
     usedByDashboard: ["Funnel: add to cart", "Friction: product -> cart", "Top pages conversion"],
   },
   {
+    event: "pa_buy_now",
+    legacyParameters: ["product_id", "from", "quantity"],
+    newParameters: ["detail_price"],
+    usedByDashboard: ["Funnel: add to cart", "Buy now on product page"],
+  },
+  {
     event: "pa_begin_checkout",
     legacyParameters: ["cart_line_items", "cart_total_dzd"],
     newParameters: ["items_qty_total", "currency", "checkout_entry"],
