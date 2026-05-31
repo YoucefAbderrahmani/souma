@@ -182,7 +182,7 @@ function buildFunnelSteps(f: {
   nCheckoutPath: number;
   nFinal: number;
 }): ConceptionFunnelStep[] {
-  const base = Math.max(1, f.nProduct);
+  const base = f.nProduct;
   const steps: { title: string; n: number }[] = [
     { title: "Product page", n: f.nProduct },
     { title: "Add to cart", n: f.nCart },
@@ -192,10 +192,9 @@ function buildFunnelSteps(f: {
 
   return steps.map((s, i) => {
     const prevN = i === 0 ? s.n : steps[i - 1]!.n;
-    const fromPrev = prevN > 0 ? Math.min(100, (100 * s.n) / prevN) : 0;
-    const overall = base > 0 ? Math.min(100, (100 * s.n) / base) : 0;
-    const abandon =
-      i === 0 ? null : prevN > 0 ? Math.min(100, (100 * (prevN - s.n)) / prevN) : null;
+    const fromPrev = prevN > 0 ? (100 * s.n) / prevN : 0;
+    const overall = base > 0 ? (100 * s.n) / base : 0;
+    const abandon = i === 0 ? null : prevN > 0 ? (100 * (prevN - s.n)) / prevN : null;
     return {
       title: s.title,
       count: s.n,

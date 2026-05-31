@@ -9,73 +9,31 @@ export type FunnelCounts = {
   nFinal: number;
 };
 
+/** Funnel page-visit events (one row per landing; not deduped by session). */
+export const FUNNEL_PAGE_EVENTS = {
+  productPage: "pa_funnel_product_page",
+  cartPage: "pa_funnel_cart_page",
+  checkoutPage: "pa_funnel_checkout_page",
+} as const;
+
 /**
- * Per-session funnel flags for a time window.
- * Step counts are nested (cart only if product, checkout only if cart, etc.) so step % stay ≤100%.
+ * Counts page visits / step events in a time window (total occurrences, not distinct sessions).
  */
 export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCounts> {
-  const res =
+  const timeFilter =
     until ?
-      await db.execute(sql`
-        WITH flags AS (
-          SELECT
-            session_key,
-            BOOL_OR(
-              event_name IN (${STORE_EVENT.productView}, 'pa_product_ident')
-              OR lower(page_path) LIKE '%shop-details%'
-            ) AS has_product,
-            BOOL_OR(
-              event_name IN (${STORE_EVENT.addToCart}, 'pa_buy_now')
-            ) AS has_cart,
-            BOOL_OR(
-              event_name = ${STORE_EVENT.beginCheckout}
-              OR event_name = 'pa_checkout_step'
-              OR event_name = 'pa_abandon_checkout'
-              OR event_name = 'pa_payment_failed'
-              OR lower(page_path) LIKE '%checkout%'
-            ) AS has_checkout,
-            BOOL_OR(event_name = ${STORE_EVENT.purchase}) AS has_purchase
-          FROM sales_micro_event
-          WHERE created_at >= ${since} AND created_at < ${until}
-          GROUP BY session_key
-        )
-        SELECT
-          COUNT(*) FILTER (WHERE has_product)::int AS n_product,
-          COUNT(*) FILTER (WHERE has_product AND has_cart)::int AS n_cart,
-          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout)::int AS n_checkout_path,
-          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout AND has_purchase)::int AS n_final
-        FROM flags
-      `)
-    : await db.execute(sql`
-        WITH flags AS (
-          SELECT
-            session_key,
-            BOOL_OR(
-              event_name IN (${STORE_EVENT.productView}, 'pa_product_ident')
-              OR lower(page_path) LIKE '%shop-details%'
-            ) AS has_product,
-            BOOL_OR(
-              event_name IN (${STORE_EVENT.addToCart}, 'pa_buy_now')
-            ) AS has_cart,
-            BOOL_OR(
-              event_name = ${STORE_EVENT.beginCheckout}
-              OR event_name = 'pa_checkout_step'
-              OR event_name = 'pa_abandon_checkout'
-              OR event_name = 'pa_payment_failed'
-              OR lower(page_path) LIKE '%checkout%'
-            ) AS has_checkout,
-            BOOL_OR(event_name = ${STORE_EVENT.purchase}) AS has_purchase
-          FROM sales_micro_event
-          WHERE created_at >= ${since}
-          GROUP BY session_key
-        )
-        SELECT
-          COUNT(*) FILTER (WHERE has_product)::int AS n_product,
-          COUNT(*) FILTER (WHERE has_product AND has_cart)::int AS n_cart,
-          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout)::int AS n_checkout_path,
-          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout AND has_purchase)::int AS n_final
-        FROM flags
-      `);
+      sql`created_at >= ${since} AND created_at < ${until}`
+    : sql`created_at >= ${since}`;
+
+  const res = await db.execute(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.productPage})::int AS n_product,
+      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.cartPage})::int AS n_cart,
+      COUNT(*) FILTER (WHERE event_name = ${FUNNEL_PAGE_EVENTS.checkoutPage})::int AS n_checkout_path,
+      COUNT(*) FILTER (WHERE event_name = ${STORE_EVENT.purchase})::int AS n_final
+    FROM sales_micro_event
+    WHERE ${timeFilter}
+  `);
 
   const row = res.rows[0] as
     | {

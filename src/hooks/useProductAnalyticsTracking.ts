@@ -104,33 +104,37 @@ export function useProductAnalyticsTracking({
   }, [productId, productTitle]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || globalSent.current) return;
+    if (typeof window === "undefined") return;
     if (!Number.isFinite(productId) || productId <= 0) return;
-    globalSent.current = true;
-    const ua = navigator.userAgent || "";
-    const { source, utm, fbclid, igshid } = parseTrafficSource();
-    trackProductAnalytics("pa_global_context", {
-      device: inferDeviceFromUserAgent(ua),
-      user_agent: ua.slice(0, 500),
-      source,
-      utm,
-      fbclid,
-      igshid,
-      country: (navigator.language || "").slice(0, 32),
-      page: window.location.pathname,
-      page_path: window.location.pathname,
-      page_type: "product_detail",
-      locale: navigator.language || "",
-      timezone_offset_min: new Date().getTimezoneOffset(),
-      viewport_w: window.innerWidth,
-      viewport_h: window.innerHeight,
-    });
-    trackProductAnalytics("pa_product_ident", {
-      product_id: productId,
-      price: detailPrice,
-      promo_price: jomlaPrice ?? null,
-      category,
-    });
+
+    if (!globalSent.current) {
+      globalSent.current = true;
+      const ua = navigator.userAgent || "";
+      const { source, utm, fbclid, igshid } = parseTrafficSource();
+      trackProductAnalytics("pa_global_context", {
+        device: inferDeviceFromUserAgent(ua),
+        user_agent: ua.slice(0, 500),
+        source,
+        utm,
+        fbclid,
+        igshid,
+        country: (navigator.language || "").slice(0, 32),
+        page: window.location.pathname,
+        page_path: window.location.pathname,
+        page_type: "product_detail",
+        locale: navigator.language || "",
+        timezone_offset_min: new Date().getTimezoneOffset(),
+        viewport_w: window.innerWidth,
+        viewport_h: window.innerHeight,
+      });
+      trackProductAnalytics("pa_product_ident", {
+        product_id: productId,
+        price: detailPrice,
+        promo_price: jomlaPrice ?? null,
+        category,
+      });
+    }
+
     trackProductAnalytics("pa_product_view", {
       product_id: productId,
       page_path: window.location.pathname,

@@ -8,6 +8,7 @@ import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import ShoppingAssistant from "@/components/Common/ShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
 import StorefrontAnalyticsLanding from "@/components/Common/StorefrontAnalyticsLanding";
+import FunnelPageTracker from "@/components/Common/FunnelPageTracker";
 import FloatingAdminButton from "@/components/Common/FloatingAdminButton";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <ShoppingAssistant />
       <SequenceRouteWatcher />
       <StorefrontAnalyticsLanding />
+      <FunnelPageTracker />
       <FloatingAdminButton />
       {!hideFooter ? <Footer /> : null}
     </>

@@ -235,9 +235,10 @@ function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto
           icon={BarChart2}
         />
         <p className="mt-2 text-custom-sm text-dark-4">
-          Live counts from the last {liveHours} hours (distinct sessions). Refresh after testing the
-          storefront; &quot;Order completed&quot; requires a successful Chargily return (
-          <code className="rounded bg-gray-1 px-1">?payment=success</code>), not the Buy now button alone.
+          Page-visit counts for the last {liveHours} hours — each time you land on the product, cart,
+          or checkout page the matching step increases (any navigation path). &quot;Order completed&quot;
+          counts successful payments (
+          <code className="rounded bg-gray-1 px-1">?payment=success</code>).
         </p>
         <div className="mt-4 space-y-4">
           {steps.length ?
