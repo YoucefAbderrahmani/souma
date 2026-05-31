@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import {
   getConceptionAlertRuleSettings,
   saveConceptionAlertRuleSettings,
@@ -8,7 +8,7 @@ import {
 import type { ConceptionAlertRuleSettings } from "@/types/conception-admin";
 
 export async function GET(req: NextRequest) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

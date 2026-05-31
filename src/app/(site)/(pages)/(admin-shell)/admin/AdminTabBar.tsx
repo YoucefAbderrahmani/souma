@@ -7,13 +7,14 @@ import { useOptimisticTabIndicator } from "@/hooks/useOptimisticTabIndicator";
 
 export type AdminMainTab =
   | "users"
+  | "role-management"
   | "add-product"
   | "products"
   | "tracking"
   | "role-emails"
   | "seller-helper";
 
-const TABS: { id: AdminMainTab; label: string }[] = [
+const BASE_TABS: { id: AdminMainTab; label: string }[] = [
   { id: "users", label: "Users" },
   { id: "add-product", label: "Add Items" },
   { id: "products", label: "Stock & Edit Items" },
@@ -21,6 +22,8 @@ const TABS: { id: AdminMainTab; label: string }[] = [
   { id: "role-emails", label: "Assign role emails" },
   { id: "seller-helper", label: "Seller Helper" },
 ];
+
+const ROLE_MANAGEMENT_TAB = { id: "role-management" as const, label: "Role management" };
 
 const TAB_PREFETCH: Partial<Record<AdminMainTab, () => void>> = {
   "seller-helper": () => {
@@ -31,15 +34,20 @@ const TAB_PREFETCH: Partial<Record<AdminMainTab, () => void>> = {
 function AdminTabBarInner({
   activeTab,
   onSelect,
+  showRoleManagement = false,
 }: {
   activeTab: AdminMainTab;
   onSelect: (tab: AdminMainTab) => void;
+  showRoleManagement?: boolean;
 }) {
   const { indicatorTab, selectTab } = useOptimisticTabIndicator(activeTab);
+  const tabs = showRoleManagement
+    ? [BASE_TABS[0], ROLE_MANAGEMENT_TAB, ...BASE_TABS.slice(1)]
+    : BASE_TABS;
 
   return (
     <nav className={cn(sellerNav, "top-24")} aria-label="Admin sections">
-      {TABS.map(({ id, label }) => (
+      {tabs.map(({ id, label }) => (
         <button
           key={id}
           type="button"

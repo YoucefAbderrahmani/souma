@@ -14,6 +14,8 @@ import AdminDeleteProductButton from "@/components/Admin/AdminDeleteProductButto
 import EditProductModal from "./EditProductModal";
 import ProductAnalyticsTrackingPanel from "@/components/Admin/ProductAnalyticsTrackingPanel";
 import RecommendationRoleEmailsPanel from "@/components/Admin/RecommendationRoleEmailsPanel";
+import AdminRoleManagementPanel from "@/components/Admin/AdminRoleManagementPanel";
+import { normalizeUserRole } from "@/lib/user-roles";
 import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
 import type { ConceptionAdminInitialData } from "@/hooks/useConceptionAdminData";
 import AdminColorVariantsPanel, {
@@ -57,6 +59,9 @@ type Props = {
   products: AdminProduct[];
   conceptionInitialData?: ConceptionAdminInitialData;
   conceptionInitialError?: string | null;
+  /** Only true for `admin` (not `seller`). */
+  canManageRoles?: boolean;
+  actorEmail?: string | null;
 };
 
 const initialState: CreateProductState = {};
@@ -66,6 +71,8 @@ export default function AdminPanels({
   products,
   conceptionInitialData,
   conceptionInitialError = null,
+  canManageRoles = false,
+  actorEmail = null,
 }: Props) {
   const [activeTab, setActiveTab] = useState<AdminMainTab>(() =>
     typeof window === "undefined" ? "users" : readAdminTabFromUrl()
@@ -93,11 +100,12 @@ export default function AdminPanels({
 
   const userStats = useMemo(() => {
     const total = users.length;
-    const admins = users.filter((u) => u.role === "admin").length;
-    const regularUsers = total - admins;
+    const admins = users.filter((u) => normalizeUserRole(u.role) === "admin").length;
+    const sellers = users.filter((u) => normalizeUserRole(u.role) === "seller").length;
+    const regularUsers = users.filter((u) => normalizeUserRole(u.role) === "user").length;
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const joinedLast30Days = users.filter((u) => new Date(u.createdAt).getTime() >= thirtyDaysAgo).length;
-    return { total, admins, regularUsers, joinedLast30Days };
+    return { total, admins, sellers, regularUsers, joinedLast30Days };
   }, [users]);
 
   const productStats = useMemo(() => {
@@ -194,7 +202,11 @@ export default function AdminPanels({
 
   return (
     <div className="mt-10 space-y-6">
-      <AdminTabBar activeTab={activeTab} onSelect={onSelectTab} />
+      <AdminTabBar
+        activeTab={activeTab}
+        onSelect={onSelectTab}
+        showRoleManagement={canManageRoles}
+      />
 
       <div className="relative mt-6 min-h-[240px]">
         {renderTab(
@@ -208,13 +220,21 @@ export default function AdminPanels({
           </section>
         )}
 
+        {canManageRoles
+          ? renderTab(
+              "role-management",
+              <AdminRoleManagementPanel users={users} actorEmail={actorEmail} />
+            )
+          : null}
+
         {renderTab(
           "users",
           <section>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard label="Total Users" value={userStats.total} />
             <StatCard label="Admins" value={userStats.admins} />
-            <StatCard label="Regular Users" value={userStats.regularUsers} />
+            <StatCard label="Sellers" value={userStats.sellers} />
+            <StatCard label="Customers" value={userStats.regularUsers} />
             <StatCard label="Joined (Last 30 Days)" value={userStats.joinedLast30Days} />
           </div>
 

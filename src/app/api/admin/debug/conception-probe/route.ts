@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { buildConceptionOverview } from "@/server/conception/metrics";
 import {
   listConceptionAlertsForAdmin,
@@ -58,7 +58,7 @@ async function probeRecommendations(): Promise<ProbeResult> {
  * and show the raw Postgres message vs mapped migration hint.
  */
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

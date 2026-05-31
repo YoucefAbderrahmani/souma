@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { resetVitrinaProductToDefault } from "@/server/seller-helper/applied-action-revert";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

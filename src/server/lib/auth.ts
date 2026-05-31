@@ -2,10 +2,12 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { customSession } from "better-auth/plugins";
-import { db } from "../db/index"; // your drizzle instance
+import { db } from "../db/index";
 import * as schema from "@/server/db/schema";
+import { eq } from "drizzle-orm";
 import { fetchUserLastName } from "@/use-cases/user";
 import { getUserImageById, getUserPhoneById } from "../data-access/user";
+import { normalizeUserRole } from "@/lib/user-roles";
 import { isDatabaseOutage } from "@/server/db-degraded";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -173,12 +175,23 @@ export const auth = betterAuth({
         return { user: { ...user }, session };
       }
       try {
+        const [row] = await db
+          .select({ role: schema.user.role })
+          .from(schema.user)
+          .where(eq(schema.user.id, user.id))
+          .limit(1);
         const lastname = await fetchUserLastName(user.id);
         const image = await getUserImageById(user.id);
         const phone = await getUserPhoneById(user.id);
         return {
           user: {
             ...user,
+            role: normalizeUserRole(
+              row?.role ??
+                (typeof user === "object" && user && "role" in user
+                  ? String((user as { role?: string }).role ?? "")
+                  : "")
+            ),
             lastname,
             image,
             phone,

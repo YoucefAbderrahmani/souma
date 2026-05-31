@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import {
   buildEnabledMap,
   getDisabledPaEventNames,
@@ -8,7 +8,7 @@ import {
 import { PA_EVENT_NAMES, isPaEventName } from "@/lib/pa-whitelist";
 
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

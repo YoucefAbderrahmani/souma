@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { buildTimelineSeries } from "@/server/seller-helper/timeline-series";
 import {
   TIMELINE_METRIC_IDS,
@@ -40,7 +40,7 @@ function parseProductId(value: string | null): number | null {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

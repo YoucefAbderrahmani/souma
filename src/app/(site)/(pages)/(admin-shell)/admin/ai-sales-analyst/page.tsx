@@ -1,13 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
-import { auth } from "@/server/lib/auth";
-import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { requireStaffPageAccess } from "@/server/lib/staff-page-access";
 import AiSalesAnalystEventsTable from "@/components/Admin/AiSalesAnalystEventsTable";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { listSalesMicroSessionsForAdmin } from "@/server/sales-analyst/micro-events-admin";
@@ -19,22 +13,8 @@ export const metadata: Metadata = {
 };
 
 const AiSalesAnalystAdminPage = async () => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    redirect("/signin");
-  }
-
-  const currentUser = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  const isAdmin = currentUser[0]?.role === "admin" || isPrivilegedAdminEmail(session.user.email);
-  if (!isAdmin) {
+  const access = await requireStaffPageAccess();
+  if (!access) {
     return (
       <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
         <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">

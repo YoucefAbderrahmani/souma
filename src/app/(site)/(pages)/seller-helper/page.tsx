@@ -3,7 +3,6 @@ import { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import SellerHelperDashboard from "@/components/SellerHelper/SellerHelperDashboard";
 import { SellerHelperLogo } from "@/components/SellerHelper/SellerHelperLogo";
@@ -23,10 +22,8 @@ import {
   sellerSecondaryButton,
 } from "@/components/SellerHelper/layout";
 import { auth } from "@/server/lib/auth";
-import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
+import { getSessionAccess } from "@/server/lib/staff-access";
 import { isNeonDataTransferQuotaError, noteDatabaseOutage } from "@/server/db-degraded";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
 
 export const metadata: Metadata = {
   title: "Seller Helper | Vitrina Store",
@@ -50,21 +47,17 @@ export default async function SellerHelperPage() {
     redirect("/signin");
   }
 
-  let isAdmin = isPrivilegedAdminEmail(session.user.email);
+  let isStaff = false;
   try {
-    const currentUser = await db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, session.user.id))
-      .limit(1);
-    isAdmin = currentUser[0]?.role === "admin" || isAdmin;
+    const access = await getSessionAccess(await headers());
+    isStaff = access?.isStaff ?? false;
   } catch (error) {
     if (isNeonDataTransferQuotaError(error)) noteDatabaseOutage();
   }
 
   let initialData: ConceptionAdminInitialData | undefined;
   let initialError: string | null = null;
-  if (isAdmin) {
+  if (isStaff) {
     try {
       const [overview, alerts, resolvedAlerts, recommendations, inbox] = await Promise.all([
         buildConceptionOverview(),
@@ -85,7 +78,7 @@ export default async function SellerHelperPage() {
 
       <section className={sellerHelperSection}>
         <div className={sellerHelperContainer}>
-          {isAdmin ?
+          {isStaff ?
             <SellerHelperDashboard initialData={initialData} initialError={initialError} />
           : <div className={`${sellerPanel} ${sellerPanelPadding} text-center`}>
               <div className="mx-auto mb-4 flex justify-center">

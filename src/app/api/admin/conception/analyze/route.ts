@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { parseVitrinaFixesPerItemParam } from "@/lib/vitrina-fixes-per-item";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { runConceptionAnalysisJob } from "@/server/conception/analyze";
 
 export async function POST(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

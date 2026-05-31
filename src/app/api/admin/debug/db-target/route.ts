@@ -5,7 +5,7 @@ import {
   resolveDatabaseConnectionString,
   safeDatabaseHostAndDatabase,
 } from "@/lib/database-url";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { db } from "@/server/db";
 
 /**
@@ -13,7 +13,7 @@ import { db } from "@/server/db";
  * and whether `public.sales_micro_event` exists on that connection.
  */
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
-import { isPrivilegedAdminEmail } from "@/server/lib/admin-access";
+import { getSessionAccess } from "@/server/lib/staff-access";
+import { roleDisplayLabel } from "@/lib/user-roles";
 import { db } from "@/server/db";
 import { categoryTable, productsTable, user } from "@/server/db/schema";
 import { ensureAllShopDataProductsInDatabase } from "@/server/data-access/product-catalog";
@@ -33,16 +34,8 @@ const AdminPage = async () => {
     redirect("/signin");
   }
 
-  const currentUser = await db
-    .select({
-      role: user.role,
-    })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  const isAdmin = currentUser[0]?.role === "admin" || isPrivilegedAdminEmail(session.user.email);
-  if (!isAdmin) {
+  const access = await getSessionAccess(await headers());
+  if (!access?.isStaff) {
     return (
       <main className="overflow-hidden pb-20 pt-40 sm:pt-44 lg:pt-36 xl:pt-45">
         <section className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -139,7 +132,7 @@ const AdminPage = async () => {
               <h1 className="text-2xl font-semibold text-dark">Admin Panel</h1>
             </div>
             <span className="rounded-md border border-orange/25 bg-orange/10 px-3 py-1 text-xs font-semibold text-orange-dark">
-              Role: admin
+              Role: {roleDisplayLabel(access.role)}
             </span>
           </div>
         </div>
@@ -174,6 +167,8 @@ const AdminPage = async () => {
           products={productsData}
           conceptionInitialData={conceptionInitialData}
           conceptionInitialError={conceptionInitialError}
+          canManageRoles={access.isRoleAdmin}
+          actorEmail={access.email}
         />
       </section>
     </main>

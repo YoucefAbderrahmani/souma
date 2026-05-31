@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { getProductPageHeatmap } from "@/server/conception/product-page-heatmap";
 import type { ConceptionHeatmapMetric } from "@/types/conception-heatmap";
 
@@ -12,7 +12,7 @@ function parseMetric(value: string | null): ConceptionHeatmapMetric {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

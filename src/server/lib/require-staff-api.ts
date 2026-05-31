@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { auth } from "@/server/lib/auth";
-import { canManageUserRoles } from "@/lib/user-roles";
+import { isStaffRole } from "@/lib/user-roles";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 
-/** Role management only — `admin` (not `seller`). */
-export async function requireAdminApi(req: Request) {
+/** Admin panel + Seller Helper APIs: `admin`, `seller`, or privileged operator email. */
+export async function requireStaffApi(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) {
     return { ok: false as const, status: 401 as const, error: "Unauthorized" };
@@ -15,8 +15,8 @@ export async function requireAdminApi(req: Request) {
     .from(user)
     .where(eq(user.id, session.user.id))
     .limit(1);
-  if (!canManageUserRoles(current?.role, current?.email ?? session.user.email)) {
+  if (!isStaffRole(current?.role, current?.email ?? session.user.email)) {
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
   }
-  return { ok: true as const, session };
+  return { ok: true as const, session, role: current?.role ?? "user" };
 }

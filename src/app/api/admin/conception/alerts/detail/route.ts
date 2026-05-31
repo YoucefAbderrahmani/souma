@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { analyzeConceptionAlertById } from "@/server/conception/alert-detail-analysis";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 
 export async function POST(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

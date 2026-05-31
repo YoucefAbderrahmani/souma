@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import { SELLER_HELPER_PARAMETER_SPECS } from "@/lib/seller-helper-parameter-spec";
@@ -13,7 +13,7 @@ function hasJsonTextKeyExpr(key: string) {
  * Admin-only coverage report for Seller Helper parameters over the last 7 days.
  */
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

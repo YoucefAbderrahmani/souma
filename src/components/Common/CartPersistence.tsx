@@ -5,6 +5,7 @@ import { useDispatch } from "react-redux";
 import { store, useAppSelector, type AppDispatch } from "@/redux/store";
 import { setCartItems, type CartItem } from "@/redux/features/cart-slice";
 import { useSession } from "@/app/context/SessionProvider";
+import { publicApiUrl } from "@/lib/public-api-url";
 
 const GUEST_CART_KEY = "vitrina_cart_guest_v1";
 
@@ -43,11 +44,37 @@ function parseStoredCart(raw: string | null): CartItem[] {
   }
 }
 
+async function fetchServerCart(): Promise<CartItem[] | null> {
+  try {
+    const res = await fetch(publicApiUrl("/api/cart"), {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { items?: unknown };
+    if (!Array.isArray(data.items)) return [];
+    return parseStoredCart(JSON.stringify(data.items));
+  } catch {
+    return null;
+  }
+}
+
+async function persistServerCart(items: CartItem[]): Promise<void> {
+  try {
+    await fetch(publicApiUrl("/api/cart"), {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+  } catch {
+    /* offline or guest */
+  }
+}
+
 /**
- * Persists cart to localStorage and hydrates Redux on load.
- * Intentionally does NOT listen to `window.storage` — same-tab `setItem` can fire `storage`
- * in some browsers and caused persist ↔ dispatch feedback loops (cart flicker).
- * Cross-tab sync is omitted in favor of stable single-tab behavior.
+ * One cart per guest (localStorage) and per logged-in user (DB + localStorage).
+ * Clears Redux when the account changes so carts never leak between users.
  */
 const CartPersistence = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -55,6 +82,8 @@ const CartPersistence = () => {
   const { session, isPending } = useSession();
   const activeStorageKeyRef = useRef<string | null>(null);
   const hydratedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
+  const persistTimerRef = useRef<number | null>(null);
   const [sessionResolved, setSessionResolved] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
@@ -73,39 +102,73 @@ const CartPersistence = () => {
   useEffect(() => {
     if (!sessionResolved) return;
 
-    const rawUser = window.localStorage.getItem(targetStorageKey);
-    const rawGuest = window.localStorage.getItem(GUEST_CART_KEY);
-    const userCart = parseStoredCart(rawUser);
-    const guestCart = parseStoredCart(rawGuest);
+    const accountChanged = lastUserIdRef.current !== userId;
+    lastUserIdRef.current = userId;
 
-    if (userId && userCart.length === 0) {
-      if (guestCart.length > 0) {
+    if (accountChanged) {
+      hydratedRef.current = false;
+      activeStorageKeyRef.current = null;
+      dispatch(setCartItems([]));
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const rawUser = window.localStorage.getItem(targetStorageKey);
+      const rawGuest = window.localStorage.getItem(GUEST_CART_KEY);
+      let userCart = parseStoredCart(rawUser);
+      const guestCart = parseStoredCart(rawGuest);
+
+      if (userId) {
+        const serverCart = await fetchServerCart();
+        if (cancelled) return;
+        if (serverCart !== null) {
+          userCart = serverCart;
+          window.localStorage.setItem(targetStorageKey, JSON.stringify(serverCart));
+        }
+      }
+
+      if (userId && userCart.length === 0 && guestCart.length > 0) {
         dispatch(setCartItems(guestCart));
         window.localStorage.setItem(targetStorageKey, JSON.stringify(guestCart));
+        void persistServerCart(guestCart);
         activeStorageKeyRef.current = targetStorageKey;
         hydratedRef.current = true;
         return;
       }
-    }
 
-    const reduxCart = store.getState().cartReducer.items;
-    if (userCart.length === 0 && reduxCart.length > 0) {
-      window.localStorage.setItem(targetStorageKey, JSON.stringify(reduxCart));
+      dispatch(setCartItems(userCart));
       activeStorageKeyRef.current = targetStorageKey;
       hydratedRef.current = true;
-      return;
-    }
+    })();
 
-    dispatch(setCartItems(userCart));
-    activeStorageKeyRef.current = targetStorageKey;
-    hydratedRef.current = true;
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch, sessionResolved, targetStorageKey, userId]);
 
   useEffect(() => {
     if (!sessionResolved || !hydratedRef.current) return;
     if (activeStorageKeyRef.current !== targetStorageKey) return;
+
     window.localStorage.setItem(targetStorageKey, JSON.stringify(cartItems));
-  }, [cartItems, sessionResolved, targetStorageKey]);
+
+    if (!userId) return;
+
+    if (persistTimerRef.current) {
+      window.clearTimeout(persistTimerRef.current);
+    }
+    persistTimerRef.current = window.setTimeout(() => {
+      void persistServerCart(cartItems);
+    }, 600);
+  }, [cartItems, sessionResolved, targetStorageKey, userId]);
+
+  useEffect(
+    () => () => {
+      if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
+    },
+    []
+  );
 
   return null;
 };

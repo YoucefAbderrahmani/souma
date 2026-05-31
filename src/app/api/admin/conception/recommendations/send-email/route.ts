@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import {
   getConceptionRecommendationById,
   moveConceptionRecommendationToInbox,
@@ -8,7 +8,7 @@ import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-
 import { brevoNotConfiguredMessage, isBrevoAutomatedEmailEnabled } from "@/server/email/brevo-config";
 
 export async function POST(req: NextRequest) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

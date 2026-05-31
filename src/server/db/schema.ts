@@ -75,6 +75,17 @@ export const verification = pgTable("verification", {
   ),
 });
 
+/** Per-account shopping cart (JSON array of line items). */
+export const userCartTable = pgTable("user_cart", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  itemsJson: text("items_json").notNull().default("[]"),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
 export const wishlistTable = pgTable("wishlist", {
   id: uuid().primaryKey().defaultRandom(),
   // one wishlist has one user

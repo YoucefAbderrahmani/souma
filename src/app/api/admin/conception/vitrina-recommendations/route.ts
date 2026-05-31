@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 import { migrationHintFromDbMessage } from "@/lib/db-error-migration-hint";
 import { parseVitrinaFixesPerItemParam } from "@/lib/vitrina-fixes-per-item";
-import { requireAdminApi } from "@/server/lib/require-admin-api";
+import { requireStaffApi } from "@/server/lib/require-staff-api";
 import { listVitrinaProductMarketingRecommendations } from "@/server/seller-helper/product-marketing-recommendations";
 import {
   readVitrinaRecommendationsCache,
@@ -12,7 +12,7 @@ import {
 import { capVitrinaRecommendationsList } from "@/types/vitrina-product-recommendations";
 
 export async function GET(req: Request) {
-  const gate = await requireAdminApi(req);
+  const gate = await requireStaffApi(req);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }

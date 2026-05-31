@@ -8,6 +8,7 @@ export function readAdminTabFromUrl(): AdminMainTab {
   if (tab === "conception") return "seller-helper";
   if (
     tab === "users" ||
+    tab === "role-management" ||
     tab === "add-product" ||
     tab === "products" ||
     tab === "tracking" ||
