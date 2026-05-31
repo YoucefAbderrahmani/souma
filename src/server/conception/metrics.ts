@@ -190,26 +190,26 @@ function buildFunnelSteps(f: {
     { title: "Order completed", n: f.nFinal },
   ];
 
+  let prevOverallPct = 100;
+
   return steps.map((s, i) => {
     const prevN = i === 0 ? s.n : steps[i - 1]!.n;
-    const shareOfProduct = entry > 0 ? Math.min(100, (100 * s.n) / entry) : 0;
-    const barPct = i === 0 ? (entry > 0 ? 100 : 0) : shareOfProduct;
 
-    let fromPrevLabel: string;
-    if (i === 0) {
-      fromPrevLabel = "Baseline";
-    } else if (prevN === 0) {
-      fromPrevLabel = s.n === 0 ? "Prior step: 0 visits" : "Prior step: 0 visits";
-    } else if (s.n > prevN) {
-      fromPrevLabel = "More visits than prior step";
-    } else {
-      fromPrevLabel = `${fmtPct((100 * s.n) / prevN)} continued from prior step`;
-    }
+    const rawOverallPct =
+      i === 0 ? (entry > 0 ? 100 : 0)
+      : entry > 0 ? (100 * s.n) / entry
+      : 0;
+    const overallPct = i === 0 ? rawOverallPct : Math.min(prevOverallPct, rawOverallPct);
+    prevOverallPct = overallPct;
 
-    const overallLabel =
-      i === 0 ? "100.0% baseline" : (
-        entry > 0 ? `${fmtPct(shareOfProduct)} of product visits` : "—"
+    const stepThroughPct = i === 0 ? 100 : prevN > 0 ? Math.min(100, (100 * s.n) / prevN) : 0;
+
+    const fromPrevLabel =
+      i === 0 ? "Entry (100%)" : (
+        prevN > 0 ? `${fmtPct(stepThroughPct)} from prior step` : "Prior step: 0"
       );
+
+    const overallLabel = i === 0 ? "100.0%" : `${fmtPct(overallPct)} of product visits`;
 
     const abandonLabel =
       i > 0 && prevN > 0 && s.n < prevN ?
@@ -223,7 +223,7 @@ function buildFunnelSteps(f: {
       fromPrevLabel,
       overallLabel,
       abandonLabel,
-      barPct,
+      barPct: overallPct,
     };
   });
 }

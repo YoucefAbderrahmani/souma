@@ -269,9 +269,9 @@ function ConversionFunnelContent({
           : null}
         </div>
         <p className="mt-2 text-custom-sm text-dark-4">
-          Live counts for the last {liveHours} hours. Product and checkout count page visits; Add to
-          cart counts Add to cart and Purchase now clicks (not opening the cart page). Orders count
-          only after Chargily
+          Live counts for the last {liveHours} hours; orange % descend from 100% at the top (share of
+          product visits, capped step to step). Add to cart includes Purchase now. Orders only after
+          Chargily
           payment is finalized (
           <code className="rounded bg-gray-1 px-1">Pay with Chargily</code>
           → complete payment → return with success).
