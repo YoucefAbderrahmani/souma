@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
-import { sequenceEndPurchase } from "@/lib/sequence-client";
+import { sequenceEndPurchase, sequenceEndLeave } from "@/lib/sequence-client";
 import {
   flushProductAnalyticsNow,
   setProductAnalyticsPageContext,
@@ -90,8 +90,10 @@ const Checkout = () => {
   }, [paymentStatus]);
 
   const checkoutBeginSent = React.useRef(false);
+  const cartSyncSentRef = React.useRef(false);
   const purchaseCompletedRef = React.useRef(false);
   const abandonSentRef = React.useRef(false);
+  const paymentFailedSentRef = React.useRef(false);
   const checkoutEnteredAtRef = React.useRef(Date.now());
 
   const checkoutLiveRef = React.useRef({
@@ -115,7 +117,6 @@ const Checkout = () => {
     const s = checkoutLiveRef.current;
     if (s.paymentStatus === "success") return;
     if (s.isSubmitting) return;
-    if (s.showPaymentPopup) return;
     const dwell_ms = Date.now() - checkoutEnteredAtRef.current;
     if (dwell_ms < 3500) return;
     abandonSentRef.current = true;
@@ -152,6 +153,17 @@ const Checkout = () => {
   React.useEffect(() => {
     if (checkoutBeginSent.current || cartItems.length === 0) return;
     checkoutBeginSent.current = true;
+    if (!cartSyncSentRef.current) {
+      cartSyncSentRef.current = true;
+      trackProductAnalytics("pa_add_to_cart", {
+        from: "checkout_entry_sync",
+        cart_line_items: cartItems.length,
+        cart_total_dzd: totalPrice,
+        items_qty_total: itemsQtyTotal,
+        currency: "DZD",
+        page_path: "/checkout",
+      });
+    }
     trackProductAnalytics("pa_begin_checkout", {
       cart_line_items: cartItems.length,
       cart_total_dzd: totalPrice,
@@ -159,7 +171,30 @@ const Checkout = () => {
       currency: "DZD",
       checkout_entry: "checkout_page",
     });
+    void flushProductAnalyticsNow();
   }, [cartItems.length, itemsQtyTotal, totalPrice]);
+
+  React.useEffect(() => {
+    if (paymentStatus !== "failed" || paymentFailedSentRef.current) return;
+    paymentFailedSentRef.current = true;
+    trackProductAnalytics("pa_payment_failed", {
+      provider: "chargily",
+      payment_method: "chargily",
+      cart_line_items: cartItems.length,
+      cart_total_dzd: totalPrice,
+      items_qty_total: itemsQtyTotal,
+      currency: "DZD",
+      status: "failed",
+    });
+    trackProductAnalytics("pa_checkout_step", {
+      step: "payment_return",
+      status: "failed",
+      provider: "chargily",
+      payment_method: "chargily",
+    });
+    void flushProductAnalyticsNow();
+    sequenceEndLeave();
+  }, [cartItems.length, itemsQtyTotal, paymentStatus, totalPrice]);
 
   React.useEffect(() => {
     if (paymentStatus !== "success" || cartItems.length === 0) return;
@@ -170,6 +205,7 @@ const Checkout = () => {
       if (cancelled) return;
 
       purchaseCompletedRef.current = true;
+      sequenceEndPurchase();
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
         line_items: cartItems.length,
@@ -178,6 +214,12 @@ const Checkout = () => {
         items_qty_total: itemsQtyTotal,
         provider: "chargily",
         status: "success",
+      });
+      trackProductAnalytics("pa_checkout_step", {
+        step: "payment_return",
+        status: "success",
+        provider: "chargily",
+        payment_method: "chargily",
       });
       void flushProductAnalyticsNow();
       dispatch(removeAllItemsFromCart());
@@ -303,7 +345,6 @@ const Checkout = () => {
         }))
       );
 
-      sequenceEndPurchase();
       trackProductAnalytics("pa_performance", {
         checkout_api_ms: Date.now() - perfStart,
         chargily_checkout: true,

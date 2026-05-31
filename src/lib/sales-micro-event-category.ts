@@ -18,6 +18,7 @@ export function salesMicroEventCategory(eventName: string): string {
     n.startsWith("pa_add_to_cart") ||
     n.startsWith("pa_remove_from_cart") ||
     n.startsWith("pa_checkout") ||
+    n.startsWith("pa_payment") ||
     n.startsWith("pa_purchase") ||
     n.startsWith("pa_abandon")
   ) {

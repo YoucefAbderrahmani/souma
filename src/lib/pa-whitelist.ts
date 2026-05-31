@@ -22,6 +22,7 @@ export const PA_EVENT_NAMES = [
   "pa_remove_from_cart",
   "pa_begin_checkout",
   "pa_checkout_step",
+  "pa_payment_failed",
   "pa_purchase",
   "pa_abandon_checkout",
   "pa_search",
@@ -44,5 +45,15 @@ export const PA_FUNNEL = {
   productView: "pa_product_view",
   addToCart: "pa_add_to_cart",
   beginCheckout: "pa_begin_checkout",
+  checkoutStep: "pa_checkout_step",
+  paymentFailed: "pa_payment_failed",
   purchase: "pa_purchase",
 } as const;
+
+/** Events that count as “checkout started” in the conversion funnel. */
+export const PA_FUNNEL_CHECKOUT_SIGNALS = [
+  PA_FUNNEL.beginCheckout,
+  PA_FUNNEL.checkoutStep,
+  "pa_abandon_checkout",
+  PA_FUNNEL.paymentFailed,
+] as const;

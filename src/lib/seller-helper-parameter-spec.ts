@@ -36,7 +36,13 @@ export const SELLER_HELPER_PARAMETER_SPECS: SellerHelperParameterSpec[] = [
     event: "pa_checkout_step",
     legacyParameters: ["step", "total_dzd", "cart_line_items"],
     newParameters: ["status", "provider", "payment_method", "failure_code", "failure_reason"],
-    usedByDashboard: ["Checkout diagnostics", "Recommendations quality"],
+    usedByDashboard: ["Checkout diagnostics", "Funnel: checkout started", "Recommendations quality"],
+  },
+  {
+    event: "pa_payment_failed",
+    legacyParameters: ["provider", "payment_method", "status"],
+    newParameters: ["cart_line_items", "cart_total_dzd", "items_qty_total", "currency"],
+    usedByDashboard: ["Funnel: checkout started", "Friction: checkout -> completion"],
   },
   {
     event: "pa_purchase",

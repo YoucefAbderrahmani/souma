@@ -1,7 +1,7 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
-import { PA_FUNNEL } from "@/lib/pa-whitelist";
+import { PA_FUNNEL, PA_FUNNEL_CHECKOUT_SIGNALS } from "@/lib/pa-whitelist";
 
 const MS_DAY = 86_400_000;
 
@@ -12,6 +12,27 @@ async function countDistinctSessions(eventName: string, since: Date): Promise<nu
     })
     .from(salesMicroEventTable)
     .where(and(gte(salesMicroEventTable.createdAt, since), eq(salesMicroEventTable.eventName, eventName)));
+  return row?.n ?? 0;
+}
+
+async function countDistinctCheckoutSessions(since: Date): Promise<number> {
+  const [row] = await db
+    .select({
+      n: sql<number>`count(distinct ${salesMicroEventTable.sessionKey})::int`.as("n"),
+    })
+    .from(salesMicroEventTable)
+    .where(
+      and(
+        gte(salesMicroEventTable.createdAt, since),
+        sql`(
+          ${salesMicroEventTable.eventName} IN (${sql.join(
+            PA_FUNNEL_CHECKOUT_SIGNALS.map((name) => sql`${name}`),
+            sql`, `
+          )})
+          OR lower(${salesMicroEventTable.pagePath}) LIKE '%checkout%'
+        )`
+      )
+    );
   return row?.n ?? 0;
 }
 
@@ -37,7 +58,7 @@ export async function computeProductAnalyticsInsights(
   const [v, c, chk, p] = await Promise.all([
     countDistinctSessions(PA_FUNNEL.productView, since),
     countDistinctSessions(PA_FUNNEL.addToCart, since),
-    countDistinctSessions(PA_FUNNEL.beginCheckout, since),
+    countDistinctCheckoutSessions(since),
     countDistinctSessions(PA_FUNNEL.purchase, since),
   ]);
 

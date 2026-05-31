@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { salesMicroEventTable } from "@/server/db/schema";
 import { getConceptionAlertRuleSettings, settingsToAlertRules } from "@/server/conception/alert-rule-settings";
 import { buildConceptionSecurityBrief } from "@/server/conception/security-intel";
+import { funnelCounts } from "@/server/conception/funnel-metrics";
 import { classifyTrafficSource, mergePinnedTrafficSources } from "@/lib/classify-traffic-source";
 import { PA_JS_ERROR, STORE_EVENT } from "@/server/conception/event-contract";
 import type {
@@ -38,60 +39,6 @@ async function scalarInt(q: Promise<{ n: number }[]>): Promise<number> {
   const v = rows[0];
   const n = v?.n;
   return typeof n === "number" && Number.isFinite(n) ? n : 0;
-}
-
-/** Funnel counts: nested subsets of sessions (7d window). */
-async function funnelCounts(since: Date): Promise<{
-  nProduct: number;
-  nCart: number;
-  nCheckoutPath: number;
-  nFinal: number;
-}> {
-  const res = await db.execute(sql`
-    WITH pe AS (
-      SELECT DISTINCT session_key
-      FROM sales_micro_event
-      WHERE created_at >= ${since} AND event_name = ${STORE_EVENT.productView}
-    ),
-    cart AS (
-      SELECT DISTINCT session_key
-      FROM sales_micro_event
-      WHERE created_at >= ${since} AND event_name = ${STORE_EVENT.addToCart}
-    ),
-    chk_path AS (
-      SELECT DISTINCT session_key
-      FROM sales_micro_event
-      WHERE created_at >= ${since}
-        AND (
-          event_name = ${STORE_EVENT.beginCheckout}
-          OR lower(page_path) LIKE '%checkout%'
-        )
-    ),
-    fin AS (
-      SELECT DISTINCT session_key
-      FROM sales_micro_event
-      WHERE created_at >= ${since} AND event_name = ${STORE_EVENT.purchase}
-    )
-    SELECT
-      (SELECT COUNT(*)::int FROM pe) AS n_product,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key)) AS n_cart,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key) INNER JOIN chk_path USING (session_key)) AS n_checkout_path,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key) INNER JOIN fin USING (session_key)) AS n_final
-  `);
-  const row = res.rows[0] as
-    | {
-        n_product: unknown;
-        n_cart: unknown;
-        n_checkout_path: unknown;
-        n_final: unknown;
-      }
-    | undefined;
-  return {
-    nProduct: Number(row?.n_product ?? 0),
-    nCart: Number(row?.n_cart ?? 0),
-    nCheckoutPath: Number(row?.n_checkout_path ?? 0),
-    nFinal: Number(row?.n_final ?? 0),
-  };
 }
 
 async function distinctSessionsSince(since: Date): Promise<number> {
@@ -279,7 +226,7 @@ function buildFriction(f: {
       });
     }
   }
-  if (f.nCart > 0 && f.nCheckoutPath > 0) {
+  if (f.nCart > 0 && f.nCheckoutPath < f.nCart) {
     const drop = 100 * (1 - f.nCheckoutPath / f.nCart);
     if (drop >= 20) {
       items.push({
@@ -564,36 +511,10 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
     buildUserBehaviorBrief(d7),
   ]);
 
-  const prevRes = await db.execute(sql`
-    WITH evt_window AS (
-      SELECT * FROM sales_micro_event
-      WHERE created_at >= ${d14} AND created_at < ${mid}
-    ),
-    pe AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.productView}),
-    cart AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.addToCart}),
-    chk_path AS (
-      SELECT DISTINCT session_key FROM evt_window
-      WHERE event_name = ${STORE_EVENT.beginCheckout} OR lower(page_path) LIKE '%checkout%'
-    ),
-    fin AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.purchase})
-    SELECT
-      (SELECT COUNT(*)::int FROM pe) AS n_product,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key)) AS n_cart,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key) INNER JOIN chk_path USING (session_key)) AS n_checkout_path,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN cart USING (session_key) INNER JOIN fin USING (session_key)) AS n_final
-  `);
-  const prow = prevRes.rows[0] as
-    | { n_product: unknown; n_cart: unknown; n_checkout_path: unknown; n_final: unknown }
-    | undefined;
-  const funnelOld = {
-    nProduct: Number(prow?.n_product ?? 0),
-    nCart: Number(prow?.n_cart ?? 0),
-    nCheckoutPath: Number(prow?.n_checkout_path ?? 0),
-    nFinal: Number(prow?.n_final ?? 0),
-  };
+  const funnelOld = await funnelCounts(d14, mid);
 
-  const rateNow = funnel.nProduct > 0 ? funnel.nFinal / funnel.nProduct : 0;
-  const rateOld = funnelOld.nProduct > 0 ? funnelOld.nFinal / funnelOld.nProduct : 0;
+  const rateNow = funnel.nCart > 0 ? funnel.nFinal / funnel.nCart : 0;
+  const rateOld = funnelOld.nCart > 0 ? funnelOld.nFinal / funnelOld.nCart : 0;
   const deltaConv = rateOld > 0 ? ((rateNow - rateOld) / rateOld) * 100 : 0;
 
   const cartAbandonProxy =
@@ -692,25 +613,10 @@ export async function buildConceptionAnalyzeSignals() {
   const d90m = new Date(now - 90 * 60 * 1000);
 
   const funnel7 = await funnelCounts(d7);
-  const foRes = await db.execute(sql`
-    WITH evt_window AS (
-      SELECT * FROM sales_micro_event
-      WHERE created_at >= ${new Date(now - 14 * MS_DAY)} AND created_at < ${new Date(now - 7 * MS_DAY)}
-    ),
-    pe AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.productView}),
-    fin AS (SELECT DISTINCT session_key FROM evt_window WHERE event_name = ${STORE_EVENT.purchase})
-    SELECT
-      (SELECT COUNT(*)::int FROM pe) AS n_product,
-      (SELECT COUNT(*)::int FROM pe INNER JOIN fin USING (session_key)) AS n_final
-  `);
-  const foRow = foRes.rows[0] as { n_product: unknown; n_final: unknown } | undefined;
-  const funnelOld = {
-    nProduct: Number(foRow?.n_product ?? 0),
-    nFinal: Number(foRow?.n_final ?? 0),
-  };
+  const funnelOld = await funnelCounts(new Date(now - 14 * MS_DAY), new Date(now - 7 * MS_DAY));
 
-  const rateNow = funnel7.nProduct > 0 ? funnel7.nFinal / funnel7.nProduct : 0;
-  const rateOld = funnelOld.nProduct > 0 ? funnelOld.nFinal / funnelOld.nProduct : 0;
+  const rateNow = funnel7.nCart > 0 ? funnel7.nFinal / funnel7.nCart : 0;
+  const rateOld = funnelOld.nCart > 0 ? funnelOld.nFinal / funnelOld.nCart : 0;
 
   const events15m = await totalEventsSince(d15m);
   const events90m = await totalEventsSince(d90m);
