@@ -8,7 +8,6 @@ import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import ShoppingAssistant from "@/components/Common/ShoppingAssistant";
 import SequenceRouteWatcher from "@/components/Common/SequenceRouteWatcher";
 import StorefrontAnalyticsLanding from "@/components/Common/StorefrontAnalyticsLanding";
-import ScrollToTop from "@/components/Common/ScrollToTop";
 import FloatingAdminButton from "@/components/Common/FloatingAdminButton";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -32,7 +31,6 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <ShoppingAssistant />
       <SequenceRouteWatcher />
       <StorefrontAnalyticsLanding />
-      <ScrollToTop />
       <FloatingAdminButton />
       {!hideFooter ? <Footer /> : null}
     </>
