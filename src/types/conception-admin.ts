@@ -201,7 +201,7 @@ export type ConceptionOverviewDto = {
   windowDays: number;
   kpis: ConceptionKpiRow[];
   funnelSteps: ConceptionFunnelStep[];
-  /** Same shape as funnelSteps; counts sessions in the last ~2 hours (live testing). */
+  /** Same shape as funnelSteps; counts sessions in the last ~6 hours (live testing). */
   funnelStepsLive: ConceptionFunnelStep[];
   funnelLiveHours: number;
   funnelSummary: ConceptionFunnelSummary[];

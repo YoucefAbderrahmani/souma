@@ -9,7 +9,10 @@ import Link from "next/link";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useRouter } from "next/navigation";
 import { sequenceStartProduct } from "@/lib/sequence-client";
-import { trackProductAnalytics } from "@/lib/product-analytics-client";
+import {
+  flushProductAnalyticsNow,
+  trackProductAnalytics,
+} from "@/lib/product-analytics-client";
 import { useAppSelector } from "@/redux/store";
 import { productDetailsHref } from "@/lib/product-page-link";
 import { ProductCardStarsRowWithStock } from "@/components/Common/ProductCardStarsRowWithStock";
@@ -62,6 +65,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
       currency: "DZD",
       page_path: typeof window !== "undefined" ? window.location.pathname : "/",
     });
+    void flushProductAnalyticsNow();
     dispatch(
       addItemToCart({
         ...item,

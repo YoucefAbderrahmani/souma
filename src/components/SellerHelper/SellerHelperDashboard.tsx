@@ -210,7 +210,7 @@ function DashboardMainContent({
 }
 
 function ConversionFunnelContent({ overview }: { overview: ConceptionOverviewDto | null }) {
-  const liveHours = overview?.funnelLiveHours ?? 2;
+  const liveHours = overview?.funnelLiveHours ?? 6;
   const steps = (overview?.funnelSteps ?? []).map((step) => ({
     title: step.title,
     countLabel: step.countLabel,

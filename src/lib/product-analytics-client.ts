@@ -194,7 +194,7 @@ async function postAnalyticsBatch(toSend: Queued[]): Promise<boolean> {
       console.warn("[product-analytics] ingest rejected", body.error);
       return false;
     }
-    return (body.inserted ?? 0) > 0;
+    return true;
   } catch (error) {
     console.warn("[product-analytics] ingest error", error);
     return false;
@@ -240,12 +240,19 @@ export function flushProductAnalyticsBeacon(): boolean {
   const sid = getOrCreateBrowserSequenceSessionId();
   if (!sid) return false;
   const body = buildBody(toSend);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    [SEQUENCE_SESSION_HEADER]: sid,
+  };
   try {
-    const ok = navigator.sendBeacon(API(), new Blob([body], { type: "application/json" }));
+    const ok = navigator.sendBeacon(
+      API(),
+      new Blob([body], { type: "application/json" })
+    );
     if (!ok) {
       void fetch(API(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body,
         credentials: "include",
         keepalive: true,

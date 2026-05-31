@@ -192,9 +192,10 @@ function buildFunnelSteps(f: {
 
   return steps.map((s, i) => {
     const prevN = i === 0 ? s.n : steps[i - 1]!.n;
-    const fromPrev = prevN > 0 ? (100 * s.n) / prevN : 0;
-    const overall = (100 * s.n) / base;
-    const abandon = i === 0 ? null : prevN > 0 ? (100 * (prevN - s.n)) / prevN : null;
+    const fromPrev = prevN > 0 ? Math.min(100, (100 * s.n) / prevN) : 0;
+    const overall = base > 0 ? Math.min(100, (100 * s.n) / base) : 0;
+    const abandon =
+      i === 0 ? null : prevN > 0 ? Math.min(100, (100 * (prevN - s.n)) / prevN) : null;
     return {
       title: s.title,
       count: s.n,
@@ -485,8 +486,8 @@ export async function buildConceptionOverview(): Promise<ConceptionOverviewDto> 
   const d14 = new Date(now - 14 * MS_DAY);
   const d24h = new Date(now - 24 * MS_DAY);
   const d15m = new Date(now - 15 * 60 * 1000);
-  const d2h = new Date(now - 2 * 60 * 60 * 1000);
-  const funnelLiveHours = 2;
+  const d2h = new Date(now - 6 * 60 * 60 * 1000);
+  const funnelLiveHours = 6;
   const mid = new Date(now - 7 * MS_DAY);
 
   const [

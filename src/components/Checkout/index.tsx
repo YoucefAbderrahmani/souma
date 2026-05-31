@@ -23,6 +23,7 @@ import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
 import { AppDispatch } from "@/redux/store";
 import {
   commitPendingInventoryPurchase,
+  readPendingPurchaseLineCount,
   savePendingInventoryPurchase,
 } from "@/hooks/useLiveProductInventory";
 
@@ -197,21 +198,23 @@ const Checkout = () => {
   }, [cartItems.length, itemsQtyTotal, paymentStatus, totalPrice]);
 
   React.useEffect(() => {
-    if (paymentStatus !== "success" || cartItems.length === 0) return;
+    if (paymentStatus !== "success" || purchaseCompletedRef.current) return;
 
     let cancelled = false;
     void (async () => {
+      const pendingLines = readPendingPurchaseLineCount();
       await commitPendingInventoryPurchase();
       if (cancelled) return;
 
       purchaseCompletedRef.current = true;
       sequenceEndPurchase();
+      const lineItems = Math.max(cartItems.length, pendingLines, 1);
       trackProductAnalytics("pa_purchase", {
         total_dzd: totalPrice,
-        line_items: cartItems.length,
+        line_items: lineItems,
         order_value: totalPrice,
         currency: "DZD",
-        items_qty_total: itemsQtyTotal,
+        items_qty_total: itemsQtyTotal > 0 ? itemsQtyTotal : lineItems,
         provider: "chargily",
         status: "success",
       });
@@ -222,7 +225,9 @@ const Checkout = () => {
         payment_method: "chargily",
       });
       void flushProductAnalyticsNow();
-      dispatch(removeAllItemsFromCart());
+      if (cartItems.length > 0) {
+        dispatch(removeAllItemsFromCart());
+      }
       toast.success("Payment confirmed. Your cart has been cleared.");
     })();
 

@@ -11,7 +11,7 @@ export type FunnelCounts = {
 
 /**
  * Per-session funnel flags for a time window.
- * Steps count distinct sessions per milestone (not nested joins).
+ * Step counts are nested (cart only if product, checkout only if cart, etc.) so step % stay ≤100%.
  */
 export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCounts> {
   const res =
@@ -41,9 +41,9 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
         )
         SELECT
           COUNT(*) FILTER (WHERE has_product)::int AS n_product,
-          COUNT(*) FILTER (WHERE has_cart)::int AS n_cart,
-          COUNT(*) FILTER (WHERE has_checkout)::int AS n_checkout_path,
-          COUNT(*) FILTER (WHERE has_purchase)::int AS n_final
+          COUNT(*) FILTER (WHERE has_product AND has_cart)::int AS n_cart,
+          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout)::int AS n_checkout_path,
+          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout AND has_purchase)::int AS n_final
         FROM flags
       `)
     : await db.execute(sql`
@@ -71,9 +71,9 @@ export async function funnelCounts(since: Date, until?: Date): Promise<FunnelCou
         )
         SELECT
           COUNT(*) FILTER (WHERE has_product)::int AS n_product,
-          COUNT(*) FILTER (WHERE has_cart)::int AS n_cart,
-          COUNT(*) FILTER (WHERE has_checkout)::int AS n_checkout_path,
-          COUNT(*) FILTER (WHERE has_purchase)::int AS n_final
+          COUNT(*) FILTER (WHERE has_product AND has_cart)::int AS n_cart,
+          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout)::int AS n_checkout_path,
+          COUNT(*) FILTER (WHERE has_product AND has_cart AND has_checkout AND has_purchase)::int AS n_final
         FROM flags
       `);
 

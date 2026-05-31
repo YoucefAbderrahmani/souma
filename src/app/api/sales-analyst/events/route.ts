@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, inserted: 0 });
     }
 
-    await insertSalesMicroEvents(rows);
-    return NextResponse.json({ ok: true, inserted: rows.length });
+    const inserted = await insertSalesMicroEvents(rows);
+    return NextResponse.json({ ok: true, inserted });
   } catch (e) {
     if (isNeonDataTransferQuotaError(e)) {
       noteDatabaseOutage();

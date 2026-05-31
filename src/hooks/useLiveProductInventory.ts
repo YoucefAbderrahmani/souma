@@ -27,6 +27,18 @@ export function savePendingInventoryPurchase(
   window.sessionStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(payload));
 }
 
+export function readPendingPurchaseLineCount(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = window.sessionStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
+  if (!raw) return 0;
+  try {
+    const items = JSON.parse(raw) as Array<{ productId?: unknown }>;
+    return Array.isArray(items) ? items.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function commitPendingInventoryPurchase(): Promise<void> {
   if (typeof window === "undefined") return;
   const raw = window.sessionStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);

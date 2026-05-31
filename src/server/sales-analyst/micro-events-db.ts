@@ -21,12 +21,12 @@ function safePath(path: string, max = 500) {
   return t.length > max ? t.slice(0, max) : t;
 }
 
-export async function insertSalesMicroEvents(rows: SalesMicroEventRowInput[]) {
-  if (rows.length === 0) return;
+export async function insertSalesMicroEvents(rows: SalesMicroEventRowInput[]): Promise<number> {
+  if (rows.length === 0) return 0;
 
   const blockedKeys = await getActiveBlockedSessionKeys(rows.map((row) => row.sessionKey));
   const allowedRows = rows.filter((row) => !blockedKeys.has(row.sessionKey.slice(0, 64)));
-  if (allowedRows.length === 0) return;
+  if (allowedRows.length === 0) return 0;
 
   await db.insert(salesMicroEventTable).values(
     allowedRows.map((r) => ({
@@ -42,4 +42,5 @@ export async function insertSalesMicroEvents(rows: SalesMicroEventRowInput[]) {
       sequenceIndex: Math.max(0, Math.min(10_000, r.sequenceIndex)),
     }))
   );
+  return allowedRows.length;
 }
