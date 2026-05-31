@@ -1,5 +1,6 @@
 "use client";
 
+import { clearFunnelCheckoutPageSent } from "@/lib/funnel-checkout-session";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLiveDataRefresh } from "@/hooks/useLiveDataRefresh";
 import type {
@@ -497,6 +498,19 @@ export function useConceptionAdminData(
 
   const clearConversionFunnel = useCallback(async () => {
     setState((s) => ({ ...s, actionMessage: null }));
+    if (typeof window !== "undefined") {
+      clearFunnelCheckoutPageSent();
+      try {
+        window.sessionStorage.removeItem("vitrina_funnel_order_complete_recorded");
+        window.sessionStorage.removeItem("vitrina_pending_inventory_purchase");
+        window.sessionStorage.removeItem("vitrina_chargily_payment_flow_active");
+        window.localStorage.removeItem("vitrina_pending_inventory_purchase_backup");
+        window.sessionStorage.removeItem("vitrina_chargily_payment_snapshot");
+        window.localStorage.removeItem("vitrina_chargily_payment_snapshot_backup");
+      } catch {
+        /* ignore */
+      }
+    }
     try {
       const res = await fetch("/api/admin/conception/funnel/clear", {
         method: "POST",

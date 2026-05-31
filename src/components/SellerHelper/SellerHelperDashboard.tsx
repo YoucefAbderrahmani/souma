@@ -269,11 +269,10 @@ function ConversionFunnelContent({
           : null}
         </div>
         <p className="mt-2 text-custom-sm text-dark-4">
-          Event counts for the last {liveHours} hours: product and checkout = page visits; Add to
-          cart = button clicks (including Purchase now); Order completed = Chargily payment
-          finalized only. Percentages descend from 100% at the top (
-          <code className="rounded bg-gray-1 px-1">Pay with Chargily</code>
-          → complete payment).
+          Event counts for the last {liveHours} hours: product = product page visit; Checkout
+          started = Chargily payment page opened; Add to cart = button clicks; Order completed =
+          <code className="rounded bg-gray-1 px-1">Go back to store</code> after Chargily success.
+          Percentages descend from 100% at the top.
         </p>
         <div className="mt-4 space-y-4">
           {steps.length ?

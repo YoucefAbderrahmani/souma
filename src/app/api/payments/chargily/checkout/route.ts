@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ChargilyClient } from "@chargily/chargily-pay";
+import { resolveRequestOrigin } from "@/lib/request-origin";
 import { validateInventoryForPurchase } from "@/server/data-access/product-inventory";
 import { tryResolveUserIdFromBetterAuthCookieCache } from "@/server/lib/auth-session-guard";
 
@@ -13,6 +14,8 @@ type CheckoutItemInput = {
 type CheckoutBody = {
   total: number;
   items: CheckoutItemInput[];
+  /** Browser origin at checkout (keeps Chargily return URL on the same host as sessionStorage). */
+  clientOrigin?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -128,7 +131,7 @@ export async function POST(req: NextRequest) {
 
     const loggedInUserId = await tryResolveUserIdFromBetterAuthCookieCache(req);
 
-    const origin = detectAppOrigin(req);
+    const origin = resolveRequestOrigin(req, body.clientOrigin);
     const successUrl = `${origin}/checkout?payment=success`;
     const failureUrl = `${origin}/checkout?payment=failed`;
 

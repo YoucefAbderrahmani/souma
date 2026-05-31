@@ -8,15 +8,9 @@ import {
   trackProductAnalytics,
 } from "@/lib/product-analytics-client";
 
-function resolveFunnelPageEvent(pathname: string): string | null {
-  if (pathname.includes("shop-details")) return "pa_funnel_product_page";
-  if (pathname.includes("checkout")) return "pa_funnel_checkout_page";
-  return null;
-}
-
 /**
- * Records funnel product and checkout page visits (one event per navigation).
- * Add to cart and orders are tracked on button click / payment success elsewhere.
+ * Records funnel product page visits only.
+ * Checkout started = Chargily opened; order completed = Go back to store click (see Checkout).
  */
 export default function FunnelPageTracker() {
   const pathname = usePathname();
@@ -25,12 +19,10 @@ export default function FunnelPageTracker() {
   useEffect(() => {
     if (typeof window === "undefined" || !pathname) return;
     if (pathname.startsWith("/admin") || pathname.startsWith("/seller-helper")) return;
-
-    const eventName = resolveFunnelPageEvent(pathname);
-    if (!eventName) return;
+    if (!pathname.includes("shop-details")) return;
 
     setProductAnalyticsPageContext({ pagePath: pathname, product: null });
-    trackProductAnalytics(eventName, {
+    trackProductAnalytics("pa_funnel_product_page", {
       page_path: pathname,
       query: searchParams.toString() || undefined,
       product_id: searchParams.get("productId") ?? undefined,

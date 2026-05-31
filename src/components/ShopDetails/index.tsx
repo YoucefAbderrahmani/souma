@@ -11,6 +11,7 @@ import { addItemToCart, selectCartItems, selectTotalPrice } from "@/redux/featur
 import { updateproductDetails } from "@/redux/features/product-details";
 import { AppDispatch } from "@/redux/store";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   parseProductContent,
   isStructuredProductContent,
@@ -117,6 +118,7 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [purchaseNowBusy, setPurchaseNowBusy] = useState(false);
 
   const [activeTab, setActiveTab] = useState("tabOne");
   const [cachedProduct, setCachedProduct] = useState<Product | null>(null);
@@ -445,10 +447,16 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     openPreviewModal();
   };
 
-  const handlePurchaseNow = () => {
-    if (sizesEnabled && !selectedSize) {
-      return;
-    }
+  const cartActionDisabled =
+    maxOrderQuantity === 0 || (sizesEnabled && !selectedSize);
+
+  const purchaseNowDisabled = cartActionDisabled || purchaseNowBusy;
+
+  useEffect(() => {
+    setPurchaseNowBusy(false);
+  }, [product.id, activeColor, selectedSize, quantity]);
+
+  const buildCartAnalyticsPayload = () => {
     const cartItemsQty = cartItems.reduce((s, x) => s + x.quantity, 0);
     const existing = cartItems.find(
       (x) =>
@@ -459,29 +467,23 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
     const nextLineItems = existing ? cartItems.length : cartItems.length + 1;
     const nextItemsQtyTotal = cartItemsQty + quantity;
     const nextCartTotal = totalPrice + (jomlaPrice ?? detailPrice) * quantity;
-    trackProductAnalytics("pa_product_view", {
+    return {
       product_id: product.id,
+      from: "product_page",
+      quantity,
+      detail_price: detailPrice,
+      active_color: activeColor,
+      selected_size: selectedSize || undefined,
+      selected_specs: selectedSpecs,
+      cart_line_items: nextLineItems,
+      cart_total_dzd: nextCartTotal,
+      items_qty_total: nextItemsQtyTotal,
+      currency: "DZD",
       page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
-      page_type: "product_detail",
-      source: "buy_now",
-    });
-    trackFunnelAddToCartClick(
-      {
-        product_id: product.id,
-        from: "product_page",
-        quantity,
-        detail_price: detailPrice,
-        active_color: activeColor,
-        selected_size: selectedSize || undefined,
-        selected_specs: selectedSpecs,
-        cart_line_items: nextLineItems,
-        cart_total_dzd: nextCartTotal,
-        items_qty_total: nextItemsQtyTotal,
-        currency: "DZD",
-        page_path: typeof window !== "undefined" ? window.location.pathname : "/shop-details",
-      },
-      { intent: "purchase_now" }
-    );
+    };
+  };
+
+  const commitProductToCart = () => {
     dispatch(
       addItemToCart({
         ...product,
@@ -496,7 +498,28 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
         selectedSize: selectedSize || undefined,
       })
     );
-    router.push("/cart");
+  };
+
+  const handleAddToCart = () => {
+    if (sizesEnabled && !selectedSize) {
+      toast.error("Please select a size before adding to cart.");
+      return;
+    }
+    commitProductToCart();
+    trackFunnelAddToCartClick(buildCartAnalyticsPayload(), { intent: "add_to_cart_button" });
+    toast.success("Added to cart. You can keep browsing.");
+  };
+
+  const handlePurchaseNow = () => {
+    if (purchaseNowBusy) return;
+    if (sizesEnabled && !selectedSize) {
+      toast.error("Please select a size before checkout.");
+      return;
+    }
+    setPurchaseNowBusy(true);
+    commitProductToCart();
+    trackFunnelAddToCartClick(buildCartAnalyticsPayload(), { intent: "purchase_now" });
+    router.push("/checkout");
   };
 
   return (
@@ -962,13 +985,20 @@ const ShopDetails = ({ initialProductId = null, embed = false, heatmapPreview = 
 
                       <button
                         type="button"
+                        onClick={handleAddToCart}
+                        disabled={cartActionDisabled}
+                        className="inline-flex font-medium text-dark border border-gray-3 bg-white py-3 px-7 rounded-md ease-out duration-200 hover:border-blue hover:text-blue disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Add to cart
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={handlePurchaseNow}
-                        disabled={
-                          maxOrderQuantity === 0 || (sizesEnabled && !selectedSize)
-                        }
+                        disabled={purchaseNowDisabled}
                         className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Purchase Now
+                        {purchaseNowBusy ? "Going to checkout…" : "Purchase Now"}
                       </button>
 
                       <button

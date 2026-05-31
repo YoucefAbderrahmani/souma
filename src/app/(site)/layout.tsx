@@ -25,7 +25,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body suppressHydrationWarning={true}>
-        <RootAppShell>{children}</RootAppShell>
+        <div suppressHydrationWarning className="contents">
+          <RootAppShell>{children}</RootAppShell>
+        </div>
       </body>
     </html>
   );

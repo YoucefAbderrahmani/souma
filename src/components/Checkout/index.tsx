@@ -1,7 +1,8 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
-import { sequenceEndPurchase, sequenceEndLeave } from "@/lib/sequence-client";
+import { finalizeChargilyPaymentReturn } from "@/lib/chargily-payment-finalize";
+import { sequenceEndLeave } from "@/lib/sequence-client";
 import {
   flushProductAnalyticsNow,
   setProductAnalyticsPageContext,
@@ -19,14 +20,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/app/context/SessionProvider";
-import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
 import { AppDispatch } from "@/redux/store";
+import { trackFunnelChargilyCheckoutOpened } from "@/lib/funnel-chargily";
 import {
-  commitPendingInventoryPurchase,
   hasChargilyPaymentPending,
+  isChargilyPaymentFlowActive,
   isFunnelOrderCompleteRecorded,
-  markFunnelOrderCompleteRecorded,
-  readPendingPurchaseLineCount,
+  restorePendingPurchaseFromBackup,
   savePendingInventoryPurchase,
 } from "@/hooks/useLiveProductInventory";
 
@@ -54,7 +54,21 @@ const INITIAL_FORM_VALUES: CheckoutFormValues = {
   notes: "",
 };
 
+function CheckoutSkeleton() {
+  return (
+    <>
+      <Breadcrumb title={"Checkout"} pages={["checkout"]} />
+      <section className="overflow-hidden py-20 bg-gray-2">
+        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <p className="text-center text-dark-4">Loading checkout…</p>
+        </div>
+      </section>
+    </>
+  );
+}
+
 const Checkout = () => {
+  const [isClient, setIsClient] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
@@ -64,6 +78,8 @@ const Checkout = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [confirmingPaymentReturn, setConfirmingPaymentReturn] = useState(false);
+  const [showPaymentSuccessConfirm, setShowPaymentSuccessConfirm] = useState(false);
   const [formValues, setFormValues] = useState<CheckoutFormValues>(INITIAL_FORM_VALUES);
   const itemsQtyTotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
@@ -78,12 +94,72 @@ const Checkout = () => {
   };
 
   const paymentStatus = searchParams.get("payment");
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const runPaymentSuccessFinalize = React.useCallback(
+    async (source: "payment_success_return" | "go_back_to_store_click") => {
+      if (purchaseCompletedRef.current) return;
+      restorePendingPurchaseFromBackup();
+      if (!hasChargilyPaymentPending() && !isChargilyPaymentFlowActive()) {
+        return;
+      }
+
+      purchaseCompletedRef.current = true;
+      setConfirmingPaymentReturn(true);
+
+      try {
+        const result = await finalizeChargilyPaymentReturn({
+          dispatch,
+          userId,
+          source,
+          totalPriceFallback: totalPrice,
+          cartLineItemsFallback: cartItems.length,
+          itemsQtyTotalFallback: itemsQtyTotal,
+        });
+
+        if (!result.ok) {
+          purchaseCompletedRef.current = false;
+          return;
+        }
+
+        if (result.committed) {
+          toast.success("Payment confirmed. Your cart has been cleared.");
+        } else {
+          toast.success("Payment confirmed. Your order has been recorded.");
+        }
+        router.push("/");
+      } catch {
+        purchaseCompletedRef.current = false;
+        toast.error("Could not finalize your order. Please try again or contact support.");
+      } finally {
+        setConfirmingPaymentReturn(false);
+      }
+    },
+    [cartItems.length, dispatch, itemsQtyTotal, router, totalPrice, userId]
+  );
+
+  React.useEffect(() => {
+    if (!isClient) return;
+    if (paymentStatus !== "success") {
+      setShowPaymentSuccessConfirm(false);
+      return;
+    }
+    restorePendingPurchaseFromBackup();
+    const canConfirm =
+      !isFunnelOrderCompleteRecorded() &&
+      (hasChargilyPaymentPending() || isChargilyPaymentFlowActive());
+    setShowPaymentSuccessConfirm(canConfirm);
+    if (canConfirm) {
+      void runPaymentSuccessFinalize("payment_success_return");
+    }
+  }, [isClient, paymentStatus, runPaymentSuccessFinalize]);
+
   const paymentBanner = useMemo(() => {
     if (paymentStatus === "success") {
-      return {
-        text: "Payment completed successfully. Thank you for your order.",
-        className: "border-green-300 bg-green-50 text-green-700",
-      };
+      return null;
     }
     if (paymentStatus === "failed") {
       return {
@@ -201,66 +277,13 @@ const Checkout = () => {
     sequenceEndLeave();
   }, [cartItems.length, itemsQtyTotal, paymentStatus, totalPrice]);
 
-  React.useEffect(() => {
-    if (paymentStatus !== "success" || purchaseCompletedRef.current) return;
-    if (isFunnelOrderCompleteRecorded()) return;
-
-    let cancelled = false;
-    void (async () => {
-      if (!hasChargilyPaymentPending()) {
-        return;
-      }
-
-      const pendingLines = readPendingPurchaseLineCount();
-      const committed = await commitPendingInventoryPurchase();
-      if (cancelled || !committed) return;
-
-      purchaseCompletedRef.current = true;
-      markFunnelOrderCompleteRecorded();
-      sequenceEndPurchase();
-      const lineItems = Math.max(cartItems.length, pendingLines, 1);
-      trackProductAnalytics("pa_funnel_order_complete", {
-        payment_finalized: true,
-        provider: "chargily",
-        source: "chargily_success_return",
-        total_dzd: totalPrice,
-        line_items: lineItems,
-        order_value: totalPrice,
-        currency: "DZD",
-        items_qty_total: itemsQtyTotal > 0 ? itemsQtyTotal : lineItems,
-      });
-      trackProductAnalytics("pa_purchase", {
-        total_dzd: totalPrice,
-        line_items: lineItems,
-        order_value: totalPrice,
-        currency: "DZD",
-        items_qty_total: itemsQtyTotal > 0 ? itemsQtyTotal : lineItems,
-        provider: "chargily",
-        status: "success",
-        payment_finalized: true,
-      });
-      trackProductAnalytics("pa_checkout_step", {
-        step: "payment_return",
-        status: "success",
-        provider: "chargily",
-        payment_method: "chargily",
-        payment_finalized: true,
-      });
-      void flushProductAnalyticsNow();
-      if (cartItems.length > 0) {
-        dispatch(removeAllItemsFromCart());
-      }
-      toast.success("Payment confirmed. Your cart has been cleared.");
-      router.replace("/checkout", { scroll: false });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cartItems.length, dispatch, itemsQtyTotal, paymentStatus, router, totalPrice]);
+  const handleGoBackToStore = React.useCallback(() => {
+    if (confirmingPaymentReturn) return;
+    void runPaymentSuccessFinalize("go_back_to_store_click");
+  }, [confirmingPaymentReturn, runPaymentSuccessFinalize]);
 
   React.useEffect(() => {
-    if (isPending) return;
+    if (!isClient || isPending) return;
 
     const sessionDefaults: CheckoutFormValues = {
       ...INITIAL_FORM_VALUES,
@@ -289,12 +312,16 @@ const Checkout = () => {
     } catch {
       setFormValues(sessionDefaults);
     }
-  }, [isPending, session?.user?.email, session?.user?.id, session?.user?.lastname, session?.user?.name, session?.user?.phone, storageKey]);
+  }, [isClient, isPending, session?.user?.email, session?.user?.id, session?.user?.lastname, session?.user?.name, session?.user?.phone, storageKey]);
 
   React.useEffect(() => {
-    if (isPending) return;
+    if (!isClient || isPending) return;
     window.localStorage.setItem(storageKey, JSON.stringify(formValues));
-  }, [formValues, isPending, storageKey]);
+  }, [formValues, isClient, isPending, storageKey]);
+
+  if (!isClient) {
+    return <CheckoutSkeleton />;
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -326,11 +353,16 @@ const Checkout = () => {
 
     setIsSubmitting(true);
     const perfStart = Date.now();
+    // Open tab synchronously (still inside the submit click) so browsers do not block popups after await.
+    const paymentTab = window.open("about:blank", "_blank", "noopener,noreferrer");
+
     try {
       const response = await fetch("/api/payments/chargily/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          clientOrigin:
+            typeof window !== "undefined" ? window.location.origin : undefined,
           total: totalPrice,
           items: cartItems.map((item) => ({
             id: item.id,
@@ -364,13 +396,26 @@ const Checkout = () => {
           id: item.id,
           quantity: item.quantity,
           title: item.title,
-        }))
+        })),
+        {
+          total_dzd: totalPrice,
+          line_items: cartItems.length,
+          items_qty_total: itemsQtyTotal,
+        }
       );
 
       trackProductAnalytics("pa_performance", {
         checkout_api_ms: Date.now() - perfStart,
         chargily_checkout: true,
       });
+      trackFunnelChargilyCheckoutOpened({
+        cart_line_items: cartItems.length,
+        cart_total_dzd: totalPrice,
+        items_qty_total: itemsQtyTotal,
+        currency: "DZD",
+        page_path: "/checkout",
+      });
+
       trackProductAnalytics("pa_checkout_step", {
         step: "payment_redirect",
         total_dzd: totalPrice,
@@ -381,27 +426,45 @@ const Checkout = () => {
         payment_method: "chargily",
         status: "redirect_started",
       });
-      void flushProductAnalyticsNow();
-      const paymentTab = window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
-      if (!paymentTab) {
-        trackProductAnalytics("pa_checkout_step", {
-          step: "payment_redirect",
-          status: "popup_blocked",
-          provider: "chargily",
-          payment_method: "chargily",
-          failure_code: "popup_blocked",
-          failure_reason: "window_open_returned_null",
-        });
-        setErrorMessage("Popup blocked. Please allow popups to continue payment in a new tab.");
-        toast.error("Popup blocked. Please allow popups to continue payment.");
-        setIsSubmitting(false);
-        return;
+      await flushProductAnalyticsNow();
+
+      const checkoutUrl = data.checkoutUrl;
+      const popupUsable = paymentTab != null && !paymentTab.closed;
+
+      if (popupUsable) {
+        try {
+          paymentTab.location.href = checkoutUrl;
+          setShowPaymentPopup(true);
+          setIsSubmitting(false);
+          toast.success("Chargily opened in a new tab. Complete your payment process.");
+          return;
+        } catch {
+          try {
+            paymentTab.close();
+          } catch {
+            /* ignore */
+          }
+        }
       }
 
-      setShowPaymentPopup(true);
-      setIsSubmitting(false);
-      toast.success("Chargily opened in a new tab. Complete your payment process.");
+      trackProductAnalytics("pa_checkout_step", {
+        step: "payment_redirect",
+        status: "same_tab_fallback",
+        provider: "chargily",
+        payment_method: "chargily",
+        failure_code: popupUsable ? "popup_nav_failed" : "popup_blocked",
+      });
+      await flushProductAnalyticsNow();
+      toast.info("Redirecting to Chargily to complete your payment…");
+      window.location.assign(checkoutUrl);
     } catch (error) {
+      if (paymentTab != null && !paymentTab.closed) {
+        try {
+          paymentTab.close();
+        } catch {
+          /* ignore */
+        }
+      }
       const message =
         error instanceof Error
           ? error.message
@@ -424,7 +487,7 @@ const Checkout = () => {
   };
 
   return (
-    <>
+    <div suppressHydrationWarning>
       <Breadcrumb title={"Checkout"} pages={["checkout"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -451,7 +514,30 @@ const Checkout = () => {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit}>
+          {showPaymentSuccessConfirm ? (
+            <div className="mb-8 flex flex-col items-center rounded-xl border border-green-300 bg-green-50 px-6 py-10 text-center shadow-1">
+              <p className="text-lg font-semibold text-green-800">Payment successful</p>
+              <p className="mt-2 max-w-md text-sm text-green-700">
+                {confirmingPaymentReturn
+                  ? "Finalizing your order and clearing your cart…"
+                  : "Your payment was completed. Returning you to the store…"}
+              </p>
+              {!confirmingPaymentReturn ? (
+                <button
+                  type="button"
+                  onClick={handleGoBackToStore}
+                  className="mt-6 inline-flex min-w-[220px] justify-center rounded-md bg-green-600 px-8 py-3.5 text-sm font-semibold text-white ease-out duration-200 hover:bg-green-700"
+                >
+                  Go back to store
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <form
+            onSubmit={handleSubmit}
+            className={showPaymentSuccessConfirm ? "hidden" : undefined}
+          >
             <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
               {/* <!-- checkout left --> */}
               <div className="lg:max-w-[670px] w-full">
@@ -594,7 +680,7 @@ const Checkout = () => {
           </form>
         </div>
       </section>
-    </>
+    </div>
   );
 };
 
