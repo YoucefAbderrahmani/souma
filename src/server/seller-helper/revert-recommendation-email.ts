@@ -10,6 +10,7 @@ import {
   parseOpenRouterJsonResponse,
   requestOpenRouterChatCompletion,
 } from "@/server/lib/openrouter-client";
+import { resolveOpenRouterModel } from "@/server/lib/openrouter-models";
 import { sendRecommendationRoleEmail } from "@/server/email/send-recommendation-email";
 import { getAppliedActionRowById } from "@/server/seller-helper/applied-action-revert";
 import type { AppliedActionKind } from "@/types/seller-helper-timeline";
@@ -44,7 +45,11 @@ async function draftRevertEmailWithLlm(payload: {
   recommendation: string;
   implementationHint: string | null;
 }) {
-  const model = process.env.OPENROUTER_MODEL?.trim() || "google/gemini-2.5-flash-preview";
+  const model = resolveOpenRouterModel(
+    process.env.OPENROUTER_MODEL,
+    process.env.CONCEPTION_OPENROUTER_MODEL,
+    process.env.ASSISTANT_FREEFLOW_MODEL
+  );
   const { raw } = await requestOpenRouterChatCompletion({
     model,
     temperature: 0.3,

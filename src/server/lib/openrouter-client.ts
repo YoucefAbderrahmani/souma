@@ -1,4 +1,5 @@
 import { extractJsonObject } from "@/lib/llm-json";
+import { normalizeOpenRouterModelId } from "@/server/lib/openrouter-models";
 
 type OpenRouterChatOptions = {
   model: string;
@@ -42,7 +43,7 @@ export async function requestOpenRouterChatCompletion(
       "X-Title": "Vitrina Store Seller Helper",
     },
     body: JSON.stringify({
-      model: options.model,
+      model: normalizeOpenRouterModelId(options.model),
       temperature: options.temperature ?? 0.2,
       max_tokens: options.maxTokens ?? 2800,
       response_format: { type: "json_object" },

@@ -7,6 +7,7 @@ import {
   parseOpenRouterJsonResponse,
   requestOpenRouterChatCompletion,
 } from "@/server/lib/openrouter-client";
+import { resolveOpenRouterModel } from "@/server/lib/openrouter-models";
 import type { conceptionAlertTable, conceptionRecommendationTable } from "@/server/db/schema";
 import { ensureRecommendationEconomicsHints } from "@/lib/recommendation-economics";
 import { buildRecommendationEconomicsContext } from "@/server/conception/recommendation-economics-context";
@@ -96,10 +97,10 @@ export function isGeminiConfigured() {
 }
 
 function conceptionOpenRouterModel() {
-  return (
-    process.env.CONCEPTION_OPENROUTER_MODEL?.trim() ||
-    process.env.ASSISTANT_FREEFLOW_MODEL?.trim() ||
-    "google/gemini-2.0-flash-001"
+  return resolveOpenRouterModel(
+    process.env.CONCEPTION_OPENROUTER_MODEL,
+    process.env.OPENROUTER_MODEL,
+    process.env.ASSISTANT_FREEFLOW_MODEL
   );
 }
 
